@@ -1,0 +1,16 @@
+{
+  "name": "Global Healthcare Conclave 2026",
+  "short_name": "GHC 2026",
+  "description": "GAIMS conference registration, research, payment and operations platform.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7FBFF",
+  "theme_color": "#081B33",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "screenshots": [
+    { "src": "/favicon.svg", "sizes": "512x512", "type": "image/svg+xml", "form_factor": "narrow" }
+  ]
+}
