@@ -1,7 +1,7 @@
 const os = require('os');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
-const { pool } = require('../config/db');
+const { databaseConfig, pool } = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
 
 const execFileAsync = promisify(execFile);
@@ -53,14 +53,21 @@ const exportCsv = asyncHandler(async (_req, res) => {
 });
 
 const exportSql = asyncHandler(async (_req, res) => {
-  const dbName = process.env.DB_NAME || 'ghc_db';
+  const dbName = databaseConfig.database;
+  const dumpArgs = [
+    '-h', databaseConfig.host,
+    '-P', String(databaseConfig.port),
+    '-u', databaseConfig.user,
+    '--ssl-mode=REQUIRED',
+  ];
+
   try {
-    const { stdout } = await execFileAsync('mysqldump', [
-      '-h', process.env.DB_HOST || 'localhost',
-      '-u', process.env.DB_USER || 'root',
-      `-p${process.env.DB_PASSWORD || ''}`,
-      dbName,
-    ]);
+    const { stdout } = await execFileAsync('mysqldump', [...dumpArgs, dbName], {
+      env: {
+        ...process.env,
+        MYSQL_PWD: databaseConfig.password,
+      },
+    });
     res.setHeader('Content-Type', 'application/sql');
     res.setHeader('Content-Disposition', `attachment; filename="${dbName}.sql"`);
     return res.send(stdout);

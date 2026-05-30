@@ -6,7 +6,7 @@ const cookieParser = require('cookie-parser');
 const path = require('path');
 require('dotenv').config();
 
-const { testConnection } = require('./config/db');
+const { closePool, testConnection } = require('./config/db');
 const { initializeDatabase } = require('./config/schema');
 const apiRoutes = require('./routes');
 const authRoutes = require('./routes/authRoutes');
@@ -52,8 +52,48 @@ app.use('/api', apiRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-app.listen(PORT, async () => {
-  console.log(`GHC API listening on port ${PORT}`);
+let server;
+
+const startServer = async () => {
   await testConnection();
   await initializeDatabase();
+  server = app.listen(PORT, () => {
+    console.log(`GHC API listening on port ${PORT}`);
+  });
+};
+
+const shutdown = async (signal) => {
+  console.log(`${signal} received. Closing server and database pool...`);
+  if (!server) {
+    try {
+      await closePool();
+    } finally {
+      process.exit(0);
+    }
+  }
+
+  server.close(async () => {
+    try {
+      await closePool();
+      console.log('Database pool closed');
+      process.exit(0);
+    } catch (error) {
+      console.error('Error while closing database pool');
+      console.error(error);
+      process.exit(1);
+    }
+  });
+};
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+startServer().catch(async (error) => {
+  console.error('Server startup failed');
+  console.error(error.message);
+  try {
+    await closePool();
+  } finally {
+    process.exit(1);
+  }
 });
