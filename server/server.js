@@ -24,12 +24,19 @@ const { apiLimiter, csrfProtection, sanitizeBody } = require('./middleware/produ
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+app.set('trust proxy', 1);
+
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   })
 );
+app.use((req, _res, next) => {
+  console.log(`Incoming Origin: ${req.get('origin') || '(none)'}`);
+  next();
+});
 app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
