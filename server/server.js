@@ -15,6 +15,7 @@ if (envResult.parsed) {
 
 const { closePool, testConnection } = require('./config/db');
 const { initializeDatabase } = require('./config/schema');
+const { corsOptions } = require('./config/cors');
 const apiRoutes = require('./routes');
 const authRoutes = require('./routes/authRoutes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
@@ -22,21 +23,13 @@ const { apiLimiter, csrfProtection, sanitizeBody } = require('./middleware/produ
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-const CLIENT_URLS = (process.env.CLIENT_URLS || process.env.CLIENT_URL || 'http://localhost:5173,http://127.0.0.1:5173')
-  .split(',')
-  .map((origin) => origin.trim());
 
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
   })
 );
-app.use(
-  cors({
-    origin: CLIENT_URLS,
-    credentials: true,
-  })
-);
+app.use(cors(corsOptions));
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
