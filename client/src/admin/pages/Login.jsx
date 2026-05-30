@@ -2,7 +2,7 @@ import { useState } from "react";
 import { ArrowRight, ShieldCheck } from "lucide-react";
 
 function Login({ api, onLogin }) {
-  const [form, setForm] = useState({ email: "admin@ghc.com", password: "Admin@123" });
+  const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 

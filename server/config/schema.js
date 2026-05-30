@@ -354,8 +354,13 @@ const seedAuthData = async () => {
   }
 
   const superAdminRoleId = roleByName.SUPER_ADMIN;
-  const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'admin@ghc.com';
-  const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'Admin@123';
+  const adminEmail = process.env.DEFAULT_ADMIN_EMAIL;
+  const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD;
+
+  if (!adminEmail || !adminPassword) {
+    throw new Error('DEFAULT_ADMIN_EMAIL and DEFAULT_ADMIN_PASSWORD must be set');
+  }
+
   const passwordHash = await bcrypt.hash(adminPassword, 12);
 
   await pool.query(
