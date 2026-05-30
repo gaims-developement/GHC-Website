@@ -1,9 +1,9 @@
 import axios from "axios";
 import { ArrowLeft, ArrowRight, BadgeCheck, Check, Download, QrCode, ReceiptText, ShieldCheck, Tag, Ticket } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { apiUrl } from "../config/api";
 import { setPageSeo, trackEvent } from "../utils/seo";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 const GST_RATE = 0.18;
 
 const emptyForm = {
@@ -64,7 +64,7 @@ function Register() {
       path: "/register",
       schema: { "@context": "https://schema.org", "@type": "RegisterAction", name: "GHC 2026 Registration" },
     });
-    axios.get(`${API_BASE_URL}/api/tickets`).then((res) => {
+    axios.get(apiUrl("/api/tickets")).then((res) => {
       const nextTickets = res.data.tickets || [];
       setTickets(nextTickets);
       setSelectedTicketId((cur) => cur || nextTickets[0]?.id || "");
@@ -91,7 +91,7 @@ function Register() {
     if (!couponCode.trim()) return;
     setCouponMessage("");
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/coupons/validate`, {
+      const res = await axios.post(apiUrl("/api/coupons/validate"), {
         code: couponCode, ticketTypeId: selectedTicketId, registrationId: registration?.id,
       });
       setCoupon(res.data.coupon);
@@ -104,7 +104,7 @@ function Register() {
 
   const ensureRegistration = async () => {
     if (registration) return registration;
-    const res = await axios.post(`${API_BASE_URL}/api/register`, { ...form, ticketTypeId: selectedTicketId });
+    const res = await axios.post(apiUrl("/api/register"), { ...form, ticketTypeId: selectedTicketId });
     trackEvent("register_click", { ticket_type_id: selectedTicketId });
     setRegistration(res.data.registration);
     localStorage.removeItem("ghc_registration_draft");
@@ -117,7 +117,7 @@ function Register() {
       const reg = await ensureRegistration();
       const loaded = await loadRazorpay();
       if (!loaded) throw new Error("Razorpay checkout could not be loaded.");
-      const orderRes = await axios.post(`${API_BASE_URL}/api/payments/create-order`, {
+      const orderRes = await axios.post(apiUrl("/api/payments/create-order"), {
         registrationId: reg.id, couponCode: coupon?.code || couponCode, provider: "razorpay",
       });
       const { order, keyId } = orderRes.data;
@@ -129,7 +129,7 @@ function Register() {
         prefill: { name: form.fullName, email: form.email, contact: form.phone },
         theme: { color: "#ff3d7f" },
         handler: async (payload) => {
-          const verifyRes = await axios.post(`${API_BASE_URL}/api/payments/verify`, { ...payload, provider: "razorpay" });
+          const verifyRes = await axios.post(apiUrl("/api/payments/verify"), { ...payload, provider: "razorpay" });
           trackEvent("payment_success", { ticket_type_id: selectedTicketId, value: totals.total });
           setConfirmation(verifyRes.data); setStep(4); setBusy(false);
         },
@@ -150,8 +150,8 @@ function Register() {
   };
 
   const progress = confirmation ? 100 : Math.round((step / 4) * 100);
-  const invoiceUrl = confirmation?.payment?.invoiceUrl ? `${API_BASE_URL}${confirmation.payment.invoiceUrl}` : "";
-  const ticketUrl = confirmation?.payment?.receiptUrl ? `${API_BASE_URL}${confirmation.payment.receiptUrl}` : "";
+  const invoiceUrl = confirmation?.payment?.invoiceUrl ? apiUrl(confirmation.payment.invoiceUrl) : "";
+  const ticketUrl = confirmation?.payment?.receiptUrl ? apiUrl(confirmation.payment.receiptUrl) : "";
 
   const stepLabels = ["Choose Pass", "Your Details", "Confirm & Pay"];
 

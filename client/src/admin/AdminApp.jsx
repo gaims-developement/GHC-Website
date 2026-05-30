@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../config/api";
 import DashboardLayout from "./DashboardLayout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -17,8 +18,6 @@ import LaunchChecklist from "./pages/LaunchChecklist";
 import Users from "./pages/Users";
 import Settings from "./pages/Settings";
 import "./admin.css";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 const api = axios.create({
   baseURL: API_BASE_URL,

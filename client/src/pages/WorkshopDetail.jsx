@@ -2,11 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeft, ArrowRight, CalendarDays, CheckCircle2, Clock3, Image, MapPin, Users, WalletCards } from "lucide-react";
+import { apiUrl } from "../config/api";
 import { categoryColors, formatWorkshopDate, getWorkshopBySlug, getWorkshopTimeRange, normalizeWorkshop } from "../data/workshops";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
-
-const imageSrc = (src) => src?.startsWith("/uploads") ? `${API_BASE_URL}${src}` : src;
+const imageSrc = (src) => src?.startsWith("/uploads") ? apiUrl(src) : src;
 
 const DetailSection = ({ title, children }) => (
   <section className="workshop-detail-block">
@@ -32,7 +31,7 @@ export default function WorkshopDetail() {
   useEffect(() => {
     let active = true;
     setLoading(true);
-    axios.get(`${API_BASE_URL}/api/workshops/${slug}`)
+    axios.get(apiUrl(`/api/workshops/${slug}`))
       .then((response) => {
         if (active && response.data.workshop) setRemoteWorkshop(normalizeWorkshop(response.data.workshop));
       })

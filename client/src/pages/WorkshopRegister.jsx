@@ -2,9 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeft, ArrowRight, CheckCircle2, TicketPercent } from "lucide-react";
+import { apiUrl } from "../config/api";
 import { getWorkshopById, loadWorkshops, normalizeWorkshop, saveWorkshops } from "../data/workshops";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export default function WorkshopRegister() {
   const { id } = useParams();
@@ -18,7 +17,7 @@ export default function WorkshopRegister() {
 
   useEffect(() => {
     let active = true;
-    axios.get(`${API_BASE_URL}/api/workshops/${id}`)
+    axios.get(apiUrl(`/api/workshops/${id}`))
       .then((response) => {
         if (active && response.data.workshop) setRemoteWorkshop(normalizeWorkshop(response.data.workshop));
       })

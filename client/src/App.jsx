@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import { useLocation } from "react-router-dom";
 import { setPageSeo, trackEvent } from "./utils/seo";
+import { apiUrl } from "./config/api";
 import MobileRadialNav from "./components/MobileRadialNav";
 import GlobeCanvas from "./components/GlobeCanvas";
 import { createWorkshopSlug } from "./data/workshops";
@@ -45,8 +46,6 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -480,7 +479,7 @@ function Tracks() {
 }
 
 function SpeakerPhoto({ speaker, featured = false }) {
-  const photoUrl = speaker?.photoUrl?.startsWith("/uploads") ? `${API_BASE_URL}${speaker.photoUrl}` : speaker?.photoUrl;
+  const photoUrl = speaker?.photoUrl?.startsWith("/uploads") ? apiUrl(speaker.photoUrl) : speaker?.photoUrl;
 
   return (
     <div className={featured ? "speaker-photo speaker-photo-featured" : "speaker-photo"} data-photo={speaker.photo}>
@@ -515,7 +514,7 @@ function WorldClassSpeakers() {
   const [speakerData, setSpeakerData] = useState(mockSpeakers);
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/speakers`).then((response) => {
+    axios.get(apiUrl("/api/speakers")).then((response) => {
       const speakers = response.data.speakers || [];
       if (speakers.length) {
         setSpeakerData(speakers.map((speaker) => ({
@@ -569,7 +568,7 @@ function WorkshopsExperience() {
   const [workshopData, setWorkshopData] = useState(mockWorkshops);
 
   useEffect(() => {
-    axios.get(`${API_BASE_URL}/api/workshops`).then((response) => {
+    axios.get(apiUrl("/api/workshops")).then((response) => {
       const workshops = response.data.workshops || [];
       if (workshops.length) {
         setWorkshopData(workshops.map((workshop) => ({
@@ -596,7 +595,7 @@ function WorkshopsExperience() {
           return (
           <motion.article key={workshop.title} className="workshop-card" whileHover={{ y: -10, scale: 1.015 }}>
             <div className="workshop-card-image">
-              {workshop.imageUrl ? <img loading="lazy" src={workshop.imageUrl.startsWith("/uploads") ? `${API_BASE_URL}${workshop.imageUrl}` : workshop.imageUrl} alt="" /> : <ClipboardCheck className="h-10 w-10" />}
+              {workshop.imageUrl ? <img loading="lazy" src={workshop.imageUrl.startsWith("/uploads") ? apiUrl(workshop.imageUrl) : workshop.imageUrl} alt="" /> : <ClipboardCheck className="h-10 w-10" />}
             </div>
             <div className="workshop-icon"><ClipboardCheck className="h-6 w-6" /></div>
             <h3>{workshop.title}</h3>
