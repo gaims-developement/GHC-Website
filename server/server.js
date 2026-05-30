@@ -4,7 +4,14 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const path = require('path');
-require('dotenv').config();
+const dotenv = require('dotenv');
+
+const envResult = dotenv.config({ path: path.join(__dirname, '.env'), quiet: true });
+if (envResult.parsed) {
+  console.log(`Loaded ${Object.keys(envResult.parsed).length} variable(s) from server/.env`);
+} else if (envResult.error && envResult.error.code !== 'ENOENT') {
+  console.warn(`Unable to load server/.env: ${envResult.error.message}`);
+}
 
 const { closePool, testConnection } = require('./config/db');
 const { initializeDatabase } = require('./config/schema');
