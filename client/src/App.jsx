@@ -53,7 +53,7 @@ gsap.registerPlugin(ScrollTrigger);
 const AdminApp = lazy(() => import("./admin/AdminApp"));
 const Register = lazy(() => import("./pages/Register"));
 const AbstractRegister = lazy(() => import("./pages/AbstractRegister"));
-const PartnerPortal = lazy(() => import("./pages/PartnerPortal"));
+const PartnershipPortal = lazy(() => import("./pages/PartnershipPortal"));
 const WorkshopDetail = lazy(() => import("./pages/WorkshopDetail"));
 const WorkshopRegister = lazy(() => import("./pages/WorkshopRegister"));
 const AdminWorkshops = lazy(() => import("./pages/AdminWorkshops"));
@@ -237,6 +237,19 @@ function SectionHeading({ eyebrow, title, text }) {
   );
 }
 
+function PartnerCTAButton({ href, variant = "hero", children }) {
+  const baseClass = variant === "hero" ? "hero-button-secondary" : "partner-marquee-cta";
+
+  return (
+    <a
+      href={href}
+      className={`${baseClass} partner-cta-button partner-cta-button--${variant}`}
+    >
+      <span className="partner-cta-button__content">{children}</span>
+    </a>
+  );
+}
+
 function AnimatedTrackHeading({ onComplete }) {
   const title = "Focused tracks for the future of care.";
   const words = title.split(" ");
@@ -317,7 +330,7 @@ function Hero() {
           <motion.div className="mt-8 flex flex-wrap gap-3" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.78, duration: 0.75 }}>
             <a href="/register" className="hero-button-primary">Register Now <ArrowRight className="h-4 w-4" /></a>
             <a href="/abstract-registration" className="hero-button-secondary">Submit Abstract <FileText className="h-4 w-4" /></a>
-            <a href="#partner-marquee" className="hero-button-secondary">Become Partner <BadgeCheck className="h-4 w-4" /></a>
+            <PartnerCTAButton href="#partner-marquee" variant="hero">Become Partner <BadgeCheck className="h-4 w-4" /></PartnerCTAButton>
             <a href="#gallery" className="hero-button-secondary">Watch Trailer <Play className="h-4 w-4" /></a>
           </motion.div>
         </div>
@@ -1005,9 +1018,9 @@ function PartnerMarquee() {
       <div className="mx-auto max-w-7xl px-5 md:px-8">
         <div className="partner-marquee-heading">
           <SectionHeading eyebrow="Partner Marquee" title="Academic, NGO, media and sponsor partners." />
-          <a className="partner-marquee-cta" href="/partners">
+          <PartnerCTAButton href="/partnership" variant="section">
             Become a Partner <ArrowRight className="h-3 w-3" />
-          </a>
+          </PartnerCTAButton>
         </div>
       </div>
       <div className="partner-marquee">
@@ -1035,7 +1048,7 @@ function RegistrationCTA() {
           <div className="mt-8 flex flex-wrap gap-3">
             <a href="/register" className="hero-button-primary">Register Now <ArrowRight className="h-4 w-4" /></a>
             <a href="/abstract-registration" className="hero-button-secondary">Submit Abstract <FileText className="h-4 w-4" /></a>
-            <a href="#partner-marquee" className="hero-button-secondary">Become Partner <Award className="h-4 w-4" /></a>
+            <PartnerCTAButton href="#partner-marquee" variant="hero">Become Partner <Award className="h-4 w-4" /></PartnerCTAButton>
           </div>
         </div>
         <div className="cta-floating-cards">
@@ -1097,7 +1110,7 @@ function App() {
   const isWorkshopRegisterRoute = location.pathname.startsWith("/register/workshop/");
   const isRegisterRoute = location.pathname.startsWith("/register");
   const isAbstractRoute = location.pathname.startsWith("/abstract-registration");
-  const isPartnerRoute = location.pathname.startsWith("/partners");
+  const isPartnerRoute = location.pathname.startsWith("/partners") || location.pathname.startsWith("/partnership");
   const isWorkshopDetailRoute = location.pathname.startsWith("/workshops/");
   const [installPrompt, setInstallPrompt] = useState(null);
 
@@ -1113,7 +1126,7 @@ function App() {
         : isRegisterRoute
         ? "Register for Global Healthcare Conclave 2026 with secure ticket checkout."
         : "Global Healthcare Conclave 2026 by GAIMS: speakers, workshops, research, venue, partners and registration.",
-      path: isWorkshopRegisterRoute ? location.pathname : isAdminWorkshopsRoute ? "/admin/workshops" : isWorkshopDetailRoute ? location.pathname : isPartnerRoute ? "/partners" : isAbstractRoute ? "/abstract-registration" : isRegisterRoute ? "/register" : isAdminRoute ? "/admin" : "/",
+      path: isWorkshopRegisterRoute ? location.pathname : isAdminWorkshopsRoute ? "/admin/workshops" : isWorkshopDetailRoute ? location.pathname : isPartnerRoute ? "/partnership" : isAbstractRoute ? "/abstract-registration" : isRegisterRoute ? "/register" : isAdminRoute ? "/admin" : "/",
       schema: {
         "@context": "https://schema.org",
         "@type": "Event",
@@ -1223,60 +1236,49 @@ function App() {
     };
   }, [isAbstractRoute, isAdminRoute, isPartnerRoute, isRegisterRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute]);
 
+  let routeContent;
+
   if (isAdminWorkshopsRoute) {
-    return <Suspense fallback={<div className="admin-loading">Loading workshop manager...</div>}><AdminWorkshops /></Suspense>;
-  }
-
-  if (isAdminRoute) {
-    return <Suspense fallback={<div className="admin-loading">Loading GHC CMS...</div>}><AdminApp /></Suspense>;
-  }
-
-  if (isWorkshopRegisterRoute) {
-    return (
+    routeContent = <Suspense fallback={<div className="admin-loading">Loading workshop manager...</div>}><AdminWorkshops /></Suspense>;
+  } else if (isAdminRoute) {
+    routeContent = <Suspense fallback={<div className="admin-loading">Loading GHC CMS...</div>}><AdminApp /></Suspense>;
+  } else if (isWorkshopRegisterRoute) {
+    routeContent = (
       <>
         <Suspense fallback={<div className="admin-loading">Loading workshop registration...</div>}><WorkshopRegister /></Suspense>
         <MobileRadialNav />
       </>
     );
-  }
-
-  if (isRegisterRoute) {
-    return (
+  } else if (isRegisterRoute) {
+    routeContent = (
       <>
         <Suspense fallback={<div className="admin-loading">Loading checkout...</div>}><Register /></Suspense>
         <MobileRadialNav />
       </>
     );
-  }
-
-  if (isAbstractRoute) {
-    return (
+  } else if (isAbstractRoute) {
+    routeContent = (
       <>
         <Suspense fallback={<div className="admin-loading">Loading abstract registration...</div>}><AbstractRegister /></Suspense>
         <MobileRadialNav />
       </>
     );
-  }
-
-  if (isPartnerRoute) {
-    return (
+  } else if (isPartnerRoute) {
+    routeContent = (
       <>
-        <Suspense fallback={<div className="admin-loading">Loading partner portal...</div>}><PartnerPortal /></Suspense>
+        <Suspense fallback={<div className="admin-loading">Loading partner portal...</div>}><PartnershipPortal /></Suspense>
         <MobileRadialNav />
       </>
     );
-  }
-
-  if (isWorkshopDetailRoute) {
-    return (
+  } else if (isWorkshopDetailRoute) {
+    routeContent = (
       <>
         <Suspense fallback={<div className="admin-loading">Loading workshop...</div>}><WorkshopDetail /></Suspense>
         <MobileRadialNav />
       </>
     );
-  }
-
-  return (
+  } else {
+    routeContent = (
     <div ref={appRef} className="min-h-screen overflow-hidden bg-[#F7FBFF] text-[#081B33]">
       <Navbar />
       <main>
@@ -1307,6 +1309,13 @@ function App() {
         </button>
       )}
     </div>
+    );
+  }
+
+  return (
+    <>
+      {routeContent}
+    </>
   );
 }
 

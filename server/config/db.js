@@ -65,8 +65,7 @@ const getDatabaseConfig = () => {
     enableKeepAlive: true,
     keepAliveInitialDelay: 0,
     ssl: {
-      minVersion: 'TLSv1.2',
-      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === 'true',
+      rejectUnauthorized: false,
     },
   };
 };

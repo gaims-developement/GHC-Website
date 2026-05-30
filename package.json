@@ -4,6 +4,7 @@
   "private": true,
   "description": "Global Healthcare Conclave full-stack website",
   "scripts": {
+    "dev": "node scripts/dev.js",
     "client": "cd client && npm run dev",
     "server": "cd server && nodemon server.js",
     "build": "cd client && npm run build",

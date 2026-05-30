@@ -1,4 +1,6 @@
 import { ArrowLeft, ArrowRight, BarChart3, Building2, Crown, Download, Globe2, Medal, Mic, Star, Users, Megaphone, Activity } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import PartnershipReveal from "../components/PartnershipReveal";
 
 const stats = [
   ["5,000+", "Delegates"],
@@ -69,14 +71,22 @@ const testimonials = [
 ];
 
 export default function PartnerPortal() {
+  const shouldReduceMotion = useReducedMotion();
+  const itemReveal = {
+    hidden: shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 42, filter: "blur(8px)" },
+    visible: shouldReduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: "blur(0px)" },
+  };
+  const revealTransition = { duration: shouldReduceMotion ? 0.1 : 1.02, ease: [0.22, 1, 0.36, 1] };
+
   return (
+    <PartnershipReveal>
     <main className="partner-page">
       <div className="partner-topbar">
         <a href="/"><ArrowLeft className="h-4 w-4" />Back to Home</a>
         <a href="/partner-login">Partner Login</a>
       </div>
 
-      <section className="partner-hero">
+      <motion.section className="partner-hero" initial="hidden" animate="visible" variants={itemReveal} transition={revealTransition}>
         <span className="partner-badge">Exclusive Partnership Programme - 2026</span>
         <h1>Partner With<br />Global Healthcare<br /><em>Conclave 2026</em></h1>
         <p>Join 60+ leading organisations reaching 5,000 delegates across 40+ countries.</p>
@@ -84,34 +94,34 @@ export default function PartnerPortal() {
           <a href="mailto:partners@ghc2026.com" className="partner-primary">Apply Now <ArrowRight className="h-4 w-4" /></a>
           <a href="/templates/ghc-partnership-brochure.txt" download className="partner-secondary"><Download className="h-4 w-4" />Download Brochure</a>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="partner-stats-strip">
+      <motion.section className="partner-stats-strip" initial="hidden" animate="visible" transition={{ staggerChildren: shouldReduceMotion ? 0 : 0.11, delayChildren: shouldReduceMotion ? 0 : 0.24 }}>
         {stats.map(([value, label]) => (
-          <div key={label}><strong>{value}</strong><span>{label}</span></div>
+          <motion.div key={label} variants={itemReveal} transition={revealTransition}><strong>{value}</strong><span>{label}</span></motion.div>
         ))}
-      </section>
+      </motion.section>
 
       <section className="partner-section">
         <h2>Why Partner With Us</h2>
-        <div className="partner-perks-grid">
+        <motion.div className="partner-perks-grid" initial="hidden" animate="visible" transition={{ staggerChildren: shouldReduceMotion ? 0 : 0.1, delayChildren: shouldReduceMotion ? 0 : 0.36 }}>
           {perks.map(([Icon, title, text]) => (
-            <article key={title} className="partner-perk-card">
+            <motion.article key={title} className="partner-perk-card" variants={itemReveal} transition={revealTransition}>
               <span><Icon className="h-4 w-4" /></span>
               <h3>{title}</h3>
               <p>{text}</p>
-            </article>
+            </motion.article>
           ))}
-        </div>
+        </motion.div>
       </section>
 
       <section className="partner-section">
         <h2>Partnership Tiers</h2>
-        <div className="partner-tier-stack">
+        <motion.div className="partner-tier-stack" initial="hidden" animate="visible" transition={{ staggerChildren: shouldReduceMotion ? 0 : 0.12, delayChildren: shouldReduceMotion ? 0 : 0.48 }}>
           {tiers.map((tier) => {
             const Icon = tier.icon;
             return (
-              <article key={tier.name} className={`partner-tier-card ${tier.tone}`}>
+              <motion.article key={tier.name} className={`partner-tier-card ${tier.tone}`} variants={itemReveal} transition={revealTransition}>
                 {tier.badge && <span className="tier-badge">{tier.badge}</span>}
                 <span className="tier-icon"><Icon className="h-4 w-4" /></span>
                 <h3>{tier.name}</h3>
@@ -120,26 +130,26 @@ export default function PartnerPortal() {
                   {tier.perks.map((perk) => <li key={perk}>{perk}</li>)}
                 </ul>
                 <a href="mailto:partners@ghc2026.com">{tier.cta} <ArrowRight className="h-4 w-4" /></a>
-              </article>
+              </motion.article>
             );
           })}
-        </div>
+        </motion.div>
       </section>
 
       <section className="partner-section">
         <h2>Trusted By</h2>
-        <div className="partner-testimonials">
+        <motion.div className="partner-testimonials" initial="hidden" animate="visible" transition={{ staggerChildren: shouldReduceMotion ? 0 : 0.1, delayChildren: shouldReduceMotion ? 0 : 0.58 }}>
           {testimonials.map(([quote, name, role, initials]) => (
-            <article key={name}>
+            <motion.article key={name} variants={itemReveal} transition={revealTransition}>
               <b>"</b>
               <p>{quote}</p>
               <div>
                 <span>{initials}</span>
                 <div><strong>{name}</strong><small>{role}</small></div>
               </div>
-            </article>
+            </motion.article>
           ))}
-        </div>
+        </motion.div>
       </section>
 
       <section className="partner-footer-cta">
@@ -150,5 +160,6 @@ export default function PartnerPortal() {
         <small>Questions? Contact us at <a href="mailto:partners@ghc2026.com">partners@ghc2026.com</a></small>
       </section>
     </main>
+    </PartnershipReveal>
   );
 }
