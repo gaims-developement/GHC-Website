@@ -1,5 +1,30 @@
 const PaymentService = require('../services/paymentService');
 const asyncHandler = require('../utils/asyncHandler');
+const Stripe = require('stripe');
+
+const createPaymentIntent = asyncHandler(async (req, res) => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    return res.status(503).json({ message: 'Stripe secret key is not configured' });
+  }
+
+  const amount = Number(req.body.amount);
+  const currency = String(req.body.currency || 'usd').toLowerCase();
+
+  if (!Number.isInteger(amount) || amount < 50) {
+    return res.status(400).json({ message: 'Amount must be an integer of at least 50 cents' });
+  }
+
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount,
+    currency,
+    automatic_payment_methods: {
+      enabled: true,
+    },
+  });
+
+  res.json({ clientSecret: paymentIntent.client_secret });
+});
 
 const createOrder = asyncHandler(async (req, res) => {
   const result = await PaymentService.createOrder({
@@ -71,6 +96,7 @@ const getTicket = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  createPaymentIntent,
   createOrder,
   getInvoice,
   getTicket,

@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const {
+  createPaymentIntent,
   createOrder,
   getInvoice,
   getTicket,
@@ -12,6 +13,7 @@ const { requireAuth, requireRole } = require('../middleware/authMiddleware');
 
 const canManagePayments = requireRole('SUPER_ADMIN', 'ADMIN');
 
+router.post('/create-payment-intent', createPaymentIntent);
 router.post('/payments/create-order', createOrder);
 router.post('/payments/verify', verifyPayment);
 router.get('/payments/:id/invoice', getInvoice);
