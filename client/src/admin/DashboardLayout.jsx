@@ -4,6 +4,7 @@ import {
   FlaskConical,
   Handshake,
   Image,
+  Film,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -46,6 +47,7 @@ const navItems = [
   { id: "launch", label: "Launch", icon: Rocket, roles: operationsAccess, keywords: ["checklist", "go live", "deploy"] },
   { id: "partners", label: "Partners", icon: Handshake, roles: fullAccess, keywords: ["sponsors", "partnerships"] },
   { id: "media", label: "Media", icon: Image, roles: fullAccess, keywords: ["images", "uploads", "gallery"] },
+  { id: "trailer", label: "Trailer", icon: Film, roles: fullAccess, keywords: ["video", "homepage", "watch"] },
   { id: "users", label: "Users", icon: Users, roles: fullAccess, keywords: ["admins", "roles", "accounts"] },
   { id: "settings", label: "Settings", icon: Settings, roles: fullAccess, keywords: ["configuration", "preferences", "setup"] },
 ];

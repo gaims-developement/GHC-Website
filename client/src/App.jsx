@@ -302,6 +302,11 @@ function AnimatedTrackHeading({ onComplete }) {
 }
 
 function Hero() {
+  const scrollToTrailer = (event) => {
+    event.preventDefault();
+    document.getElementById("watch-vision")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
   return (
     <section id="home" className="hero-section reveal-section">
       <ParticleField />
@@ -330,7 +335,7 @@ function Hero() {
             <a href="/register" className="hero-button-primary">Register Now <ArrowRight className="h-4 w-4" /></a>
             <a href="/abstract-registration" className="hero-button-secondary">Submit Abstract <FileText className="h-4 w-4" /></a>
             <PartnerCTAButton href="#partner-marquee" variant="hero">Become Partner <BadgeCheck className="h-4 w-4" /></PartnerCTAButton>
-            <a href="#gallery" className="hero-button-secondary">Watch Trailer <Play className="h-4 w-4" /></a>
+            <a href="#watch-vision" className="hero-button-secondary" onClick={scrollToTrailer}>Watch Trailer <Play className="h-4 w-4" /></a>
           </motion.div>
         </div>
 
@@ -357,6 +362,62 @@ function Hero() {
           />
         </svg>
       </div>
+    </section>
+  );
+}
+
+function WatchVision() {
+  const [trailer, setTrailer] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    axios
+      .get(apiUrl("/api/trailer"))
+      .then((response) => {
+        if (active) setTrailer(response.data.trailer || null);
+      })
+      .catch(() => {
+        if (active) setError("Trailer is being prepared. Please check back soon.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const title = trailer?.title || "Watch the Vision";
+  const description = trailer?.description || "Discover the vision behind Global Health Conclave and our mission to advance healthcare beyond boundaries.";
+  const hasVideo = Boolean(trailer?.videoUrl);
+
+  return (
+    <section id="watch-vision" className="watch-vision-section section-shell reveal-section">
+      <SectionHeading eyebrow="Featured Video" title={title} text={description} />
+
+      <motion.div
+        className="vision-video-card"
+        initial={{ opacity: 0, y: 34 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.72, ease: "easeOut" }}
+        viewport={{ once: true, amount: 0.25 }}
+      >
+        {loading ? (
+          <div className="vision-video-frame vision-video-fallback">Loading trailer...</div>
+        ) : hasVideo ? (
+          <div className="vision-video-frame">
+            <video src={trailer.videoUrl} poster={trailer.thumbnailUrl || undefined} controls preload="metadata" />
+          </div>
+        ) : (
+          <div className="vision-video-frame vision-video-fallback">
+            <Play className="h-9 w-9" />
+            <span>{error || "The Global Health Conclave trailer will be available soon."}</span>
+          </div>
+        )}
+      </motion.div>
     </section>
   );
 }
@@ -1285,6 +1346,7 @@ function App() {
       <Navbar />
       <main>
         <Hero />
+        <WatchVision />
         <StatsStrip />
         <About />
         <Mosaic />

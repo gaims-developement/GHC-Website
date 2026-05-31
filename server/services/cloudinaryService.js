@@ -7,16 +7,22 @@ const folderMap = {
   partners: 'ghc/partners',
   gallery: 'ghc/gallery',
   certificates: 'ghc/certificates',
+  trailer: 'ghc/trailer',
 };
 
-const uploadToCloudinary = async (filePath, folder = 'ghc') => {
-  const result = await cloudinary.uploader.upload(filePath, {
+const uploadToCloudinary = async (filePath, folder = 'ghc', options = {}) => {
+  const uploadOptions = {
     folder: folderMap[folder] || folder,
-    resource_type: 'auto',
+    resource_type: options.resourceType || 'auto',
     quality: 'auto',
     fetch_format: 'auto',
-    transformation: [{ width: 1600, crop: 'limit' }],
-  });
+  };
+
+  if (options.transform !== false) {
+    uploadOptions.transformation = [{ width: 1600, crop: 'limit' }];
+  }
+
+  const result = await cloudinary.uploader.upload(filePath, uploadOptions);
 
   await fs.unlink(filePath).catch(() => {});
   return result;

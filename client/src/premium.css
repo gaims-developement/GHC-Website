@@ -946,6 +946,85 @@ button {
   line-height: 1.8;
 }
 
+.watch-vision-section {
+  display: grid;
+  gap: 2rem;
+  padding-top: 5rem;
+  padding-bottom: 5.5rem;
+}
+
+.watch-vision-section .section-heading {
+  max-width: 50rem;
+  margin-inline: auto;
+  text-align: center;
+}
+
+.vision-video-card {
+  position: relative;
+  width: min(100%, 68rem);
+  margin-inline: auto;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 1.35rem;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.045)),
+    rgba(8, 27, 51, 0.82);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.32), 0 0 44px rgba(79, 195, 247, 0.1);
+  padding: clamp(0.65rem, 1.5vw, 1rem);
+  backdrop-filter: blur(22px);
+}
+
+.vision-video-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: #061528;
+}
+
+.vision-video-frame iframe,
+.vision-video-frame video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: cover;
+}
+
+.vision-video-fallback {
+  display: grid;
+  place-items: center;
+  gap: 0.85rem;
+  color: rgba(240, 249, 255, 0.68);
+  font-weight: 800;
+  text-align: center;
+}
+
+.vision-video-fallback svg {
+  color: #f5b942;
+}
+
+@media (max-width: 860px) {
+  .watch-vision-section {
+    gap: 1.5rem;
+    padding-top: 4rem;
+    padding-bottom: 4.5rem;
+  }
+}
+
+@media (max-width: 560px) {
+  .vision-video-card {
+    border-radius: 1rem;
+    padding: 0.45rem;
+  }
+
+  .vision-video-frame {
+    border-radius: 0.85rem;
+  }
+}
+
 .asym-grid {
   display: grid;
   gap: 2rem;

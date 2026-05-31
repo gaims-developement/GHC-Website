@@ -13,6 +13,7 @@ import AdminPartners from "./pages/AdminPartners";
 import Payments from "./pages/Payments";
 import Analytics from "./pages/Analytics";
 import AdminMedia from "./pages/AdminMedia";
+import AdminTrailer from "./pages/AdminTrailer";
 import Checkin from "./pages/Checkin";
 import Certificates from "./pages/Certificates";
 import Operations from "./pages/Operations";
@@ -45,6 +46,7 @@ const pages = {
   payments: Payments,
   partners: AdminPartners,
   media: AdminMedia,
+  trailer: AdminTrailer,
   analytics: Analytics,
   checkin: Checkin,
   certificates: Certificates,

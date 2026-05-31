@@ -1064,6 +1064,70 @@
   font-weight: 800;
 }
 
+.admin-trailer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(22rem, 0.8fr);
+  gap: 1rem;
+}
+
+.trailer-preview-panel,
+.trailer-form-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-trailer-preview {
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1rem;
+  background: rgba(2, 8, 23, 0.75);
+}
+
+.admin-trailer-preview video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #020817;
+}
+
+.trailer-form-panel label {
+  display: grid;
+  gap: 0.45rem;
+  color: rgba(226, 232, 240, 0.72);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.trailer-form-panel input,
+.trailer-form-panel textarea {
+  width: 100%;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 0.85rem;
+  outline: 0;
+  background: rgba(15, 23, 42, 0.72);
+  color: #f8fafc;
+  padding: 0.85rem 0.95rem;
+}
+
+.admin-danger-button,
+.admin-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #e2e8f0;
+  padding: 0.72rem 1rem;
+  font-weight: 900;
+}
+
+.admin-danger-button {
+  border-color: rgba(248, 113, 113, 0.26);
+  color: #fecaca;
+}
+
 .admin-settings-page,
 .settings-form-grid,
 .settings-section {
@@ -1714,6 +1778,7 @@
   .payment-kpi-grid,
   .payment-card-grid,
   .media-gallery,
+  .admin-trailer-grid,
   .settings-form-grid,
   .ops-kpi-grid,
   .ops-chart-grid,
