@@ -3,11 +3,14 @@ const {
   checkInRegistration,
   createRegistration,
   createTicket,
+  deleteTicket,
   exportRegistrationsCsv,
   exportRegistrationsExcel,
   getRegistration,
+  listAdminTickets,
   listRegistrations,
   listTickets,
+  updateTicket,
   updateRegistrationStatus,
 } = require('../controllers/registrationController');
 const { requireAuth, requireRole } = require('../middleware/authMiddleware');
@@ -22,7 +25,10 @@ router.get('/register/export.xls', requireAuth, canManageRegistrations, exportRe
 router.get('/register/:id', requireAuth, canManageRegistrations, getRegistration);
 router.patch('/register/:id/status', requireAuth, canManageRegistrations, updateRegistrationStatus);
 router.patch('/register/:id/checkin', requireAuth, canManageRegistrations, checkInRegistration);
+router.get('/tickets/admin', requireAuth, canManageTickets, listAdminTickets);
 router.get('/tickets', listTickets);
 router.post('/tickets', requireAuth, canManageTickets, createTicket);
+router.put('/tickets/:id', requireAuth, canManageTickets, updateTicket);
+router.delete('/tickets/:id', requireAuth, canManageTickets, deleteTicket);
 
 module.exports = router;

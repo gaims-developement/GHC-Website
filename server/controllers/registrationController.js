@@ -26,6 +26,17 @@ const validateRegistration = (payload) => {
   return null;
 };
 
+const validateTicket = (payload) => {
+  if (!payload.name?.trim()) return 'Ticket name is required';
+  if (Number(payload.price || 0) < 0) return 'Ticket price cannot be negative';
+  if (Number(payload.capacity || 0) < 0) return 'Ticket capacity cannot be negative';
+  if (payload.remaining !== undefined && Number(payload.remaining || 0) < 0) return 'Remaining capacity cannot be negative';
+  if (payload.remaining !== undefined && Number(payload.remaining || 0) > Number(payload.capacity || 0)) {
+    return 'Remaining capacity cannot exceed total capacity';
+  }
+  return null;
+};
+
 const listRegistrations = asyncHandler(async (req, res) => {
   const registrations = await Registration.listRegistrations({
     limit: req.query.limit || 50,
@@ -89,10 +100,34 @@ const listTickets = asyncHandler(async (_req, res) => {
   res.json({ tickets });
 });
 
+const listAdminTickets = asyncHandler(async (_req, res) => {
+  const tickets = await Registration.listTickets({ includeInactive: true });
+  res.json({ tickets });
+});
+
 const createTicket = asyncHandler(async (req, res) => {
-  if (!req.body.name) return res.status(400).json({ message: 'Ticket name is required' });
+  const validationError = validateTicket(req.body);
+  if (validationError) return res.status(400).json({ message: validationError });
   const ticket = await Registration.createTicket(req.body);
   return res.status(201).json({ ticket });
+});
+
+const updateTicket = asyncHandler(async (req, res) => {
+  const existing = await Registration.findTicketById(req.params.id);
+  if (!existing) return res.status(404).json({ message: 'Ticket not found' });
+
+  const payload = { ...existing, ...req.body };
+  const validationError = validateTicket(payload);
+  if (validationError) return res.status(400).json({ message: validationError });
+
+  const ticket = await Registration.updateTicket(req.params.id, payload);
+  return res.json({ ticket });
+});
+
+const deleteTicket = asyncHandler(async (req, res) => {
+  const deleted = await Registration.deleteTicket(req.params.id);
+  if (!deleted) return res.status(404).json({ message: 'Ticket not found' });
+  return res.json({ message: 'Ticket deleted' });
 });
 
 const exportRegistrationsCsv = asyncHandler(async (_req, res) => {
@@ -155,7 +190,10 @@ module.exports = {
   exportRegistrationsExcel,
   exportRegistrationsCsv,
   getRegistration,
+  deleteTicket,
+  listAdminTickets,
   listRegistrations,
   listTickets,
+  updateTicket,
   updateRegistrationStatus,
 };

@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { ArrowLeft, ArrowRight, CheckCircle2, TicketPercent } from "lucide-react";
 import { apiUrl } from "../config/api";
-import { getWorkshopById, loadWorkshops, normalizeWorkshop, saveWorkshops } from "../data/workshops";
+import { getWorkshopById, normalizeWorkshop } from "../data/workshops";
 
 export default function WorkshopRegister() {
   const { id } = useParams();
@@ -44,10 +44,6 @@ export default function WorkshopRegister() {
       createdAt: new Date().toISOString(),
     };
     localStorage.setItem("ghc_workshop_registrations", JSON.stringify([registration, ...registrations]));
-    saveWorkshops(loadWorkshops().map((item) => String(item.id) === String(id) ? {
-      ...item,
-      seats: { ...item.seats, filled: Math.min(Number(item.seats.total || 0), Number(item.seats.filled || 0) + 1) },
-    } : item));
     setPaid(true);
   };
 

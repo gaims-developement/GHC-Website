@@ -161,6 +161,47 @@ const createWorkshopTables = async () => {
   `);
 };
 
+const createPartnerTables = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS partners (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      name VARCHAR(255) NOT NULL,
+      logo TEXT,
+      website TEXT,
+      tier VARCHAR(100),
+      display_order INT DEFAULT 0,
+      active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+};
+
+const createMediaTables = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS media_assets (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      filename VARCHAR(255),
+      original_name VARCHAR(255),
+      url TEXT NOT NULL,
+      public_id VARCHAR(255),
+      resource_type VARCHAR(50),
+      file_type VARCHAR(100),
+      size_bytes INT DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+};
+
+const createSettingsTables = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      setting_key VARCHAR(100) PRIMARY KEY,
+      setting_value JSON NOT NULL,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+};
+
 const createResearchTables = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS abstracts (
@@ -456,6 +497,9 @@ const initializeDatabase = async () => {
     await createAuthTables();
     await createSpeakerTables();
     await createWorkshopTables();
+    await createPartnerTables();
+    await createMediaTables();
+    await createSettingsTables();
     await createResearchTables();
     await createRegistrationTables();
     await createPaymentTables();
@@ -466,7 +510,7 @@ const initializeDatabase = async () => {
     await seedResearch();
     await seedTickets();
     await seedCoupons();
-    console.log('Auth, speaker, workshop, research, registration and payment schema ready; default data seeded');
+    console.log('Auth, speaker, workshop, partner, media, settings, research, registration and payment schema ready; default data seeded');
   } catch (error) {
     console.warn(`Auth schema setup skipped: ${error.message}`);
   }
@@ -477,6 +521,9 @@ module.exports = {
   createAuthTables,
   createSpeakerTables,
   createWorkshopTables,
+  createPartnerTables,
+  createMediaTables,
+  createSettingsTables,
   createResearchTables,
   createRegistrationTables,
   createPaymentTables,

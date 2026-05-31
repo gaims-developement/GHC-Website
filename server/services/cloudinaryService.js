@@ -4,6 +4,7 @@ const cloudinary = require('../config/cloudinary');
 const folderMap = {
   speakers: 'ghc/speakers',
   workshops: 'ghc/workshops',
+  partners: 'ghc/partners',
   gallery: 'ghc/gallery',
   certificates: 'ghc/certificates',
 };
@@ -21,4 +22,9 @@ const uploadToCloudinary = async (filePath, folder = 'ghc') => {
   return result;
 };
 
-module.exports = { uploadToCloudinary };
+const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
+  if (!publicId) return null;
+  return cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+};
+
+module.exports = { deleteFromCloudinary, uploadToCloudinary };

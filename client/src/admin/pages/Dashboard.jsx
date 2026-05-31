@@ -1,5 +1,5 @@
 import { Activity, Award, Banknote, CalendarClock, FileText, Gauge, Mic2, QrCode, Star, TicketCheck, Users, Wrench } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 const activities = [
   "Speaker CMS module enabled",
@@ -15,48 +15,98 @@ const activities = [
   "Workshop RBAC includes SUPER_ADMIN, ADMIN, MEDIA and RESEARCH",
 ];
 
+const emptySpeakerStats = { total: 0, featured: 0, keynotes: 0, drafts: 0 };
+const emptyWorkshopStats = { upcoming: 0, seatsRemaining: 0, popularWorkshops: 0, occupancy: 0 };
+const emptyResearchStats = { total: 0, underReview: 0, accepted: 0, rejected: 0, awardNominees: 0 };
+const emptyRegistrationStats = { total: 0, paid: 0, pending: 0, attendance: 0, revenue: 0 };
+const emptyPaymentStats = { revenue: 0, paid: 0, refunds: 0, pending: 0 };
+
+const formatNumber = (value) => Number(value || 0).toLocaleString("en-US");
+const formatRevenue = (value) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
+
 function Dashboard({ user, api }) {
-  const [speakerStats, setSpeakerStats] = useState({ total: 0, featured: 0, keynotes: 0, drafts: 0 });
-  const [workshopStats, setWorkshopStats] = useState({ upcoming: 0, seatsRemaining: 0, popularWorkshops: 0, occupancy: 0 });
-  const [researchStats, setResearchStats] = useState({ total: 0, underReview: 0, accepted: 0, rejected: 0, awardNominees: 0 });
-  const [registrationStats, setRegistrationStats] = useState({ total: 0, paid: 0, pending: 0, attendance: 0, revenue: 0 });
+  const [speakerStats, setSpeakerStats] = useState(emptySpeakerStats);
+  const [workshopStats, setWorkshopStats] = useState(emptyWorkshopStats);
+  const [researchStats, setResearchStats] = useState(emptyResearchStats);
+  const [registrationStats, setRegistrationStats] = useState(emptyRegistrationStats);
+  const [paymentStats, setPaymentStats] = useState(emptyPaymentStats);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
-    api.get("/api/speakers/stats").then((response) => {
-      setSpeakerStats(response.data.stats || { total: 0, featured: 0, keynotes: 0, drafts: 0 });
-    }).catch(() => {});
+  const loadDashboardStats = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
+    setError("");
 
-    api.get("/api/workshops/stats").then((response) => {
-      setWorkshopStats(response.data.stats || { upcoming: 0, seatsRemaining: 0, popularWorkshops: 0, occupancy: 0 });
-    }).catch(() => {});
+    const [
+      speakersResult,
+      workshopsResult,
+      researchResult,
+      registrationsResult,
+      paymentsResult,
+    ] = await Promise.allSettled([
+      api.get("/api/speakers/stats"),
+      api.get("/api/workshops/stats"),
+      api.get("/api/research/stats"),
+      api.get("/api/register?limit=1&offset=0"),
+      api.get("/api/payments"),
+    ]);
 
-    api.get("/api/research/stats").then((response) => {
-      setResearchStats(response.data.stats || { total: 0, underReview: 0, accepted: 0, rejected: 0, awardNominees: 0 });
-    }).catch(() => {});
+    if (speakersResult.status === "fulfilled") {
+      setSpeakerStats(speakersResult.value.data.stats || emptySpeakerStats);
+    }
+    if (workshopsResult.status === "fulfilled") {
+      setWorkshopStats(workshopsResult.value.data.stats || emptyWorkshopStats);
+    }
+    if (researchResult.status === "fulfilled") {
+      setResearchStats(researchResult.value.data.stats || emptyResearchStats);
+    }
+    if (registrationsResult.status === "fulfilled") {
+      setRegistrationStats(registrationsResult.value.data.stats || emptyRegistrationStats);
+    }
+    if (paymentsResult.status === "fulfilled") {
+      setPaymentStats(paymentsResult.value.data.stats || emptyPaymentStats);
+    }
 
-    api.get("/api/register?limit=1&offset=0").then((response) => {
-      setRegistrationStats(response.data.stats || { total: 0, paid: 0, pending: 0, attendance: 0, revenue: 0 });
-    }).catch(() => {});
+    const failed = [speakersResult, workshopsResult, researchResult, registrationsResult, paymentsResult]
+      .some((result) => result.status === "rejected");
+
+    if (failed) {
+      setError("Some dashboard metrics could not be refreshed. Showing the latest available values.");
+    }
+    setLoading(false);
   }, [api]);
 
+  useEffect(() => {
+    loadDashboardStats();
+    const refreshTimer = setInterval(() => loadDashboardStats({ silent: true }), 30000);
+    return () => clearInterval(refreshTimer);
+  }, [loadDashboardStats]);
+
+  const metricValue = (value, formatter = formatNumber) => (loading ? "..." : formatter(value));
+
   const kpis = [
-    { label: "Delegates", value: "2,000+", icon: Users },
-    { label: "Abstracts", value: "420", icon: FileText },
-    { label: "Total speakers", value: speakerStats.total || 0, icon: Mic2 },
-    { label: "Featured speakers", value: speakerStats.featured || 0, icon: Star },
-    { label: "Keynotes", value: speakerStats.keynotes || 0, icon: Activity },
-    { label: "Drafts", value: speakerStats.drafts || 0, icon: FileText },
-    { label: "Workshops", value: workshopStats.upcoming || 0, icon: Wrench },
-    { label: "Seats remaining", value: workshopStats.seatsRemaining || 0, icon: TicketCheck },
-    { label: "Popular workshops", value: workshopStats.popularWorkshops || 0, icon: CalendarClock },
-    { label: "Occupancy", value: `${workshopStats.occupancy || 0}%`, icon: Gauge },
-    { label: "Research submissions", value: researchStats.total || 0, icon: FileText },
-    { label: "Under review", value: researchStats.underReview || 0, icon: Activity },
-    { label: "Accepted abstracts", value: researchStats.accepted || 0, icon: Star },
-    { label: "Award nominees", value: researchStats.awardNominees || 0, icon: Award },
-    { label: "Registrations", value: registrationStats.total || 0, icon: QrCode },
-    { label: "Checked in", value: registrationStats.attendance || 0, icon: TicketCheck },
-    { label: "Revenue", value: "INR 18L", icon: Banknote },
+    { label: "Delegates", value: metricValue(registrationStats.total), icon: Users },
+    { label: "Abstracts", value: metricValue(researchStats.total), icon: FileText },
+    { label: "Total speakers", value: metricValue(speakerStats.total), icon: Mic2 },
+    { label: "Featured speakers", value: metricValue(speakerStats.featured), icon: Star },
+    { label: "Keynotes", value: metricValue(speakerStats.keynotes), icon: Activity },
+    { label: "Drafts", value: metricValue(speakerStats.drafts), icon: FileText },
+    { label: "Workshops", value: metricValue(workshopStats.upcoming), icon: Wrench },
+    { label: "Seats remaining", value: metricValue(workshopStats.seatsRemaining), icon: TicketCheck },
+    { label: "Popular workshops", value: metricValue(workshopStats.popularWorkshops), icon: CalendarClock },
+    { label: "Occupancy", value: loading ? "..." : `${workshopStats.occupancy || 0}%`, icon: Gauge },
+    { label: "Research submissions", value: metricValue(researchStats.total), icon: FileText },
+    { label: "Under review", value: metricValue(researchStats.underReview), icon: Activity },
+    { label: "Accepted abstracts", value: metricValue(researchStats.accepted), icon: Star },
+    { label: "Award nominees", value: metricValue(researchStats.awardNominees), icon: Award },
+    { label: "Registrations", value: metricValue(registrationStats.total), icon: QrCode },
+    { label: "Checked in", value: metricValue(registrationStats.attendance), icon: TicketCheck },
+    { label: "Revenue", value: metricValue(paymentStats.revenue, formatRevenue), icon: Banknote },
   ];
 
   return (
@@ -66,6 +116,8 @@ function Dashboard({ user, api }) {
         <h1>Welcome back, {user.name}</h1>
         <p className="admin-muted">GHC CMS Phase 2A is live with authentication, roles, permissions and the admin shell.</p>
       </section>
+
+      {error && <div className="admin-error">{error}</div>}
 
       <section className="admin-kpi-grid">
         {kpis.map((kpi) => {

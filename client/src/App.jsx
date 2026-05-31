@@ -55,7 +55,6 @@ const AbstractRegister = lazy(() => import("./pages/AbstractRegister"));
 const PartnershipPortal = lazy(() => import("./pages/PartnershipPortal"));
 const WorkshopDetail = lazy(() => import("./pages/WorkshopDetail"));
 const WorkshopRegister = lazy(() => import("./pages/WorkshopRegister"));
-const AdminWorkshops = lazy(() => import("./pages/AdminWorkshops"));
 const GooglePayTest = lazy(() => import("./pages/GooglePayTest"));
 
 const navLinks = [
@@ -1106,7 +1105,7 @@ function App() {
   const appRef = useRef(null);
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith("/admin");
-  const isAdminWorkshopsRoute = location.pathname === "/admin/workshops";
+  const isWorkshopCmsRoute = location.pathname === "/admin/workshops";
   const isWorkshopRegisterRoute = location.pathname.startsWith("/register/workshop/");
   const isRegisterRoute = location.pathname.startsWith("/register");
   const isAbstractRoute = location.pathname.startsWith("/abstract-registration");
@@ -1117,7 +1116,7 @@ function App() {
 
   useEffect(() => {
     setPageSeo({
-      title: isGooglePayTestRoute ? "Google Pay Test" : isWorkshopRegisterRoute ? "Workshop Registration" : isAdminWorkshopsRoute ? "Workshop Manager" : isWorkshopDetailRoute ? "Workshop Details" : isPartnerRoute ? "Partner Portal" : isAbstractRoute ? "Abstract Registration" : isRegisterRoute ? "Register" : isAdminRoute ? "Admin" : "Global Healthcare Conclave 2026",
+      title: isGooglePayTestRoute ? "Google Pay Test" : isWorkshopRegisterRoute ? "Workshop Registration" : isWorkshopCmsRoute ? "Workshop Manager" : isWorkshopDetailRoute ? "Workshop Details" : isPartnerRoute ? "Partner Portal" : isAbstractRoute ? "Abstract Registration" : isRegisterRoute ? "Register" : isAdminRoute ? "Admin" : "Global Healthcare Conclave 2026",
       description: isWorkshopDetailRoute
         ? "Workshop details for Global Healthcare Conclave 2026."
         : isPartnerRoute
@@ -1127,7 +1126,7 @@ function App() {
         : isRegisterRoute
         ? "Register for Global Healthcare Conclave 2026 with secure ticket checkout."
         : "Global Healthcare Conclave 2026 by GAIMS: speakers, workshops, research, venue, partners and registration.",
-      path: isGooglePayTestRoute ? "/google-pay-test" : isWorkshopRegisterRoute ? location.pathname : isAdminWorkshopsRoute ? "/admin/workshops" : isWorkshopDetailRoute ? location.pathname : isPartnerRoute ? "/partnership" : isAbstractRoute ? "/abstract-registration" : isRegisterRoute ? "/register" : isAdminRoute ? "/admin" : "/",
+      path: isGooglePayTestRoute ? "/google-pay-test" : isWorkshopRegisterRoute ? location.pathname : isWorkshopCmsRoute ? "/admin/workshops" : isWorkshopDetailRoute ? location.pathname : isPartnerRoute ? "/partnership" : isAbstractRoute ? "/abstract-registration" : isRegisterRoute ? "/register" : isAdminRoute ? "/admin" : "/",
       schema: {
         "@context": "https://schema.org",
         "@type": "Event",
@@ -1135,7 +1134,7 @@ function App() {
         organizer: { "@type": "Organization", name: "GAIMS" },
       },
     });
-  }, [isAbstractRoute, isAdminRoute, isAdminWorkshopsRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute, location.pathname]);
+  }, [isAbstractRoute, isAdminRoute, isWorkshopCmsRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute, location.pathname]);
 
   useEffect(() => {
     const handler = (event) => {
@@ -1239,8 +1238,8 @@ function App() {
 
   let routeContent;
 
-  if (isAdminWorkshopsRoute) {
-    routeContent = <Suspense fallback={<div className="admin-loading">Loading workshop manager...</div>}><AdminWorkshops /></Suspense>;
+  if (isWorkshopCmsRoute) {
+    routeContent = <Suspense fallback={<div className="admin-loading">Loading GHC CMS...</div>}><AdminApp initialPage="workshops" /></Suspense>;
   } else if (isGooglePayTestRoute) {
     routeContent = <Suspense fallback={<div className="admin-loading">Loading Google Pay...</div>}><GooglePayTest /></Suspense>;
   } else if (isAdminRoute) {

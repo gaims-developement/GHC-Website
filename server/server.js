@@ -20,6 +20,7 @@ const apiRoutes = require('./routes');
 const authRoutes = require('./routes/authRoutes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { apiLimiter, csrfProtection, sanitizeBody } = require('./middleware/productionMiddleware');
+const { startCronJobs, stopCronJobs } = require('./services/cronService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -66,11 +67,13 @@ const startServer = async () => {
   await initializeDatabase();
   server = app.listen(PORT, () => {
     console.log(`GHC API listening on port ${PORT}`);
+    startCronJobs();
   });
 };
 
 const shutdown = async (signal) => {
   console.log(`${signal} received. Closing server and database pool...`);
+  stopCronJobs();
   if (!server) {
     try {
       await closePool();

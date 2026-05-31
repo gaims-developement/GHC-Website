@@ -186,28 +186,8 @@ export const normalizeWorkshop = (workshop) => ({
 });
 
 export const loadWorkshops = () => {
-  try {
-    const saved = localStorage.getItem("ghc_workshops");
-    if (!saved) return defaultWorkshops;
-    const parsed = JSON.parse(saved);
-    return Array.isArray(parsed) && parsed.length ? parsed.map(normalizeWorkshop) : defaultWorkshops;
-  } catch {
-    return defaultWorkshops;
-  }
-};
-
-export const saveWorkshops = (workshops) => {
-  const normalized = workshops.map(normalizeWorkshop);
-  localStorage.setItem("ghc_workshops", JSON.stringify(normalized));
-  normalized.forEach((workshop) => localStorage.setItem(`ghc_workshop_${workshop.id}`, JSON.stringify(workshop)));
-  return normalized;
+  return defaultWorkshops.map(normalizeWorkshop);
 };
 
 export const getWorkshopById = (id) => loadWorkshops().find((workshop) => String(workshop.id) === String(id));
 export const getWorkshopBySlug = (slug) => loadWorkshops().find((workshop) => workshop.slug === slug || String(workshop.id) === String(slug));
-
-export const deleteWorkshopById = (id) => {
-  const next = loadWorkshops().filter((workshop) => workshop.id !== id);
-  localStorage.removeItem(`ghc_workshop_${id}`);
-  return saveWorkshops(next);
-};

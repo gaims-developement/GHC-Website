@@ -62,6 +62,41 @@ const createTicket = async (data) => {
   return findTicketById(result.insertId);
 };
 
+const updateTicket = async (id, data) => {
+  const existing = await findTicketById(id);
+  if (!existing) return null;
+
+  const nextCapacity = Number(data.capacity ?? existing.capacity ?? 0);
+  const sold = Math.max(Number(existing.capacity || 0) - Number(existing.remaining || 0), 0);
+  const nextRemaining = data.remaining === undefined
+    ? Math.max(nextCapacity - sold, 0)
+    : Math.min(Number(data.remaining || 0), nextCapacity);
+
+  await pool.query(
+    `UPDATE ticket_types
+     SET name = ?, description = ?, price = ?, currency = ?, capacity = ?, remaining = ?, featured = ?, active = ?
+     WHERE id = ?`,
+    [
+      data.name ?? existing.name,
+      data.description ?? existing.description,
+      Number(data.price ?? existing.price ?? 0),
+      data.currency || existing.currency || 'INR',
+      nextCapacity,
+      nextRemaining,
+      data.featured === undefined ? existing.featured : Boolean(data.featured),
+      data.active === undefined ? existing.active : Boolean(data.active),
+      id,
+    ]
+  );
+
+  return findTicketById(id);
+};
+
+const deleteTicket = async (id) => {
+  const [result] = await pool.query('DELETE FROM ticket_types WHERE id = ?', [id]);
+  return result.affectedRows > 0;
+};
+
 const nextRegistrationId = async (connection) => {
   const [rows] = await connection.query('SELECT COUNT(*) AS count FROM registrations');
   return `GHC2026-${String(Number(rows[0].count || 0) + 1).padStart(4, '0')}`;
@@ -176,10 +211,12 @@ module.exports = {
   checkIn,
   createRegistration,
   createTicket,
+  deleteTicket,
   findRegistrationById,
   findTicketById,
   listRegistrations,
   listTickets,
   setStatus,
   stats,
+  updateTicket,
 };

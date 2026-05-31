@@ -1,13 +1,13 @@
-import { Activity, Archive, Cpu, Database, HardDrive, Mail, Server, ShieldCheck } from "lucide-react";
+import { Activity, Archive, Clock, Database, Server } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
-const statusClass = (value) => String(value).includes("ok") || String(value).includes("configured") ? "paid" : "pending";
+const statusClass = (value) => ["healthy", "connected", "production"].includes(String(value).toLowerCase()) ? "paid" : "pending";
 
 function SystemHealth({ api }) {
   const [health, setHealth] = useState(null);
 
   const load = useCallback(() => {
-    api.get("/api/system/health").then((response) => setHealth(response.data)).catch(() => {});
+    api.get("/api/system/health").then((response) => setHealth(response.data)).catch((error) => setHealth(error.response?.data || null));
   }, [api]);
 
   useEffect(() => {
@@ -15,13 +15,10 @@ function SystemHealth({ api }) {
   }, [load]);
 
   const cards = [
-    { label: "DB status", value: health?.db || "checking", icon: Database },
-    { label: "API status", value: health?.api || "checking", icon: Server },
-    { label: "Payment status", value: health?.payment || "checking", icon: ShieldCheck },
-    { label: "SMTP status", value: health?.smtp || "checking", icon: Mail },
-    { label: "Storage", value: health?.storage || "checking", icon: HardDrive },
-    { label: "Memory", value: health ? `${health.memory.usedMb} MB` : "checking", icon: Activity },
-    { label: "CPU", value: health ? `${health.cpu.cores} cores` : "checking", icon: Cpu },
+    { label: "API status", value: health?.status || "checking", icon: Server },
+    { label: "DB status", value: health?.database || "checking", icon: Database },
+    { label: "Environment", value: health?.environment || "checking", icon: Activity },
+    { label: "Uptime", value: health?.uptime || "checking", icon: Clock },
   ];
 
   return (
@@ -31,7 +28,7 @@ function SystemHealth({ api }) {
           <div>
             <p className="admin-eyebrow">Monitoring</p>
             <h1>System Health</h1>
-            <p className="admin-muted">Production readiness checks for API, database, payments, SMTP, storage and server resources.</p>
+            <p className="admin-muted">Lightweight uptime monitor for API availability and database connectivity.</p>
           </div>
           <button className="admin-primary-button" onClick={load}>Refresh</button>
         </div>

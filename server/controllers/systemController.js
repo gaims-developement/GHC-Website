@@ -1,4 +1,3 @@
-const os = require('os');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const { databaseConfig, pool } = require('../config/db');
@@ -6,34 +5,76 @@ const asyncHandler = require('../utils/asyncHandler');
 
 const execFileAsync = promisify(execFile);
 
-const health = asyncHandler(async (_req, res) => {
-  const started = Date.now();
-  let dbStatus = 'down';
-  try {
-    await pool.query('SELECT 1');
-    dbStatus = 'ok';
-  } catch {
-    dbStatus = 'down';
-  }
+const HEALTHCHECK_DB_TIMEOUT_MS = Number(process.env.HEALTHCHECK_DB_TIMEOUT_MS || 2000);
 
-  const smtpStatus = process.env.SMTP_HOST ? 'configured' : 'not configured';
+const formatUptime = (seconds) => {
+  const totalSeconds = Math.floor(seconds);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const remainingSeconds = totalSeconds % 60;
 
-  res.json({
-    db: dbStatus,
-    api: 'ok',
-    payment: process.env.RAZORPAY_KEY_ID ? 'configured' : 'missing keys',
-    smtp: smtpStatus,
-    storage: process.env.CLOUDINARY_NAME ? 'cloudinary configured' : 'local uploads',
-    memory: {
-      usedMb: Math.round(process.memoryUsage().rss / 1024 / 1024),
-      totalMb: Math.round(os.totalmem() / 1024 / 1024),
-    },
-    cpu: {
-      cores: os.cpus().length,
-      load: os.loadavg(),
-    },
-    latencyMs: Date.now() - started,
+  return [
+    hours ? `${hours}h` : null,
+    minutes ? `${minutes}m` : null,
+    `${remainingSeconds}s`,
+  ].filter(Boolean).join(' ');
+};
+
+const queryWithTimeout = (queryPromise, timeoutMs) => {
+  let timeout;
+  const timeoutPromise = new Promise((_, reject) => {
+    timeout = setTimeout(() => reject(new Error(`Database health check timed out after ${timeoutMs}ms`)), timeoutMs);
   });
+
+  return Promise.race([queryPromise, timeoutPromise]).finally(() => clearTimeout(timeout));
+};
+
+/**
+ * Public uptime monitor endpoint.
+ *
+ * Configure external monitors such as UptimeRobot or Better Stack to send an
+ * HTTP GET request to:
+ *   https://<backend-domain>/api/system/health
+ *
+ * Expected behavior:
+ *   - HTTP 200 means the API is up and MySQL answered a lightweight SELECT 1.
+ *   - HTTP 503 means the API process is reachable, but database connectivity failed.
+ *
+ * Keep this endpoint unauthenticated, fast, and lightweight so it can be called
+ * frequently by uptime monitoring and keep-alive services.
+ */
+const health = asyncHandler(async (_req, res) => {
+  try {
+    await queryWithTimeout(
+      pool.query({ sql: 'SELECT 1 AS healthcheck', timeout: HEALTHCHECK_DB_TIMEOUT_MS }),
+      HEALTHCHECK_DB_TIMEOUT_MS
+    );
+
+    return res.status(200).json({
+      status: 'healthy',
+      database: 'connected',
+      timestamp: new Date().toISOString(),
+      uptime: formatUptime(process.uptime()),
+      environment: process.env.NODE_ENV || 'development',
+    });
+  } catch (error) {
+    console.error('System health check failed');
+    console.error({
+      message: error.message,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+    });
+
+    return res.status(503).json({
+      status: 'unhealthy',
+      database: 'disconnected',
+      error: error.message || 'Database health check failed',
+      timestamp: new Date().toISOString(),
+      uptime: formatUptime(process.uptime()),
+      environment: process.env.NODE_ENV || 'development',
+    });
+  }
 });
 
 const exportCsv = asyncHandler(async (_req, res) => {
