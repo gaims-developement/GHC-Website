@@ -1,74 +1,170 @@
 import {
   Bell,
+  BellRing,
+  Archive,
+  BadgeCheck,
+  BadgePercent,
   BriefcaseBusiness,
+  Bus,
+  BarChart3,
+  CalendarClock,
+  CalendarDays,
+  ChartColumn,
+  ClipboardCheck,
+  ClipboardList,
+  CreditCard,
+  Cloud,
+  Database,
+  FileSignature,
+  FileCheck2,
+  FileSpreadsheet,
+  FileText,
+  FolderUp,
+  Film,
   FlaskConical,
   Handshake,
-  Image,
-  Film,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  CreditCard,
-  BarChart3,
-  ClipboardCheck,
-  FileCheck2,
-  RadioTower,
   HeartPulse,
-  Rocket,
+  Hotel,
+  Image,
+  Images,
+  GraduationCap,
+  Home,
+  LayoutDashboard,
+  Layers3,
+  ListChecks,
+  LogOut,
+  Mail,
+  Menu,
+  Megaphone,
+  MessageSquareText,
   Mic2,
+  MapPinned,
+  Microscope,
+  MonitorCheck,
+  Network,
+  Newspaper,
+  PanelsTopLeft,
+  PackageCheck,
+  PenLine,
+  Presentation,
+  RadioTower,
+  Rocket,
   MoreHorizontal,
   QrCode,
   Search,
+  SearchCheck,
   Settings,
+  Share2,
+  ShieldCheck,
+  ShieldAlert,
+  Siren,
+  SlidersHorizontal,
+  Scale,
+  Smartphone,
+  ReceiptText,
+  Store,
   Ticket,
+  Trophy,
+  ToggleLeft,
   Users,
+  UserCheck,
+  UserPlus,
+  Waypoints,
   Wrench,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import EventSelector from "./components/EventSelector";
 
-const fullAccess = ["SUPER_ADMIN", "ADMIN"];
-const operationsAccess = [...fullAccess, "OPERATIONS"];
-const checkinAccess = [...operationsAccess, "VOLUNTEER", "CHECKIN"];
+const icons = {
+  BarChart3,
+  Archive,
+  BadgeCheck,
+  BadgePercent,
+  BriefcaseBusiness,
+  Bus,
+  Bell,
+  BellRing,
+  ClipboardCheck,
+  CalendarClock,
+  CalendarDays,
+  ChartColumn,
+  CreditCard,
+  Cloud,
+  Database,
+  FileSignature,
+  ClipboardList,
+  FileCheck2,
+  FileSpreadsheet,
+  FileText,
+  FolderUp,
+  Film,
+  FlaskConical,
+  Handshake,
+  HeartPulse,
+  Hotel,
+  Image,
+  Images,
+  GraduationCap,
+  Home,
+  LayoutDashboard,
+  Layers3,
+  ListChecks,
+  Mail,
+  Megaphone,
+  MessageSquareText,
+  Mic2,
+  MapPinned,
+  Microscope,
+  MonitorCheck,
+  Network,
+  Newspaper,
+  PanelsTopLeft,
+  PackageCheck,
+  PenLine,
+  Presentation,
+  QrCode,
+  RadioTower,
+  Rocket,
+  SearchCheck,
+  Settings,
+  Share2,
+  ShieldCheck,
+  ShieldAlert,
+  Siren,
+  SlidersHorizontal,
+  Scale,
+  Smartphone,
+  ReceiptText,
+  Store,
+  Ticket,
+  Trophy,
+  ToggleLeft,
+  Users,
+  UserCheck,
+  UserPlus,
+  Waypoints,
+  Wrench,
+};
 
-const navItems = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, keywords: ["home", "overview", "stats", "metrics"] },
-  { id: "speakers", label: "Speakers", icon: Mic2, roles: fullAccess, keywords: ["faculty", "keynotes", "cms"] },
-  { id: "workshops", label: "Workshops", icon: Wrench, roles: operationsAccess, keywords: ["sessions", "labs", "capacity"] },
-  { id: "research", label: "Research", icon: FlaskConical, roles: [...fullAccess, "RESEARCH"], keywords: ["abstracts", "submissions", "review"] },
-  { id: "registrations", label: "Registrations", icon: QrCode, roles: checkinAccess, keywords: ["delegates", "attendees", "qr"] },
-  { id: "tickets", label: "Tickets", icon: Ticket, roles: fullAccess, keywords: ["passes", "pricing", "capacity"] },
-  { id: "payments", label: "Payments", icon: CreditCard, roles: fullAccess, keywords: ["revenue", "transactions", "refunds"] },
-  { id: "analytics", label: "Analytics", icon: BarChart3, roles: operationsAccess, keywords: ["charts", "reports", "insights"] },
-  { id: "checkin", label: "Check-in", icon: ClipboardCheck, roles: checkinAccess, keywords: ["attendance", "scan", "volunteer"] },
-  { id: "certificates", label: "Certificates", icon: FileCheck2, roles: operationsAccess, keywords: ["generate", "awards", "documents"] },
-  { id: "operations", label: "Operations", icon: RadioTower, roles: checkinAccess, keywords: ["command", "launch", "tasks"] },
-  { id: "system", label: "System Health", icon: HeartPulse, roles: operationsAccess, keywords: ["status", "health", "uptime"] },
-  { id: "launch", label: "Launch", icon: Rocket, roles: operationsAccess, keywords: ["checklist", "go live", "deploy"] },
-  { id: "partners", label: "Partners", icon: Handshake, roles: fullAccess, keywords: ["sponsors", "partnerships"] },
-  { id: "media", label: "Media", icon: Image, roles: fullAccess, keywords: ["images", "uploads", "gallery"] },
-  { id: "trailer", label: "Trailer", icon: Film, roles: fullAccess, keywords: ["video", "homepage", "watch"] },
-  { id: "users", label: "Users", icon: Users, roles: fullAccess, keywords: ["admins", "roles", "accounts"] },
-  { id: "settings", label: "Settings", icon: Settings, roles: fullAccess, keywords: ["configuration", "preferences", "setup"] },
-];
-
-function DashboardLayout({ children, user, activePage, onNavigate, onLogout }) {
+function DashboardLayout({ api, children, user, activePage, eventContext, impersonating, onEventContextChange, onNavigate, onLogout, onReturnToSuperAdmin }) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-  const visibleNavItems = navItems.filter((item) => !item.roles || item.roles.includes(user.role));
-  const primaryMobileItems = ["VOLUNTEER", "CHECKIN"].includes(user.role)
-    ? visibleNavItems.filter((item) => ["dashboard", "checkin", "operations", "registrations"].includes(item.id))
-    : visibleNavItems.slice(0, 4);
-  const searchResults = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return [];
-
-    return visibleNavItems.filter((item) => {
+  const visibleNavItems = (user.modules || []).map((module) => ({
+    id: module.route_key || module.routeKey,
+    label: module.label,
+    icon: icons[module.icon] || LayoutDashboard,
+    keywords: [module.module_key || module.moduleKey, module.permission_key || module.permissionKey].filter(Boolean),
+  })).filter((item) => item.id);
+  const primaryMobileItems = visibleNavItems.slice(0, 4);
+  const query = searchQuery.trim().toLowerCase();
+  const searchResults = query
+    ? visibleNavItems.filter((item) => {
       const searchable = [item.label, item.id, ...(item.keywords || [])].join(" ").toLowerCase();
       return searchable.includes(query);
-    });
-  }, [searchQuery, visibleNavItems]);
+    })
+    : [];
   const showSearchResults = searchFocused && searchQuery.trim().length > 0;
 
   const handleNavigate = (pageId) => {
@@ -168,6 +264,13 @@ function DashboardLayout({ children, user, activePage, onNavigate, onLogout }) {
           <button className="admin-icon-button" aria-label="Notifications">
             <Bell size={18} />
           </button>
+          <EventSelector
+            api={api}
+            user={user}
+            selectedEventId={eventContext?.eventId}
+            globalView={eventContext?.isGlobalView}
+            onChange={onEventContextChange}
+          />
           <div className="admin-profile">
             <span>{user.name?.slice(0, 1) || "A"}</span>
             <div>
@@ -177,6 +280,11 @@ function DashboardLayout({ children, user, activePage, onNavigate, onLogout }) {
           </div>
         </header>
         <main>{children}</main>
+        {impersonating && (
+          <button className="admin-impersonation-return" type="button" onClick={onReturnToSuperAdmin}>
+            Return to Super Admin
+          </button>
+        )}
       </div>
 
       <nav className="admin-bottom-nav" aria-label="Admin mobile navigation">

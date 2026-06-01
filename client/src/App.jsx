@@ -56,6 +56,8 @@ const PartnershipPortal = lazy(() => import("./pages/PartnershipPortal"));
 const WorkshopDetail = lazy(() => import("./pages/WorkshopDetail"));
 const WorkshopRegister = lazy(() => import("./pages/WorkshopRegister"));
 const GooglePayTest = lazy(() => import("./pages/GooglePayTest"));
+const VerifyCertificate = lazy(() => import("./pages/VerifyCertificate"));
+const DynamicForm = lazy(() => import("./pages/DynamicForm"));
 
 const navLinks = [
   ["Home", "home"],
@@ -1173,11 +1175,13 @@ function App() {
   const isPartnerRoute = location.pathname.startsWith("/partners") || location.pathname.startsWith("/partnership");
   const isWorkshopDetailRoute = location.pathname.startsWith("/workshops/");
   const isGooglePayTestRoute = location.pathname.startsWith("/google-pay-test");
+  const isVerifyCertificateRoute = location.pathname.startsWith("/verify-certificate");
+  const isDynamicFormRoute = location.pathname.startsWith("/forms/");
   const [installPrompt, setInstallPrompt] = useState(null);
 
   useEffect(() => {
     setPageSeo({
-      title: isGooglePayTestRoute ? "Google Pay Test" : isWorkshopRegisterRoute ? "Workshop Registration" : isWorkshopCmsRoute ? "Workshop Manager" : isWorkshopDetailRoute ? "Workshop Details" : isPartnerRoute ? "Partner Portal" : isAbstractRoute ? "Abstract Registration" : isRegisterRoute ? "Register" : isAdminRoute ? "Admin" : "Global Healthcare Conclave 2026",
+      title: isDynamicFormRoute ? "GHC Form" : isVerifyCertificateRoute ? "Verify Certificate" : isGooglePayTestRoute ? "Google Pay Test" : isWorkshopRegisterRoute ? "Workshop Registration" : isWorkshopCmsRoute ? "Workshop Manager" : isWorkshopDetailRoute ? "Workshop Details" : isPartnerRoute ? "Partner Portal" : isAbstractRoute ? "Abstract Registration" : isRegisterRoute ? "Register" : isAdminRoute ? "Admin" : "Global Healthcare Conclave 2026",
       description: isWorkshopDetailRoute
         ? "Workshop details for Global Healthcare Conclave 2026."
         : isPartnerRoute
@@ -1187,7 +1191,7 @@ function App() {
         : isRegisterRoute
         ? "Register for Global Healthcare Conclave 2026 with secure ticket checkout."
         : "Global Healthcare Conclave 2026 by GAIMS: speakers, workshops, research, venue, partners and registration.",
-      path: isGooglePayTestRoute ? "/google-pay-test" : isWorkshopRegisterRoute ? location.pathname : isWorkshopCmsRoute ? "/admin/workshops" : isWorkshopDetailRoute ? location.pathname : isPartnerRoute ? "/partnership" : isAbstractRoute ? "/abstract-registration" : isRegisterRoute ? "/register" : isAdminRoute ? "/admin" : "/",
+      path: isDynamicFormRoute ? location.pathname : isVerifyCertificateRoute ? "/verify-certificate" : isGooglePayTestRoute ? "/google-pay-test" : isWorkshopRegisterRoute ? location.pathname : isWorkshopCmsRoute ? "/admin/workshops" : isWorkshopDetailRoute ? location.pathname : isPartnerRoute ? "/partnership" : isAbstractRoute ? "/abstract-registration" : isRegisterRoute ? "/register" : isAdminRoute ? "/admin" : "/",
       schema: {
         "@context": "https://schema.org",
         "@type": "Event",
@@ -1195,7 +1199,7 @@ function App() {
         organizer: { "@type": "Organization", name: "GAIMS" },
       },
     });
-  }, [isAbstractRoute, isAdminRoute, isWorkshopCmsRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute, location.pathname]);
+  }, [isAbstractRoute, isAdminRoute, isWorkshopCmsRoute, isDynamicFormRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isVerifyCertificateRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute, location.pathname]);
 
   useEffect(() => {
     const handler = (event) => {
@@ -1207,7 +1211,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (isAdminRoute || isRegisterRoute || isAbstractRoute || isPartnerRoute || isWorkshopDetailRoute || isWorkshopRegisterRoute || isGooglePayTestRoute) {
+    if (isAdminRoute || isRegisterRoute || isAbstractRoute || isPartnerRoute || isWorkshopDetailRoute || isWorkshopRegisterRoute || isGooglePayTestRoute || isVerifyCertificateRoute || isDynamicFormRoute) {
       return undefined;
     }
 
@@ -1295,12 +1299,16 @@ function App() {
       lenis.destroy();
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
     };
-  }, [isAbstractRoute, isAdminRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute]);
+  }, [isAbstractRoute, isAdminRoute, isDynamicFormRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isVerifyCertificateRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute]);
 
   let routeContent;
 
   if (isWorkshopCmsRoute) {
     routeContent = <Suspense fallback={<div className="admin-loading">Loading GHC CMS...</div>}><AdminApp initialPage="workshops" /></Suspense>;
+  } else if (isVerifyCertificateRoute) {
+    routeContent = <Suspense fallback={<div className="admin-loading">Loading verification...</div>}><VerifyCertificate /></Suspense>;
+  } else if (isDynamicFormRoute) {
+    routeContent = <Suspense fallback={<div className="admin-loading">Loading form...</div>}><DynamicForm /></Suspense>;
   } else if (isGooglePayTestRoute) {
     routeContent = <Suspense fallback={<div className="admin-loading">Loading Google Pay...</div>}><GooglePayTest /></Suspense>;
   } else if (isAdminRoute) {

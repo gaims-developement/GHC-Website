@@ -1,10 +1,11 @@
-import { Award, Edit3, Eye, Trash2, X } from "lucide-react";
+import { Award, Edit3, Eye, Trash2, UserCheck, X } from "lucide-react";
 
-function ResearchTable({ onAward, onDelete, onEdit, onReject, onReview, submissions }) {
+function ResearchTable({ onAssignReviewer, onAward, onDelete, onEdit, onReject, onReview, submissions }) {
   const renderActions = (submission, mobile = false) => (
     <div className={mobile ? "speaker-actions mobile-actions" : "speaker-actions"}>
       <button onClick={() => onEdit(submission)} title="Edit"><Edit3 size={16} />{mobile && "Edit"}</button>
       <button onClick={() => onReview(submission)} title="Review"><Eye size={16} />{mobile && "Review"}</button>
+      {onAssignReviewer && <button onClick={() => onAssignReviewer(submission)} title="Assign reviewer"><UserCheck size={16} />{mobile && "Assign"}</button>}
       <button onClick={() => onAward(submission)} title="Award"><Award size={16} />{mobile && "Award"}</button>
       <button onClick={() => onReject(submission)} title="Reject"><X size={16} />{mobile && "Reject"}</button>
       <button onClick={() => onDelete(submission)} title="Delete"><Trash2 size={16} />{mobile && "Delete"}</button>

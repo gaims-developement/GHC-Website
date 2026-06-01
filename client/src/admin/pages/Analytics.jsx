@@ -17,6 +17,8 @@ const emptyCharts = {
   revenueTrend: [],
   ticketDistribution: [],
   workshopOccupancy: [],
+  workshopRegistrations: [],
+  abstractSubmissions: [],
   attendanceHeatmap: [],
   deviceSplit: [],
 };
@@ -84,12 +86,12 @@ function Analytics({ api }) {
 
       <Suspense fallback={<div className="admin-panel">Loading charts...</div>}>
         <section className="ops-chart-grid">
-          <LazyChart title="Registrations over time" data={charts.registrationsOverTime} />
+          <LazyChart title="Registration growth" data={charts.registrationsOverTime} />
           <LazyChart title="Revenue trend" data={charts.revenueTrend} />
+          <LazyChart title="Workshop registrations" data={charts.workshopRegistrations || []} />
+          <LazyChart title="Abstract submissions" data={charts.abstractSubmissions || []} />
           <LazyChart title="Ticket distribution" data={charts.ticketDistribution} />
           <LazyChart title="Workshop occupancy" data={charts.workshopOccupancy} />
-          <LazyChart title="Attendance heatmap" data={charts.attendanceHeatmap} type="heatmap" />
-          <LazyChart title="Device split" data={charts.deviceSplit} type="device" />
         </section>
       </Suspense>
 

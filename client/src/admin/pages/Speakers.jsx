@@ -4,7 +4,7 @@ import SpeakerCard from "../components/speakers/SpeakerCard";
 import SpeakerForm from "../components/speakers/SpeakerForm";
 import SpeakerTable from "../components/speakers/SpeakerTable";
 
-const filters = ["all", "published", "draft", "featured", "keynote"];
+const filters = ["all", "confirmed", "published", "draft", "cancelled", "featured", "keynote"];
 
 function Speakers({ api }) {
   const [speakers, setSpeakers] = useState([]);
@@ -83,7 +83,7 @@ function Speakers({ api }) {
           <div>
             <p className="admin-eyebrow">Speaker CMS</p>
             <h1>Speaker Management</h1>
-            <p className="admin-muted">Create, publish, feature and order speakers for the public GHC site.</p>
+            <p className="admin-muted">Manage profiles, social links, documents, travel readiness, sessions and public speaker sync.</p>
           </div>
           <button className="admin-primary-button" onClick={() => openForm()}>
             <Plus size={18} />

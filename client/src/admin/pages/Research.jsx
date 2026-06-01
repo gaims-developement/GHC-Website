@@ -10,6 +10,7 @@ function Research({ api }) {
   const [submissions, setSubmissions] = useState([]);
   const [editingSubmission, setEditingSubmission] = useState(null);
   const [reviewingSubmission, setReviewingSubmission] = useState(null);
+  const [reviewers, setReviewers] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
@@ -20,6 +21,7 @@ function Research({ api }) {
 
   useEffect(() => {
     loadSubmissions();
+    api.get("/api/research/reviewers").then((response) => setReviewers(response.data.reviewers || [])).catch(() => {});
   }, [loadSubmissions]);
 
   const stats = useMemo(() => ({
@@ -92,6 +94,13 @@ function Research({ api }) {
     loadSubmissions();
   };
 
+  const assignReviewer = async (submission) => {
+    const reviewerId = window.prompt(`Reviewer ID to assign:\n${reviewers.map((reviewer) => `${reviewer.id}: ${reviewer.name}`).join("\n")}`);
+    if (!reviewerId) return;
+    await api.post(`/api/research/${submission.id}/reviewers`, { reviewerId });
+    loadSubmissions();
+  };
+
   return (
     <div className="admin-speakers-page admin-research-page">
       <section className="admin-panel">
@@ -133,6 +142,7 @@ function Research({ api }) {
       <section className="admin-panel">
         <ResearchTable
           submissions={filteredSubmissions}
+          onAssignReviewer={assignReviewer}
           onAward={toggleAward}
           onDelete={deleteSubmission}
           onEdit={openForm}

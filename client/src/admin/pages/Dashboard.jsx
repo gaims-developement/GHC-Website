@@ -30,6 +30,7 @@ const formatRevenue = (value) =>
   }).format(Number(value || 0));
 
 function Dashboard({ user, api }) {
+  const [superDashboard, setSuperDashboard] = useState(null);
   const [speakerStats, setSpeakerStats] = useState(emptySpeakerStats);
   const [workshopStats, setWorkshopStats] = useState(emptyWorkshopStats);
   const [researchStats, setResearchStats] = useState(emptyResearchStats);
@@ -41,6 +42,18 @@ function Dashboard({ user, api }) {
   const loadDashboardStats = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
     setError("");
+
+    if (user.role === "SUPER_ADMIN") {
+      try {
+        const response = await api.get("/api/super-admin/dashboard");
+        setSuperDashboard(response.data);
+      } catch {
+        setError("Super Admin dashboard could not be refreshed.");
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
 
     const [
       speakersResult,
@@ -79,17 +92,31 @@ function Dashboard({ user, api }) {
       setError("Some dashboard metrics could not be refreshed. Showing the latest available values.");
     }
     setLoading(false);
-  }, [api]);
+  }, [api, user.role]);
 
   useEffect(() => {
-    loadDashboardStats();
+    const initialTimer = window.setTimeout(() => loadDashboardStats(), 0);
     const refreshTimer = setInterval(() => loadDashboardStats({ silent: true }), 30000);
-    return () => clearInterval(refreshTimer);
+    return () => {
+      window.clearTimeout(initialTimer);
+      clearInterval(refreshTimer);
+    };
   }, [loadDashboardStats]);
 
   const metricValue = (value, formatter = formatNumber) => (loading ? "..." : formatter(value));
 
-  const kpis = [
+  const superKpis = superDashboard ? [
+    { label: "Total registrations", value: metricValue(superDashboard.kpis.registrations), icon: QrCode },
+    { label: "Total speakers", value: metricValue(superDashboard.kpis.speakers), icon: Mic2 },
+    { label: "Total workshops", value: metricValue(superDashboard.kpis.workshops), icon: Wrench },
+    { label: "Total sponsors", value: metricValue(superDashboard.kpis.sponsors), icon: Award },
+    { label: "Scientific abstracts", value: metricValue(superDashboard.kpis.abstracts), icon: FileText },
+    { label: "Total users", value: metricValue(superDashboard.kpis.users), icon: Users },
+    { label: "Pending approvals", value: metricValue(superDashboard.kpis.pendingApprovals), icon: Activity },
+    { label: "Revenue summary", value: metricValue(superDashboard.kpis.revenue, (value) => `INR ${Number(value || 0).toLocaleString("en-IN")}`), icon: Banknote },
+  ] : [];
+
+  const kpis = user.role === "SUPER_ADMIN" ? superKpis : [
     { label: "Delegates", value: metricValue(registrationStats.total), icon: Users },
     { label: "Abstracts", value: metricValue(researchStats.total), icon: FileText },
     { label: "Total speakers", value: metricValue(speakerStats.total), icon: Mic2 },
@@ -114,7 +141,11 @@ function Dashboard({ user, api }) {
       <section className="admin-hero-panel">
         <p className="admin-eyebrow">Dashboard</p>
         <h1>Welcome back, {user.name}</h1>
-        <p className="admin-muted">GHC CMS Phase 2A is live with authentication, roles, permissions and the admin shell.</p>
+        <p className="admin-muted">
+          {user.role === "SUPER_ADMIN"
+            ? "Unrestricted command center for teams, content, analytics and conference operations."
+            : "GHC CMS is live with authentication, roles, permissions and the admin shell."}
+        </p>
       </section>
 
       {error && <div className="admin-error">{error}</div>}
@@ -141,7 +172,14 @@ function Dashboard({ user, api }) {
           <Activity size={20} />
         </div>
         <div className="admin-activity-list">
-          {activities.map((activity) => <div key={activity}>{activity}</div>)}
+          {user.role === "SUPER_ADMIN" && superDashboard?.recentActivity?.length
+            ? superDashboard.recentActivity.map((activity) => (
+              <div key={activity.id}>
+                <strong>{activity.action}</strong>
+                <span>{activity.module || "cms"} {activity.user_name ? `by ${activity.user_name}` : ""}</span>
+              </div>
+            ))
+            : activities.map((activity) => <div key={activity}>{activity}</div>)}
         </div>
       </section>
     </div>

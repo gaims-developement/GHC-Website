@@ -1,12 +1,16 @@
-import { BadgeCheck, Check, Eye, QrCode, X } from "lucide-react";
+import { BadgeCheck, Check, Edit3, Eye, QrCode, RotateCcw, Trash2, X } from "lucide-react";
 
-function RegistrationTable({ onApprove, onCheckIn, onReject, onViewQr, registrations }) {
+function RegistrationTable({ onApprove, onCancel, onCheckIn, onDelete, onEdit, onRefund, onReject, onViewQr, registrations }) {
   const actions = (registration, mobile = false) => (
     <div className={mobile ? "speaker-actions mobile-actions" : "speaker-actions"}>
+      {onEdit && <button onClick={() => onEdit(registration)} title="Edit"><Edit3 size={16} />{mobile && "Edit"}</button>}
       <button onClick={() => onApprove(registration)} title="Approve"><Check size={16} />{mobile && "Approve"}</button>
       <button onClick={() => onReject(registration)} title="Reject"><X size={16} />{mobile && "Reject"}</button>
       <button onClick={() => onCheckIn(registration)} title="Check-in"><BadgeCheck size={16} />{mobile && "Check-in"}</button>
       <button onClick={() => onViewQr(registration)} title="View QR"><QrCode size={16} />{mobile && "QR"}</button>
+      {onCancel && <button onClick={() => onCancel(registration)} title="Cancel"><X size={16} />{mobile && "Cancel"}</button>}
+      {onRefund && <button onClick={() => onRefund(registration)} title="Refund"><RotateCcw size={16} />{mobile && "Refund"}</button>}
+      {onDelete && <button onClick={() => onDelete(registration)} title="Delete"><Trash2 size={16} />{mobile && "Delete"}</button>}
     </div>
   );
 

@@ -1,7 +1,7 @@
 import { Copy, FileText, Image, Plus, Search, Trash2, UploadCloud } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const filters = ["all", "image", "raw"];
+const filters = ["all", "image", "video", "raw"];
 
 const formatSize = (bytes) => {
   const value = Number(bytes || 0);
@@ -102,7 +102,7 @@ function AdminMedia({ api }) {
             ref={fileInputRef}
             className="media-hidden-input"
             type="file"
-            accept="image/png,image/jpeg,image/webp,image/svg+xml,application/pdf"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml,video/mp4,video/webm,application/pdf,.doc,.docx,.xls,.xlsx"
             onChange={(event) => uploadFile(event.target.files?.[0])}
           />
         </div>
