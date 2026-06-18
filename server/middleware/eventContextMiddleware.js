@@ -137,12 +137,12 @@ const findDefaultActiveEvent = async () => {
      WHERE status = 'published'
      ORDER BY
        CASE
-         WHEN COALESCE(start_datetime, start_date) <= NOW()
-          AND COALESCE(end_datetime, end_date, start_datetime, start_date) >= NOW()
+         WHEN start_datetime <= NOW()
+          AND COALESCE(end_datetime, start_datetime) >= NOW()
          THEN 0
          ELSE 1
        END,
-       COALESCE(start_datetime, start_date) DESC,
+       start_datetime DESC,
        created_at DESC
      LIMIT 1`
   );
