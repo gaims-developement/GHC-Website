@@ -32,86 +32,95 @@ const writeLoginLog = async (req, { userId = null, email, status }) => {
 };
 
 router.get("/me", async (req, res) => {
+  const routePath = `GET /api/auth/me`;
   const token = getTokenFromRequest(req);
   if (!token) {
-    return res.status(401).json({ message: "Unauthorized" });
+    return res.status(401).json({ error: "Unauthorized" });
   }
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET || "change-this-secret");
     const user = await User.findById(payload.id);
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ error: "User not found" });
     }
 
     return res.json(User.serialize(user));
-  } catch {
-    return res.status(401).json({ message: "Unauthorized" });
+  } catch (err) {
+    console.error(`[ROUTE ${routePath}]`, err.message, err.stack);
+    return res.status(401).json({ error: err.message || "Unauthorized" });
   }
 });
 
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-  const user = email ? await User.findByEmail(email) : null;
-  const passwordMatches = user ? await bcrypt.compare(password || "", user.password_hash) : false;
+  const routePath = `POST /api/auth/login`;
+  try {
+    const { email, password } = req.body;
+    const user = email ? await User.findByEmail(email) : null;
+    const passwordMatches = user ? await bcrypt.compare(password || "", user.password_hash) : false;
 
-  if (!passwordMatches) {
-    await writeLoginLog(req, { userId: user?.id || null, email, status: "failed" });
-    return res.status(401).json({ message: "Invalid credentials" });
+    if (!passwordMatches) {
+      await writeLoginLog(req, { userId: user?.id || null, email, status: "failed" });
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    if (user.is_active === false || user.is_active === 0 || user.is_locked === true || user.is_locked === 1) {
+      await writeLoginLog(req, { userId: user.id, email, status: "failed" });
+      return res.status(403).json({ error: "Account is inactive" });
+    }
+
+    const serializedUser = User.serialize(user);
+    const token = signToken(user);
+    const refreshToken = jwt.sign({ id: user.id, type: "refresh" }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "change-this-secret", { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d" });
+    res.cookie("token", token, {
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    res.cookie("refresh_token", refreshToken, {
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+
+    await ActivityLog.logActivity({
+      userId: user.id,
+      action: "user_login",
+      module: "auth",
+      recordId: String(user.id),
+    });
+    await writeLoginLog(req, { userId: user.id, email, status: "success" });
+    await pool.query(
+      "INSERT INTO active_sessions (user_id, session_token, ip_address, device, expires_at) VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 30 DAY))",
+      [user.id, tokenFingerprint(token), req.ip || req.socket?.remoteAddress || null, parseAgent(req.headers["user-agent"] || "").device]
+    );
+    await pool.query(
+      "INSERT INTO audit_logs (user_id, action, module, record_type, record_id, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [user.id, "login", "auth", "user", user.id, req.ip || req.socket?.remoteAddress || null, req.headers["user-agent"] || null]
+    );
+
+    res.json({
+      success: true,
+      token,
+      refreshToken,
+      user: serializedUser,
+    });
+  } catch (err) {
+    console.error(`[ROUTE ${routePath}]`, err.message, err.stack);
+    res.status(500).json({ error: err.message });
   }
-
-  if (user.is_active === false || user.is_active === 0 || user.is_locked === true || user.is_locked === 1) {
-    await writeLoginLog(req, { userId: user.id, email, status: "failed" });
-    return res.status(403).json({ message: "Account is inactive" });
-  }
-
-  const serializedUser = User.serialize(user);
-  const token = signToken(user);
-  const refreshToken = jwt.sign({ id: user.id, type: "refresh" }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "change-this-secret", { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d" });
-  res.cookie("token", token, {
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-  res.cookie("refresh_token", refreshToken, {
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    secure: process.env.NODE_ENV === "production",
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-  });
-
-  await ActivityLog.logActivity({
-    userId: user.id,
-    action: "user_login",
-    module: "auth",
-    recordId: String(user.id),
-  });
-  await writeLoginLog(req, { userId: user.id, email, status: "success" });
-  await pool.query(
-    "INSERT INTO active_sessions (user_id, session_token, ip_address, device, expires_at) VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 30 DAY))",
-    [user.id, tokenFingerprint(token), req.ip || req.socket?.remoteAddress || null, parseAgent(req.headers["user-agent"] || "").device]
-  );
-  await pool.query(
-    "INSERT INTO audit_logs (user_id, action, module, record_type, record_id, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?)",
-    [user.id, "login", "auth", "user", user.id, req.ip || req.socket?.remoteAddress || null, req.headers["user-agent"] || null]
-  );
-
-  res.json({
-    success: true,
-    token,
-    refreshToken,
-    user: serializedUser,
-  });
 });
 
 router.post("/refresh", async (req, res) => {
-  const incoming = req.cookies?.refresh_token || req.body.refreshToken;
+  const routePath = `POST /api/auth/refresh`;
   try {
+    const incoming = req.cookies?.refresh_token || req.body.refreshToken;
     const payload = jwt.verify(incoming, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "change-this-secret");
     const user = await User.findById(payload.id);
     if (!user) {
-      return res.status(401).json({ message: "Invalid refresh token" });
+      return res.status(401).json({ error: "Invalid refresh token" });
     }
 
     const token = signToken(user);
@@ -122,8 +131,9 @@ router.post("/refresh", async (req, res) => {
       maxAge: 15 * 60 * 1000,
     });
     return res.json({ token, user: User.serialize(user) });
-  } catch {
-    return res.status(401).json({ message: "Invalid refresh token" });
+  } catch (err) {
+    console.error(`[ROUTE ${routePath}]`, err.message, err.stack);
+    return res.status(401).json({ error: err.message || "Invalid refresh token" });
   }
 });
 
@@ -134,32 +144,39 @@ router.post("/register", (req, res) => {
 });
 
 router.post("/logout", async (req, res) => {
-  const token = getTokenFromRequest(req);
-  if (token) {
-    try {
-      const payload = jwt.verify(token, process.env.JWT_SECRET || "change-this-secret");
-      await pool.query("DELETE FROM active_sessions WHERE session_token = ?", [tokenFingerprint(token)]);
-      await pool.query(
-        "INSERT INTO audit_logs (user_id, action, module, record_type, record_id, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        [payload.id, "logout", "auth", "user", payload.id, req.ip || req.socket?.remoteAddress || null, req.headers["user-agent"] || null]
-      );
-      await ActivityLog.logActivity({
-        userId: payload.id,
-        action: "user_logout",
-        module: "auth",
-        recordId: String(payload.id),
-        metadata: payload.impersonatorId ? { impersonatorId: payload.impersonatorId } : null,
-      });
-    } catch {
-      // Logout should clear the client session even when a stale token is present.
+  const routePath = `POST /api/auth/logout`;
+  try {
+    const token = getTokenFromRequest(req);
+    if (token) {
+      try {
+        const payload = jwt.verify(token, process.env.JWT_SECRET || "change-this-secret");
+        await pool.query("DELETE FROM active_sessions WHERE session_token = ?", [tokenFingerprint(token)]);
+        await pool.query(
+          "INSERT INTO audit_logs (user_id, action, module, record_type, record_id, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          [payload.id, "logout", "auth", "user", payload.id, req.ip || req.socket?.remoteAddress || null, req.headers["user-agent"] || null]
+        );
+        await ActivityLog.logActivity({
+          userId: payload.id,
+          action: "user_logout",
+          module: "auth",
+          recordId: String(payload.id),
+          metadata: payload.impersonatorId ? { impersonatorId: payload.impersonatorId } : null,
+        });
+      } catch (tokenErr) {
+        console.warn(`[ROUTE ${routePath}] Token processing warning:`, tokenErr.message);
+        // Logout should clear the client session even when a stale token is present.
+      }
     }
-  }
 
-  res.clearCookie("token");
-  res.clearCookie("refresh_token");
-  res.json({
-    success: true,
-  });
+    res.clearCookie("token");
+    res.clearCookie("refresh_token");
+    res.json({
+      success: true,
+    });
+  } catch (err) {
+    console.error(`[ROUTE ${routePath}]`, err.message, err.stack);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = router;

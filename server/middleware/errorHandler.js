@@ -6,10 +6,18 @@ const notFound = (req, res, next) => {
 
 const errorHandler = (error, req, res, next) => {
   const statusCode = error.statusCode || 500;
+  const routePath = error.routePath || req.originalUrl || 'unknown';
+
+  console.error(`[ERROR] [${req.method} ${routePath}]`, {
+    message: error.message || 'Internal server error',
+    statusCode,
+    stack: error.stack,
+    timestamp: new Date().toISOString(),
+  });
 
   res.status(statusCode).json({
-    message: error.message || 'Internal server error',
-    stack: process.env.NODE_ENV === 'production' ? undefined : error.stack,
+    error: error.message || 'Internal server error',
+    ...(process.env.NODE_ENV !== 'production' && { stack: error.stack }),
   });
 };
 
