@@ -173,6 +173,9 @@ const partnerGroups = {
 };
 
 const heroTitle = "Global Healthcare Conclave 2026";
+const defaultHeroDescription = "Reimagining Healthcare Beyond Borders through policy, research, clinical excellence and responsible innovation.";
+const defaultHeroButtonText = "Register Now";
+const defaultHeroLink = "/register";
 // If the globe model still appears small inside the fixed container, move the
 // camera closer or scale the model up in the source Spline scene.
 const splineGlobeScene = import.meta.env.VITE_SPLINE_GLOBE_SCENE || "https://prod.spline.design/hBZIW8l6bSsFsHvV/scene.splinecode";
@@ -411,6 +414,9 @@ function AnimatedTrackHeading({ onComplete }) {
 }
 
 function Hero({ banner }) {
+  const heroDescription = banner?.subtitle || defaultHeroDescription;
+  const heroButtonText = banner?.button_text || defaultHeroButtonText;
+  const heroLink = banner?.button_link || defaultHeroLink;
   const [introActive, setIntroActive] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.sessionStorage.getItem("ghcHeroIntroSeen") !== "true";
@@ -1652,11 +1658,13 @@ function App() {
       </>
     );
   } else {
+    const activeHeroBanner = homepageSync.banners?.find((banner) => banner?.is_active !== false) || homepageSync.banners?.[0] || null;
+
     routeContent = (
     <div ref={appRef} className="min-h-screen overflow-hidden bg-[#F7FBFF] text-[#081B33]">
       <Navbar />
       <main>
-        <Hero />
+        <Hero banner={activeHeroBanner} />
         <WatchVision />
         <StatsStrip />
         <About />
