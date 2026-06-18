@@ -287,15 +287,30 @@ const indexExists = async (tableName, indexName) => {
   return rows.length > 0;
 };
 
+const SQL_IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+const assertSqlIdentifier = (value, label) => {
+  const identifier = String(value || '').trim();
+  if (!SQL_IDENTIFIER_PATTERN.test(identifier)) {
+    console.warn('Schema setup received invalid SQL identifier', { label, value });
+    throw new Error(`Invalid SQL identifier for ${label}: ${identifier || '(empty)'}`);
+  }
+  return identifier;
+};
+
 const addColumnIfMissing = async (tableName, columnName, definition) => {
-  if (!(await columnExists(tableName, columnName))) {
-    await pool.query(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition}`);
+  const safeTableName = assertSqlIdentifier(tableName, 'tableName');
+  const safeColumnName = assertSqlIdentifier(columnName, 'columnName');
+  if (!(await columnExists(safeTableName, safeColumnName))) {
+    await pool.query(`ALTER TABLE ${safeTableName} ADD COLUMN ${safeColumnName} ${definition}`);
   }
 };
 
 const addIndexIfMissing = async (tableName, indexName, definition) => {
-  if (!(await indexExists(tableName, indexName))) {
-    await pool.query(`ALTER TABLE ${tableName} ADD ${definition}`);
+  const safeTableName = assertSqlIdentifier(tableName, 'tableName');
+  const safeIndexName = assertSqlIdentifier(indexName, 'indexName');
+  if (!(await indexExists(safeTableName, safeIndexName))) {
+    await pool.query(`ALTER TABLE ${safeTableName} ADD ${definition}`);
   }
 };
 
@@ -2736,7 +2751,7 @@ const seedCoreArchitectureData = async () => {
     ['users', 'users', 'name', 'email', '/admin/users'],
     ['speakers', 'speakers', 'full_name', 'institution', '/admin/speakers'],
     ['sponsors', 'sponsors', 'company_name', 'email', '/admin/sponsors'],
-    ['abstracts', 'abstracts', 'title', 'presenter_name', '/admin/abstracts'],
+    ['abstracts', 'abstracts', 'title', 'presenting_author', '/admin/abstracts'],
     ['workshops', 'workshops', 'title', 'faculty', '/admin/workshops'],
     ['registrations', 'registrations', 'full_name', 'email', '/admin/registrations'],
     ['announcements', 'announcements', 'title', 'status', '/admin/announcements'],
@@ -2745,12 +2760,25 @@ const seedCoreArchitectureData = async () => {
   for (const source of sources) {
     if (await tableExists(source[1])) {
       await pool.query(
-        `INSERT IGNORE INTO core_search_sources (module, table_name, title_column, subtitle_column, route_template)
-         VALUES (?, ?, ?, ?, ?)`,
+        `INSERT INTO core_search_sources (module, table_name, title_column, subtitle_column, route_template)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           table_name = VALUES(table_name),
+           title_column = VALUES(title_column),
+           subtitle_column = VALUES(subtitle_column),
+           route_template = VALUES(route_template),
+           is_active = TRUE`,
         source
       );
     }
   }
+
+  await pool.query(`
+    UPDATE core_search_sources
+    SET is_active = FALSE
+    WHERE TRIM(COALESCE(table_name, '')) = ''
+       OR TRIM(COALESCE(title_column, '')) = ''
+  `);
 
   const languages = [
     ['en', 'English', true, true],

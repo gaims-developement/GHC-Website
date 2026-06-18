@@ -3,6 +3,16 @@ const normalizeId = (value) => {
   return Number.isInteger(id) && id > 0 ? id : null;
 };
 
+const SQL_IDENTIFIER_PATH_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)?$/;
+
+const normalizeColumn = (column) => {
+  const normalized = String(column || '').trim();
+  if (SQL_IDENTIFIER_PATH_PATTERN.test(normalized)) return normalized;
+
+  console.warn('Invalid event scope column; falling back to event_id', { column });
+  return 'event_id';
+};
+
 const getEventIds = (req) => {
   const context = req?.eventContext || {};
   if (context.isGlobalView) return [];
@@ -21,10 +31,11 @@ const buildEventWhere = (req, column = 'event_id') => {
 
   const eventIds = getEventIds(req);
   if (eventIds.length === 0) return { clause: '', params: [] };
-  if (eventIds.length === 1) return { clause: `${column} = ?`, params: [eventIds[0]] };
+  const scopeColumn = normalizeColumn(column);
+  if (eventIds.length === 1) return { clause: `${scopeColumn} = ?`, params: [eventIds[0]] };
 
   return {
-    clause: `${column} IN (${eventIds.map(() => '?').join(', ')})`,
+    clause: `${scopeColumn} IN (${eventIds.map(() => '?').join(', ')})`,
     params: eventIds,
   };
 };

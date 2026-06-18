@@ -17,6 +17,14 @@ const parseJson = (value, fallback = {}) => {
   }
 };
 
+const SQL_IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+const escapeIdentifier = (value) => {
+  const identifier = String(value || '').trim();
+  if (!SQL_IDENTIFIER_PATTERN.test(identifier)) return null;
+  return `\`${identifier}\``;
+};
+
 const logActivity = async ({ userId = null, action, module = null, recordId = null, metadata = null }) => {
   if (!action) return null;
   await pool.query(
@@ -63,14 +71,28 @@ const search = async (query, limit = 8) => {
   const [sources] = await pool.query('SELECT * FROM core_search_sources WHERE is_active = TRUE ORDER BY module ASC');
   const results = [];
   for (const source of sources) {
-    const subtitle = source.subtitle_column ? `, ${source.subtitle_column} AS subtitle` : ', NULL AS subtitle';
+    const tableName = escapeIdentifier(source.table_name);
+    const titleColumn = escapeIdentifier(source.title_column);
+    const subtitleColumn = source.subtitle_column ? escapeIdentifier(source.subtitle_column) : null;
+
+    if (!tableName || !titleColumn || (source.subtitle_column && !subtitleColumn)) {
+      console.warn('Core search source skipped: invalid SQL identifier', {
+        module: source.module,
+        table_name: source.table_name,
+        title_column: source.title_column,
+        subtitle_column: source.subtitle_column,
+      });
+      continue;
+    }
+
+    const subtitle = subtitleColumn ? `, ${subtitleColumn} AS subtitle` : ', NULL AS subtitle';
     const [rows] = await pool.query(
-      `SELECT id, ${source.title_column} AS title ${subtitle}
-       FROM ${source.table_name}
-       WHERE ${source.title_column} LIKE ? ${source.subtitle_column ? `OR ${source.subtitle_column} LIKE ?` : ''}
+      `SELECT id, ${titleColumn} AS title ${subtitle}
+       FROM ${tableName}
+       WHERE ${titleColumn} LIKE ? ${subtitleColumn ? `OR ${subtitleColumn} LIKE ?` : ''}
        ORDER BY id DESC
        LIMIT ?`,
-      source.subtitle_column ? [clean, clean, Number(limit)] : [clean, Number(limit)]
+      subtitleColumn ? [clean, clean, Number(limit)] : [clean, Number(limit)]
     );
     rows.forEach((row) => results.push({ ...row, module: source.module, route: source.route_template }));
   }
