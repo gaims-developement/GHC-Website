@@ -5,11 +5,28 @@ const DEFAULT_CLIENT_URLS = [
   'http://localhost:3000',
 ];
 
-const configuredClientUrls = (process.env.CLIENT_URLS || process.env.CLIENT_URL || '')
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const getEnvOrigins = () => {
+  const envVars = [
+    process.env.CLIENT_URLS,
+    process.env.CLIENT_URL,
+    process.env.CORS_ORIGIN,
+    process.env.CORS_ORIGINS,
+    process.env.ALLOWED_ORIGINS,
+    process.env.ALLOWED_ORIGIN,
+  ];
+  const origins = [];
+  for (const envVal of envVars) {
+    if (envVal) {
+      envVal.split(',').forEach((val) => {
+        const trimmed = val.trim();
+        if (trimmed) origins.push(trimmed);
+      });
+    }
+  }
+  return origins;
+};
 
+const configuredClientUrls = getEnvOrigins();
 const CLIENT_URLS = [...new Set([...DEFAULT_CLIENT_URLS, ...configuredClientUrls])];
 
 const corsOptions = {
