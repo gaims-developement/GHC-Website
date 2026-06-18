@@ -29,7 +29,7 @@ const normalizeEventRow = (event) => {
   return {
     id: event.id,
     slug: event.slug,
-    name: event.name || event.title || null,
+    name: event.title || null,
   };
 };
 
@@ -120,7 +120,7 @@ const findEvent = async (reference) => {
 
   const whereClause = reference.type === 'id' ? 'id = ?' : 'slug = ?';
   const [rows] = await pool.query(
-    `SELECT id, slug, name, title
+    `SELECT id, slug, title
      FROM events
      WHERE ${whereClause}
      LIMIT 1`,
@@ -132,7 +132,7 @@ const findEvent = async (reference) => {
 
 const findDefaultActiveEvent = async () => {
   const [rows] = await pool.query(
-    `SELECT id, slug, name, title
+    `SELECT id, slug, title
      FROM events
      WHERE status = 'published'
      ORDER BY
@@ -176,7 +176,7 @@ const canAccessEvent = async (req, eventId) => {
 const buildContext = ({ event = null, isGlobalView = false, isSuperAdmin = false, eventIds = [] } = {}) => ({
   eventId: event?.id || null,
   eventSlug: event?.slug || null,
-  eventName: event?.name || null,
+  eventName: event?.title || null,
   isGlobalView,
   isSuperAdmin,
   viewMode: isGlobalView ? 'global' : eventIds.length > 1 ? 'multi' : 'single',
