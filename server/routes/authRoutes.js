@@ -31,6 +31,10 @@ const writeLoginLog = async (req, { userId = null, email, status }) => {
   );
 };
 
+router.get("/csrf-token", (req, res) => {
+  res.json({ csrfToken: req.csrfToken || req.cookies?.csrf_token || "" });
+});
+
 router.get("/me", async (req, res) => {
   const routePath = `GET /api/auth/me`;
   const token = getTokenFromRequest(req);

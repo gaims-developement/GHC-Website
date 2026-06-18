@@ -43,6 +43,7 @@ const csrfProtection = (req, res, next) => {
       secure: process.env.NODE_ENV === 'production',
       maxAge: 24 * 60 * 60 * 1000,
     });
+    req.csrfToken = token;
     return next();
   }
 

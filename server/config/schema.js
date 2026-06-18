@@ -1630,7 +1630,7 @@ const createResearchTables = async () => {
   await addColumnIfMissing('abstracts', 'final_score', 'DECIMAL(8,2)');
   await addColumnIfMissing('abstracts', 'submitted_at', 'TIMESTAMP NULL');
   await pool.query("ALTER TABLE abstracts MODIFY status ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft'");
-  await pool.query('UPDATE abstracts SET abstract_id = CONCAT("GHC-ABS-", LPAD(id, 5, "0")) WHERE abstract_id IS NULL OR abstract_id = ""');
+  await pool.query("UPDATE abstracts SET abstract_id = CONCAT('GHC-ABS-', LPAD(id, 5, '0')) WHERE abstract_id IS NULL OR abstract_id = ''");
   await pool.query('UPDATE abstracts SET corresponding_author = COALESCE(corresponding_author, presenting_author), file_url = COALESCE(file_url, pdf_url), submission_status = COALESCE(submission_status, status)');
 
   await pool.query(`
@@ -1944,9 +1944,9 @@ const createOperationsTables = async () => {
   await addColumnIfMissing('certificates', 'certificate_url', 'TEXT');
   await addColumnIfMissing('certificates', 'status', "ENUM('generated', 'sent', 'revoked') DEFAULT 'generated'");
   await addColumnIfMissing('certificates', 'email_status', "ENUM('pending', 'sent', 'failed') DEFAULT 'pending'");
-  await pool.query('UPDATE certificates SET certificate_id = CONCAT("GHC-CERT-", LPAD(id, 6, "0")) WHERE certificate_id IS NULL OR certificate_id = ""');
-  await pool.query('UPDATE certificates SET verification_code = CONCAT("VERIFY-", id, "-", UNIX_TIMESTAMP(created_at)) WHERE verification_code IS NULL OR verification_code = ""');
-  await pool.query('UPDATE certificates SET certificate_url = COALESCE(certificate_url, pdf_url), status = IF(issued = TRUE, "generated", status)');
+  await pool.query("UPDATE certificates SET certificate_id = CONCAT('GHC-CERT-', LPAD(id, 6, '0')) WHERE certificate_id IS NULL OR certificate_id = ''");
+  await pool.query("UPDATE certificates SET verification_code = CONCAT('VERIFY-', id, '-', UNIX_TIMESTAMP(created_at)) WHERE verification_code IS NULL OR verification_code = ''");
+  await pool.query("UPDATE certificates SET certificate_url = COALESCE(certificate_url, pdf_url), status = IF(issued = TRUE, 'generated', status)");
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS certificate_templates (
@@ -2830,9 +2830,9 @@ const seedAuthData = async () => {
     );
   }
 
-  await pool.query('UPDATE teams SET slug = LOWER(REPLACE(name, " ", "-")) WHERE slug IS NULL OR slug = ""');
-  await pool.query('UPDATE modules SET name = label WHERE name IS NULL OR name = ""');
-  await pool.query('UPDATE modules SET slug = module_key WHERE slug IS NULL OR slug = ""');
+  await pool.query("UPDATE teams SET slug = LOWER(REPLACE(name, ' ', '-')) WHERE slug IS NULL OR slug = ''");
+  await pool.query("UPDATE modules SET name = label WHERE name IS NULL OR name = ''");
+  await pool.query("UPDATE modules SET slug = module_key WHERE slug IS NULL OR slug = ''");
 
   const [roleRows] = await pool.query('SELECT id, name FROM roles');
   const [permissionRows] = await pool.query('SELECT id, `key` FROM permissions');

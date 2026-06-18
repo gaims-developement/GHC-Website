@@ -12,10 +12,20 @@ function Login({ api, onLogin }) {
     setLoading(true);
 
     try {
-      const response = await api.post("/api/auth/login", form);
+      let csrfToken = "";
+      try {
+        const csrfResponse = await api.get("/api/auth/csrf-token");
+        csrfToken = csrfResponse.data.csrfToken;
+      } catch (csrfError) {
+        console.error("CSRF token fetch failed:", csrfError);
+      }
+
+      const response = await api.post("/api/auth/login", form, {
+        headers: csrfToken ? { "X-CSRF-Token": csrfToken } : {},
+      });
       onLogin(response.data);
     } catch (requestError) {
-      setError(requestError.response?.data?.message || "Unable to login");
+      setError(requestError.response?.data?.message || requestError.response?.data?.error || "Unable to login");
     } finally {
       setLoading(false);
     }
