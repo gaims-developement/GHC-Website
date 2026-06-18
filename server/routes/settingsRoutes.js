@@ -1,8 +1,8 @@
 const router = require('express').Router();
 const { getSettings, updateSettings } = require('../controllers/settingsController');
-const { requireAuth, requireRole } = require('../middleware/authMiddleware');
+const { requireAuth, requirePermission } = require('../middleware/authMiddleware');
 
-const canManageSettings = requireRole('SUPER_ADMIN', 'ADMIN');
+const canManageSettings = requirePermission('settings.manage');
 
 router.get('/', requireAuth, canManageSettings, getSettings);
 router.put('/', requireAuth, canManageSettings, updateSettings);

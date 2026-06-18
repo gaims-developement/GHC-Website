@@ -3,7 +3,7 @@ const path = require('path');
 const multer = require('multer');
 const router = require('express').Router();
 const { deleteMedia, listMedia, uploadMedia } = require('../controllers/mediaController');
-const { requireAuth, requireRole } = require('../middleware/authMiddleware');
+const { requireAuth, requirePermission } = require('../middleware/authMiddleware');
 
 const mediaUploadDir = path.join(__dirname, '..', 'uploads', 'media');
 fs.mkdirSync(mediaUploadDir, { recursive: true });
@@ -19,12 +19,24 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (_req, file, cb) => {
-    cb(null, ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml', 'application/pdf'].includes(file.mimetype));
+    cb(null, [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/svg+xml',
+      'video/mp4',
+      'video/webm',
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    ].includes(file.mimetype));
   },
-  limits: { fileSize: Number(process.env.MAX_UPLOAD_SIZE || 10 * 1024 * 1024) },
+  limits: { fileSize: Number(process.env.MAX_UPLOAD_SIZE || 25 * 1024 * 1024) },
 });
 
-const canManageMedia = requireRole('SUPER_ADMIN', 'ADMIN', 'MEDIA');
+const canManageMedia = requirePermission('media.manage', 'manage_gallery');
 
 router.get('/', requireAuth, canManageMedia, listMedia);
 router.post('/', requireAuth, canManageMedia, upload.single('file'), uploadMedia);

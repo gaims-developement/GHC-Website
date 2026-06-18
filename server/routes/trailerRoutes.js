@@ -3,7 +3,7 @@ const path = require('path');
 const multer = require('multer');
 const router = require('express').Router();
 const { getTrailer, removeTrailer, updateTrailer, uploadTrailer } = require('../controllers/trailerController');
-const { requireAuth, requireRole } = require('../middleware/authMiddleware');
+const { requireAuth, requirePermission } = require('../middleware/authMiddleware');
 
 const trailerUploadDir = path.join(__dirname, '..', 'uploads', 'trailer');
 fs.mkdirSync(trailerUploadDir, { recursive: true });
@@ -29,7 +29,7 @@ const upload = multer({
   limits: { fileSize: Number(process.env.TRAILER_MAX_UPLOAD_SIZE || 200 * 1024 * 1024) },
 });
 
-const canManageTrailer = requireRole('SUPER_ADMIN', 'ADMIN', 'MEDIA');
+const canManageTrailer = requirePermission('cms.manage', 'media.manage');
 
 const handleUploadError = (handler) => (req, res, next) => {
   handler(req, res, (error) => {

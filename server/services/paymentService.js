@@ -4,6 +4,7 @@ const QRCode = require('qrcode');
 const Razorpay = require('razorpay');
 const { pool } = require('../config/db');
 const { sendMail } = require('./mailService');
+const { applyEventScope } = require('../utils/eventScope');
 
 const GST_RATE = Number(process.env.GST_RATE || 0.18);
 const DEFAULT_PROVIDER = 'razorpay';
@@ -92,6 +93,7 @@ const normalizePayment = (payment) => payment && ({
   status: payment.status,
   receiptUrl: payment.receipt_url,
   invoiceUrl: payment.invoice_url,
+  eventId: payment.event_id,
   createdAt: payment.created_at,
 });
 
@@ -102,14 +104,17 @@ const paymentSelect = `
   LEFT JOIN ticket_types t ON t.id = p.ticket_type_id
 `;
 
-const findRegistrationWithTicket = async (registrationId) => {
+const findRegistrationWithTicket = async (registrationId, req = null) => {
+  const where = ['(r.id = ? OR r.registration_id = ?)'];
+  const params = [registrationId, registrationId];
+  applyEventScope(where, params, req, 'r.event_id');
   const [rows] = await pool.query(
     `SELECT r.*, t.name AS ticket_name, t.price AS ticket_price, t.currency AS ticket_currency
      FROM registrations r
      LEFT JOIN ticket_types t ON t.id = r.ticket_type_id
-     WHERE r.id = ? OR r.registration_id = ?
+     WHERE ${where.join(' AND ')}
      LIMIT 1`,
-    [registrationId, registrationId]
+    params
   );
   return rows[0];
 };
@@ -131,8 +136,8 @@ const findValidCoupon = async (code) => {
   return rows[0] || null;
 };
 
-const priceForRegistration = async (registrationId, couponCode) => {
-  const registration = await findRegistrationWithTicket(registrationId);
+const priceForRegistration = async (registrationId, couponCode, req = null) => {
+  const registration = await findRegistrationWithTicket(registrationId, req);
   if (!registration) {
     const error = new Error('Registration not found');
     error.statusCode = 404;
@@ -159,10 +164,10 @@ const priceForRegistration = async (registrationId, couponCode) => {
   };
 };
 
-const validateCoupon = async ({ code, ticketTypeId, registrationId }) => {
+const validateCoupon = async ({ code, ticketTypeId, registrationId, req = null }) => {
   let subtotal = 0;
   if (registrationId) {
-    const pricing = await priceForRegistration(registrationId, code);
+    const pricing = await priceForRegistration(registrationId, code, req);
     return { coupon: pricing.coupon, totals: pricing.totals };
   }
 
@@ -181,9 +186,9 @@ const validateCoupon = async ({ code, ticketTypeId, registrationId }) => {
   };
 };
 
-const createOrder = async ({ registrationId, couponCode, provider = DEFAULT_PROVIDER }) => {
+const createOrder = async ({ registrationId, couponCode, provider = DEFAULT_PROVIDER, req = null }) => {
   const paymentProvider = getProvider(provider);
-  const { registration, coupon, totals } = await priceForRegistration(registrationId, couponCode);
+  const { registration, coupon, totals } = await priceForRegistration(registrationId, couponCode, req);
   const receipt = `GHC-${registration.registration_id || registration.id}`.slice(0, 40);
   const order = await paymentProvider.createOrder({
     amount: totals.total,
@@ -198,9 +203,9 @@ const createOrder = async ({ registrationId, couponCode, provider = DEFAULT_PROV
 
   const [result] = await pool.query(
     `INSERT INTO payments
-      (registration_id, ticket_type_id, payment_provider, provider_order_id, amount, currency, status)
-     VALUES (?, ?, ?, ?, ?, ?, 'created')`,
-    [registration.id, registration.ticket_type_id, provider, order.id, totals.total, totals.currency]
+      (registration_id, ticket_type_id, payment_provider, provider_order_id, amount, currency, status, event_id)
+     VALUES (?, ?, ?, ?, ?, ?, 'created', ?)`,
+    [registration.id, registration.ticket_type_id, provider, order.id, totals.total, totals.currency, registration.event_id || null]
   );
 
   const [[payment]] = await pool.query(`${paymentSelect} WHERE p.id = ? LIMIT 1`, [result.insertId]);
@@ -265,7 +270,7 @@ const sendPaymentEmail = async ({ registration, payment, invoiceBuffer, qrBuffer
   });
 };
 
-const verifyPayment = async ({ provider = DEFAULT_PROVIDER, orderId, paymentId, signature }) => {
+const verifyPayment = async ({ provider = DEFAULT_PROVIDER, orderId, paymentId, signature, req = null }) => {
   const paymentProvider = getProvider(provider);
   if (!paymentProvider.verifySignature({ orderId, paymentId, signature })) {
     await pool.query("UPDATE payments SET status = 'failed', provider_payment_id = ? WHERE provider_order_id = ?", [paymentId || null, orderId]);
@@ -282,7 +287,10 @@ const verifyPayment = async ({ provider = DEFAULT_PROVIDER, orderId, paymentId, 
       [paymentId, orderId]
     );
 
-    const [[payment]] = await connection.query(`${paymentSelect} WHERE p.provider_order_id = ? LIMIT 1`, [orderId]);
+    const paymentWhere = ['p.provider_order_id = ?'];
+    const paymentParams = [orderId];
+    applyEventScope(paymentWhere, paymentParams, req, 'p.event_id');
+    const [[payment]] = await connection.query(`${paymentSelect} WHERE ${paymentWhere.join(' AND ')} LIMIT 1`, paymentParams);
     if (!payment) {
       const error = new Error('Payment not found');
       error.statusCode = 404;
@@ -340,9 +348,10 @@ const verifyPayment = async ({ provider = DEFAULT_PROVIDER, orderId, paymentId, 
   }
 };
 
-const listPayments = async ({ status, search } = {}) => {
+const listPayments = async ({ status, search, req = null } = {}) => {
   const params = [];
   const where = [];
+  applyEventScope(where, params, req, 'p.event_id');
   if (status && status !== 'all') {
     where.push('p.status = ?');
     params.push(status);
@@ -357,6 +366,9 @@ const listPayments = async ({ status, search } = {}) => {
     `${paymentSelect} ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY p.created_at DESC LIMIT 100`,
     params
   );
+  const statWhere = [];
+  const statParams = [];
+  applyEventScope(statWhere, statParams, req, 'event_id');
   const [statsRows] = await pool.query(`
     SELECT
       SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) AS revenue,
@@ -364,7 +376,8 @@ const listPayments = async ({ status, search } = {}) => {
       SUM(status = 'refunded') AS refunds,
       SUM(status IN ('created', 'pending')) AS pending
     FROM payments
-  `);
+    ${statWhere.length ? `WHERE ${statWhere.join(' AND ')}` : ''}
+  `, statParams);
 
   return {
     payments: rows.map(normalizePayment),
@@ -377,8 +390,11 @@ const listPayments = async ({ status, search } = {}) => {
   };
 };
 
-const refundPayment = async ({ paymentId, amount }) => {
-  const [[payment]] = await pool.query(`${paymentSelect} WHERE p.id = ? OR p.provider_payment_id = ? LIMIT 1`, [paymentId, paymentId]);
+const refundPayment = async ({ paymentId, amount, req = null }) => {
+  const where = ['(p.id = ? OR p.provider_payment_id = ?)'];
+  const params = [paymentId, paymentId];
+  applyEventScope(where, params, req, 'p.event_id');
+  const [[payment]] = await pool.query(`${paymentSelect} WHERE ${where.join(' AND ')} LIMIT 1`, params);
   if (!payment) {
     const error = new Error('Payment not found');
     error.statusCode = 404;
@@ -391,8 +407,11 @@ const refundPayment = async ({ paymentId, amount }) => {
   return normalizePayment({ ...payment, status: 'refunded' });
 };
 
-const getInvoice = async (id) => {
-  const [[payment]] = await pool.query(`${paymentSelect} WHERE p.id = ? LIMIT 1`, [id]);
+const getInvoice = async (id, req = null) => {
+  const where = ['p.id = ?'];
+  const params = [id];
+  applyEventScope(where, params, req, 'p.event_id');
+  const [[payment]] = await pool.query(`${paymentSelect} WHERE ${where.join(' AND ')} LIMIT 1`, params);
   if (!payment) return null;
   const [[registration]] = await pool.query(
     `SELECT r.*, t.name AS ticket_name
@@ -403,8 +422,11 @@ const getInvoice = async (id) => {
   return generateInvoiceBuffer({ payment, registration });
 };
 
-const getTicket = async (id) => {
-  const [[payment]] = await pool.query(`${paymentSelect} WHERE p.id = ? LIMIT 1`, [id]);
+const getTicket = async (id, req = null) => {
+  const where = ['p.id = ?'];
+  const params = [id];
+  applyEventScope(where, params, req, 'p.event_id');
+  const [[payment]] = await pool.query(`${paymentSelect} WHERE ${where.join(' AND ')} LIMIT 1`, params);
   if (!payment) return null;
   const [[registration]] = await pool.query(
     `SELECT r.*, t.name AS ticket_name

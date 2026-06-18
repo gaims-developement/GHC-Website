@@ -24,6 +24,7 @@ const normalizeRegistration = (row) => row && ({
   paymentStatus: row.payment_status,
   registrationStatus: row.registration_status,
   attendance: Boolean(row.attendance),
+  attendanceStatus: row.attendance_status,
   qrCode: row.qr_code,
 });
 
@@ -105,12 +106,15 @@ const scan = asyncHandler(async (req, res) => {
   if (!registration) return res.status(404).json({ message: 'Registration not found' });
   if (registration.payment_status !== 'paid') return res.status(400).json({ message: 'Payment is not complete', registration: normalizeRegistration(registration) });
   if (registration.registration_status !== 'approved') return res.status(400).json({ message: 'Registration is not approved', registration: normalizeRegistration(registration) });
+  if (registration.attendance_status === 'checked_in' || registration.attendance) {
+    return res.status(409).json({ message: 'Delegate is already checked in', registration: normalizeRegistration(registration), history: await historyFor(registration.id) });
+  }
 
-  await pool.query('UPDATE registrations SET attendance = TRUE WHERE id = ?', [registration.id]);
+  await pool.query("UPDATE registrations SET attendance = TRUE, attendance_status = 'checked_in' WHERE id = ?", [registration.id]);
   await pool.query(
-    `INSERT INTO attendance_logs (registration_id, checkin_time, workshop_id, verified_by)
-     VALUES (?, NOW(), ?, ?)`,
-    [registration.id, req.body.workshopId || req.body.workshop_id || null, req.user?.id || null]
+    `INSERT INTO attendance_logs (registration_id, checkin_time, check_in_time, workshop_id, verified_by, checked_by, location)
+     VALUES (?, NOW(), NOW(), ?, ?, ?, ?)`,
+    [registration.id, req.body.workshopId || req.body.workshop_id || null, req.user?.id || null, req.user?.id || null, req.body.location || null]
   );
   await pool.query(
     `INSERT INTO analytics_events (event_type, user_id, registration_id, metadata)

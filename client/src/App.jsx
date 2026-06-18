@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import axios from "axios";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -50,6 +50,7 @@ import {
 gsap.registerPlugin(ScrollTrigger);
 
 const AdminApp = lazy(() => import("./admin/AdminApp"));
+const Spline = lazy(() => import("@splinetool/react-spline"));
 const Register = lazy(() => import("./pages/Register"));
 const AbstractRegister = lazy(() => import("./pages/AbstractRegister"));
 const PartnershipPortal = lazy(() => import("./pages/PartnershipPortal"));
@@ -92,6 +93,25 @@ const tracks = [
 const apiEndpoints = {
   speakers: "/api/speakers",
   workshops: "/api/workshops",
+};
+
+const publicMarketingSyncEndpoint = "/api/marketing/public/marketing-sync";
+const homepageSeoKeys = new Set(["home", "homepage", "default", "index"]);
+
+const findHomepageSection = (sections, name) =>
+  sections?.find((section) => String(section.section_name || "").trim().toLowerCase() === String(name).trim().toLowerCase());
+
+const findSeoPage = (seoItems) =>
+  seoItems?.find((item) => item.page_key && homepageSeoKeys.has(String(item.page_key).trim().toLowerCase()));
+
+const parseJsonConfig = (value) => {
+  if (!value) return null;
+  if (typeof value === "object") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 };
 
 const mockSpeakers = [
@@ -153,6 +173,10 @@ const partnerGroups = {
 };
 
 const heroTitle = "Global Healthcare Conclave 2026";
+// If the globe model still appears small inside the fixed container, move the
+// camera closer or scale the model up in the source Spline scene.
+const splineGlobeScene = import.meta.env.VITE_SPLINE_GLOBE_SCENE || "https://prod.spline.design/hBZIW8l6bSsFsHvV/scene.splinecode";
+const splineGlobeZoom = Number(import.meta.env.VITE_SPLINE_GLOBE_ZOOM || 6);
 
 const wordReveal = {
   hidden: { y: "110%", clipPath: "inset(0 0 100% 0)" },
@@ -251,6 +275,89 @@ function PartnerCTAButton({ href, variant = "hero", children }) {
   );
 }
 
+function SplineGlobe({ className = "" }) {
+  const [failed, setFailed] = useState(false);
+  const wrapperRef = useRef(null);
+  const spinFrameRef = useRef(null);
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return undefined;
+
+    const hideSplineBadge = () => {
+      wrapper.querySelectorAll("a, div, span").forEach((node) => {
+        const label = `${node.textContent || ""} ${node.getAttribute("aria-label") || ""} ${node.getAttribute("title") || ""}`;
+        const href = node.getAttribute("href") || "";
+        if (/built\s+with\s+spline|spline\.design/i.test(`${label} ${href}`)) {
+          node.style.display = "none";
+          node.style.opacity = "0";
+          node.style.pointerEvents = "none";
+        }
+      });
+    };
+
+    hideSplineBadge();
+    const observer = new MutationObserver(hideSplineBadge);
+    observer.observe(wrapper, { childList: true, subtree: true });
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => () => {
+    if (spinFrameRef.current) cancelAnimationFrame(spinFrameRef.current);
+  }, []);
+
+  const startGlobeSpin = (spline) => {
+    const objects = spline?.getAllObjects?.() || [];
+    const spinTarget =
+      objects.find((object) => /globe|earth|sphere|world/i.test(object.name || "") && object.rotation) ||
+      objects.find((object) => object.rotation && /mesh|group|object/i.test(object.type || "")) ||
+      objects.find((object) => object.rotation);
+
+    if (!spinTarget?.rotation) return;
+
+    const tick = () => {
+      spinTarget.rotation.y += 0.0014;
+      spline?.requestRender?.();
+      spinFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    if (spinFrameRef.current) cancelAnimationFrame(spinFrameRef.current);
+    spinFrameRef.current = requestAnimationFrame(tick);
+  };
+
+  return (
+    <div ref={wrapperRef} className={`spline-globe ${className}`}>
+      {failed ? (
+        <GlobeCanvas className="spline-globe-fallback" />
+      ) : (
+        <Suspense fallback={<div className="spline-globe-loader" />}>
+          <Spline
+            scene={splineGlobeScene}
+            renderOnDemand={false}
+            style={{ overflow: "visible" }}
+            onLoad={(spline) => {
+              spline?.setZoom?.(splineGlobeZoom);
+              const camera = spline?._scene?.activeCamera || spline?._camera;
+              if (camera?.zoom) {
+                camera.zoom = Math.max(camera.zoom, splineGlobeZoom);
+                camera.updateProjectionMatrix?.();
+              }
+              spline?.requestRender?.();
+              spline?.setBackgroundColor?.("rgba(0,0,0,0)");
+              spline?._renderer?.pipeline?.setWatermark?.(null);
+              spline?.controls?.deactivate?.();
+              spline?.eventManager?.deactivate?.();
+              startGlobeSpin(spline);
+            }}
+            onError={() => setFailed(true)}
+          />
+        </Suspense>
+      )}
+    </div>
+  );
+}
+
 function AnimatedTrackHeading({ onComplete }) {
   const title = "Focused tracks for the future of care.";
   const words = title.split(" ");
@@ -303,25 +410,85 @@ function AnimatedTrackHeading({ onComplete }) {
   );
 }
 
-function Hero() {
+function Hero({ banner }) {
+  const [introActive, setIntroActive] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem("ghcHeroIntroSeen") !== "true";
+  });
+
+  useEffect(() => {
+    if (!introActive) return undefined;
+
+    window.sessionStorage.setItem("ghcHeroIntroSeen", "true");
+    const timer = window.setTimeout(() => setIntroActive(false), 2500);
+
+    return () => window.clearTimeout(timer);
+  }, [introActive]);
+
   const scrollToTrailer = (event) => {
     event.preventDefault();
     document.getElementById("watch-vision")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  const finalDelay = introActive ? 2.12 : 0;
+  const panelDelay = introActive ? 2.18 : 0;
+
   return (
     <section id="home" className="hero-section reveal-section">
+      <AnimatePresence>
+        {introActive && (
+          <motion.div
+            className="hero-intro"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.58, ease: [0.16, 1, 0.3, 1] } }}
+          >
+            <motion.div
+              className="hero-intro-globe"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.72, ease: [0.16, 1, 0.3, 1] } }}
+            >
+              <SplineGlobe />
+            </motion.div>
+            <motion.h1
+              className="hero-intro-title"
+              layoutId="ghc-hero-title"
+              initial={{ opacity: 0, y: 28, filter: "blur(12px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{
+                opacity: 0,
+                x: "-19vw",
+                y: "-4vh",
+                scale: 0.74,
+                filter: "blur(2px)",
+                transition: { duration: 0.72, ease: [0.16, 1, 0.3, 1] },
+              }}
+            >
+              GLOBAL HEALTHCARE
+              <span>CONCLAVE</span>
+              <span>2026</span>
+            </motion.h1>
+          </motion.div>
+        )}
+      </AnimatePresence>
       <ParticleField />
       <div className="blob blob-one parallax-layer" data-speed="-18" />
       <div className="blob blob-two parallax-layer" data-speed="14" />
 
-      <div className="hero-mobile-shell mx-auto grid min-h-screen max-w-7xl items-center gap-10 px-4 pb-10 pt-32 md:px-8 lg:grid-cols-[0.92fr_1.08fr] lg:pt-24">
+      <div className="hero-mobile-shell mx-auto grid min-h-screen max-w-7xl items-center gap-10 px-4 pb-10 pt-32 md:px-8 lg:grid-cols-2 lg:pt-24">
         <div className="relative z-10">
-          <motion.div className="hero-pill" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: "easeOut" }}>
+          <motion.div className="hero-pill" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: finalDelay, duration: 0.7, ease: "easeOut" }}>
             <MapPin className="h-4 w-4 text-[#ff3b8b]" />
             New Delhi · Dates will be announced soon
           </motion.div>
-          <h1 className="kinetic-title mt-7 font-['Sora'] text-5xl font-bold leading-[0.96] text-[#081B33] sm:text-6xl lg:text-7xl" aria-label={heroTitle}>
+          <motion.h1
+            className="kinetic-title mt-7 font-['Sora'] text-5xl font-bold leading-[0.96] text-[#081B33] sm:text-6xl lg:text-7xl"
+            aria-label={heroTitle}
+            layoutId={introActive ? undefined : "ghc-hero-title"}
+            initial={introActive ? { opacity: 0, y: 16 } : false}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: finalDelay + 0.08, duration: 0.76, ease: [0.16, 1, 0.3, 1] }}
+          >
             {heroTitle.split(" ")?.map((word, index) => (
               <span className="word-mask" key={`${word}-${index}`} aria-hidden="true">
                 <motion.span custom={index} variants={wordReveal} initial="hidden" animate="visible">
@@ -329,20 +496,38 @@ function Hero() {
                 </motion.span>
               </span>
             ))}
-          </h1>
-          <motion.p className="mt-6 max-w-2xl text-xl leading-8 text-[#12385f]/78" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.62, duration: 0.75 }}>
-            Reimagining Healthcare Beyond Borders through policy, research, clinical excellence and responsible innovation.
+          </motion.h1>
+          <motion.p className="mt-6 max-w-2xl text-xl leading-8 text-[#12385f]/78" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: finalDelay + 0.42, duration: 0.75 }}>
+            {heroDescription}
           </motion.p>
-          <motion.div className="mt-8 flex flex-wrap gap-3" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.78, duration: 0.75 }}>
-            <a href="/register" className="hero-button-primary">Register Now <ArrowRight className="h-4 w-4" /></a>
-            <a href="/abstract-registration" className="hero-button-secondary">Submit Abstract <FileText className="h-4 w-4" /></a>
-            <PartnerCTAButton href="#partner-marquee" variant="hero">Become Partner <BadgeCheck className="h-4 w-4" /></PartnerCTAButton>
-            <a href="#watch-vision" className="hero-button-secondary" onClick={scrollToTrailer}>Watch Trailer <Play className="h-4 w-4" /></a>
+          <motion.div className="mt-8 flex flex-wrap gap-3" initial="hidden" animate="visible" variants={{ hidden: {}, visible: { transition: { delayChildren: finalDelay + 0.62, staggerChildren: 0.09 } } }}>
+            {[
+              <a href={heroLink} className="hero-button-primary">{heroButtonText} <ArrowRight className="h-4 w-4" /></a>,
+              <a href="/abstract-registration" className="hero-button-secondary">Submit Abstract <FileText className="h-4 w-4" /></a>,
+              <PartnerCTAButton href="#partner-marquee" variant="hero">Become Partner <BadgeCheck className="h-4 w-4" /></PartnerCTAButton>,
+              <a href="#watch-vision" className="hero-button-secondary" onClick={scrollToTrailer}>Watch Trailer <Play className="h-4 w-4" /></a>,
+            ].map((button, index) => (
+              <motion.span
+                className="hero-action-item"
+                key={index}
+                variants={{
+                  hidden: { opacity: 0, y: 18, scale: 0.98 },
+                  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.62, ease: [0.16, 1, 0.3, 1] } },
+                }}
+              >
+                {button}
+              </motion.span>
+            ))}
           </motion.div>
         </div>
 
-        <motion.div className="parallax-visual hero-panel" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 1 }}>
-          <GlobeCanvas className="hero-globe" />
+        <motion.div
+          className="hero-globe-stage"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: panelDelay, duration: 1, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <SplineGlobe className="hero-globe" />
         </motion.div>
       </div>
 
@@ -1069,10 +1254,18 @@ function VenueSection() {
   );
 }
 
-function PartnerMarquee() {
-  const marqueeItems = [
-    ...Object.entries(partnerGroups).flatMap(([category, names]) => names.map((name) => ({ category, name, type: "logo" }))),
-  ];
+function PartnerMarquee({ partners = [] }) {
+  const hasPartnerApiData = Array.isArray(partners) && partners.length > 0;
+  const marqueeItems = hasPartnerApiData
+    ? partners.map((partner) => ({
+        id: partner.id,
+        category: partner.tier || "Partner",
+        name: partner.name,
+        type: "logo",
+        logo: partner.logo,
+        website: partner.website,
+      }))
+    : Object.entries(partnerGroups).flatMap(([category, names]) => names.map((name) => ({ category, name, type: "logo" })));
   const doubledItems = [...marqueeItems, ...marqueeItems];
 
   return (
@@ -1087,12 +1280,23 @@ function PartnerMarquee() {
       </div>
       <div className="partner-marquee">
         <div className="partner-marquee-track">
-          {doubledItems?.map((item, index) => (
-            <div className="partner-logo" key={`${item.category}-${item.name}-${index}`}>
-              <span>{item.category}</span>
-              {item.name}
-            </div>
-          ))}
+          {doubledItems?.map((item, index) => {
+            const logoUrl = item.logo?.startsWith("/uploads") ? apiUrl(item.logo) : item.logo;
+            const partnerKey = item.id ? `partner-${item.id}-${index}` : `${item.category}-${item.name}-${index}`;
+
+            return (
+              <a
+                className="partner-logo"
+                key={partnerKey}
+                href={item.website || "#"}
+                target={item.website ? "_blank" : undefined}
+                rel={item.website ? "noreferrer noopener" : undefined}
+              >
+                <span>{item.category}</span>
+                {logoUrl ? <img src={logoUrl} alt={item.name} /> : item.name}
+              </a>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -1178,20 +1382,106 @@ function App() {
   const isVerifyCertificateRoute = location.pathname.startsWith("/verify-certificate");
   const isDynamicFormRoute = location.pathname.startsWith("/forms/");
   const [installPrompt, setInstallPrompt] = useState(null);
+  const [homepageSync, setHomepageSync] = useState({ banners: [], homepage: [], mediaPartners: [], notifications: [], seo: [] });
+  const [partners, setPartners] = useState([]);
 
   useEffect(() => {
+    if (
+      isAdminRoute ||
+      isRegisterRoute ||
+      isAbstractRoute ||
+      isPartnerRoute ||
+      isWorkshopDetailRoute ||
+      isWorkshopRegisterRoute ||
+      isGooglePayTestRoute ||
+      isVerifyCertificateRoute ||
+      isDynamicFormRoute
+    ) {
+      return undefined;
+    }
+
+    let active = true;
+
+    const fetchHomepageCms = async () => {
+      try {
+        const [syncResponse, partnersResponse] = await Promise.all([
+          axios.get(apiUrl(publicMarketingSyncEndpoint)),
+          axios.get(apiUrl("/api/partners")),
+        ]);
+
+        if (!active) return;
+
+        const syncData = syncResponse.data || {};
+        setHomepageSync({
+          banners: syncData.banners || [],
+          homepage: syncData.homepage || [],
+          mediaPartners: syncData.mediaPartners || [],
+          notifications: syncData.notifications || [],
+          seo: syncData.seo || [],
+        });
+        setPartners(partnersResponse.data?.partners || []);
+      } catch (error) {
+        console.warn("Failed to load homepage CMS data", error);
+      }
+    };
+
+    fetchHomepageCms();
+
+    return () => {
+      active = false;
+    };
+  }, [
+    isAbstractRoute,
+    isAdminRoute,
+    isDynamicFormRoute,
+    isGooglePayTestRoute,
+    isPartnerRoute,
+    isRegisterRoute,
+    isVerifyCertificateRoute,
+    isWorkshopCmsRoute,
+    isWorkshopDetailRoute,
+    isWorkshopRegisterRoute,
+  ]);
+
+  useEffect(() => {
+    if (
+      isAdminRoute ||
+      isRegisterRoute ||
+      isAbstractRoute ||
+      isPartnerRoute ||
+      isWorkshopDetailRoute ||
+      isWorkshopRegisterRoute ||
+      isGooglePayTestRoute ||
+      isVerifyCertificateRoute ||
+      isDynamicFormRoute
+    ) {
+      setPageSeo({
+        title: isDynamicFormRoute ? "GHC Form" : isVerifyCertificateRoute ? "Verify Certificate" : isGooglePayTestRoute ? "Google Pay Test" : isWorkshopRegisterRoute ? "Workshop Registration" : isWorkshopCmsRoute ? "Workshop Manager" : isWorkshopDetailRoute ? "Workshop Details" : isPartnerRoute ? "Partner Portal" : isAbstractRoute ? "Abstract Registration" : isRegisterRoute ? "Register" : isAdminRoute ? "Admin" : "Global Healthcare Conclave 2026",
+        description: isWorkshopDetailRoute
+          ? "Workshop details for Global Healthcare Conclave 2026."
+          : isPartnerRoute
+          ? "Partner with Global Healthcare Conclave 2026."
+          : isAbstractRoute
+          ? "Submit a research abstract for Global Healthcare Conclave 2026."
+          : isRegisterRoute
+          ? "Register for Global Healthcare Conclave 2026 with secure ticket checkout."
+          : "Global Healthcare Conclave 2026 by GAIMS: speakers, workshops, research, venue, partners and registration.",
+        path: isDynamicFormRoute ? location.pathname : isVerifyCertificateRoute ? "/verify-certificate" : isGooglePayTestRoute ? "/google-pay-test" : isWorkshopRegisterRoute ? location.pathname : isWorkshopCmsRoute ? "/admin/workshops" : isWorkshopDetailRoute ? location.pathname : isPartnerRoute ? "/partnership" : isAbstractRoute ? "/abstract-registration" : isRegisterRoute ? "/register" : isAdminRoute ? "/admin" : "/",
+        schema: {
+          "@context": "https://schema.org",
+          "@type": "Event",
+          name: "Global Healthcare Conclave 2026",
+          organizer: { "@type": "Organization", name: "GAIMS" },
+        },
+      });
+      return;
+    }
+
+    const seoPage = findSeoPage(homepageSync.seo);
     setPageSeo({
-      title: isDynamicFormRoute ? "GHC Form" : isVerifyCertificateRoute ? "Verify Certificate" : isGooglePayTestRoute ? "Google Pay Test" : isWorkshopRegisterRoute ? "Workshop Registration" : isWorkshopCmsRoute ? "Workshop Manager" : isWorkshopDetailRoute ? "Workshop Details" : isPartnerRoute ? "Partner Portal" : isAbstractRoute ? "Abstract Registration" : isRegisterRoute ? "Register" : isAdminRoute ? "Admin" : "Global Healthcare Conclave 2026",
-      description: isWorkshopDetailRoute
-        ? "Workshop details for Global Healthcare Conclave 2026."
-        : isPartnerRoute
-        ? "Partner with Global Healthcare Conclave 2026."
-        : isAbstractRoute
-        ? "Submit a research abstract for Global Healthcare Conclave 2026."
-        : isRegisterRoute
-        ? "Register for Global Healthcare Conclave 2026 with secure ticket checkout."
-        : "Global Healthcare Conclave 2026 by GAIMS: speakers, workshops, research, venue, partners and registration.",
-      path: isDynamicFormRoute ? location.pathname : isVerifyCertificateRoute ? "/verify-certificate" : isGooglePayTestRoute ? "/google-pay-test" : isWorkshopRegisterRoute ? location.pathname : isWorkshopCmsRoute ? "/admin/workshops" : isWorkshopDetailRoute ? location.pathname : isPartnerRoute ? "/partnership" : isAbstractRoute ? "/abstract-registration" : isRegisterRoute ? "/register" : isAdminRoute ? "/admin" : "/",
+      title: seoPage?.seo_title || "Global Healthcare Conclave 2026",
+      description: seoPage?.seo_description || "Global Healthcare Conclave 2026 by GAIMS: speakers, workshops, research, venue, partners and registration.",
+      path: "/",
       schema: {
         "@context": "https://schema.org",
         "@type": "Event",
@@ -1199,7 +1489,20 @@ function App() {
         organizer: { "@type": "Organization", name: "GAIMS" },
       },
     });
-  }, [isAbstractRoute, isAdminRoute, isWorkshopCmsRoute, isDynamicFormRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isVerifyCertificateRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute, location.pathname]);
+  }, [
+    homepageSync.seo,
+    isAbstractRoute,
+    isAdminRoute,
+    isDynamicFormRoute,
+    isGooglePayTestRoute,
+    isPartnerRoute,
+    isRegisterRoute,
+    isVerifyCertificateRoute,
+    isWorkshopCmsRoute,
+    isWorkshopDetailRoute,
+    isWorkshopRegisterRoute,
+    location.pathname,
+  ]);
 
   useEffect(() => {
     const handler = (event) => {

@@ -1,10 +1,10 @@
 const router = require('express').Router();
 const { exportCsv, exportSql, health, launchChecklist } = require('../controllers/systemController');
-const { requireAuth, requireRole } = require('../middleware/authMiddleware');
+const { requireAuth, requirePermission } = require('../middleware/authMiddleware');
 const { auditLog } = require('../middleware/productionMiddleware');
 
-const canManageSystem = requireRole('SUPER_ADMIN', 'ADMIN', 'OPERATIONS');
-const canBackup = requireRole('SUPER_ADMIN', 'ADMIN');
+const canManageSystem = requirePermission('operations.view');
+const canBackup = requirePermission('settings.manage');
 
 router.get('/system/health', health);
 router.get('/system/launch-checklist', requireAuth, canManageSystem, launchChecklist);

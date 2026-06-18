@@ -7,6 +7,7 @@ const folderMap = {
   partners: 'ghc/partners',
   gallery: 'ghc/gallery',
   certificates: 'ghc/certificates',
+  forms: 'ghc/forms',
   trailer: 'ghc/trailer',
 };
 

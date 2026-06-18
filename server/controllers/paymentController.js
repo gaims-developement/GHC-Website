@@ -1,4 +1,5 @@
 const PaymentService = require('../services/paymentService');
+const ActivityLog = require('../models/activityLogModel');
 const asyncHandler = require('../utils/asyncHandler');
 const Stripe = require('stripe');
 
@@ -31,6 +32,7 @@ const createOrder = asyncHandler(async (req, res) => {
     registrationId: req.body.registrationId || req.body.registration_id,
     couponCode: req.body.couponCode || req.body.coupon_code,
     provider: req.body.provider || 'razorpay',
+    req,
   });
   res.status(201).json(result);
 });
@@ -41,6 +43,7 @@ const verifyPayment = asyncHandler(async (req, res) => {
     orderId: req.body.razorpay_order_id || req.body.orderId || req.body.providerOrderId,
     paymentId: req.body.razorpay_payment_id || req.body.paymentId || req.body.providerPaymentId,
     signature: req.body.razorpay_signature || req.body.signature,
+    req,
   });
   res.json(result);
 });
@@ -49,6 +52,7 @@ const listPayments = asyncHandler(async (req, res) => {
   const result = await PaymentService.listPayments({
     status: req.query.status,
     search: req.query.search,
+    req,
   });
   res.json(result);
 });
@@ -57,6 +61,14 @@ const refundPayment = asyncHandler(async (req, res) => {
   const payment = await PaymentService.refundPayment({
     paymentId: req.body.paymentId || req.body.payment_id || req.body.providerPaymentId,
     amount: req.body.amount,
+    req,
+  });
+  await ActivityLog.logActivity({
+    userId: req.user?.id || null,
+    action: 'refunded_payment',
+    module: 'payments',
+    recordId: String(req.body.paymentId || req.body.payment_id || req.body.providerPaymentId),
+    metadata: { amount: req.body.amount || null },
   });
   res.json({ payment });
 });
@@ -66,6 +78,7 @@ const validateCoupon = asyncHandler(async (req, res) => {
     code: req.body.code,
     ticketTypeId: req.body.ticketTypeId || req.body.ticket_type_id,
     registrationId: req.body.registrationId || req.body.registration_id,
+    req,
   });
 
   if (!result.coupon) return res.status(404).json({ message: 'Coupon not valid', totals: result.totals });
@@ -80,7 +93,7 @@ const validateCoupon = asyncHandler(async (req, res) => {
 });
 
 const getInvoice = asyncHandler(async (req, res) => {
-  const buffer = await PaymentService.getInvoice(req.params.id);
+  const buffer = await PaymentService.getInvoice(req.params.id, req);
   if (!buffer) return res.status(404).json({ message: 'Invoice not found' });
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="ghc-invoice-${req.params.id}.pdf"`);
@@ -88,7 +101,7 @@ const getInvoice = asyncHandler(async (req, res) => {
 });
 
 const getTicket = asyncHandler(async (req, res) => {
-  const buffer = await PaymentService.getTicket(req.params.id);
+  const buffer = await PaymentService.getTicket(req.params.id, req);
   if (!buffer) return res.status(404).json({ message: 'Ticket not found' });
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader('Content-Disposition', `inline; filename="ghc-ticket-${req.params.id}.pdf"`);

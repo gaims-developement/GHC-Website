@@ -69,4 +69,19 @@ const auditLog = (action) => async (req, _res, next) => {
   next();
 };
 
-module.exports = { apiLimiter, auditLog, authLimiter, csrfProtection, sanitizeBody };
+const apiRequestLog = (req, res, next) => {
+  const startedAt = Date.now();
+  res.on('finish', async () => {
+    try {
+      await pool.query(
+        'INSERT INTO api_request_logs (user_id, method, path, status_code, duration_ms, ip_address) VALUES (?, ?, ?, ?, ?, ?)',
+        [req.user?.id || null, req.method, req.originalUrl, res.statusCode, Date.now() - startedAt, req.ip || req.socket?.remoteAddress || null]
+      );
+    } catch {
+      // Monitoring should never block a request.
+    }
+  });
+  next();
+};
+
+module.exports = { apiLimiter, apiRequestLog, auditLog, authLimiter, csrfProtection, sanitizeBody };

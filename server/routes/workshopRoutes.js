@@ -14,7 +14,7 @@ const {
   updateWorkshop,
   workshopStats,
 } = require('../controllers/workshopController');
-const { optionalAuth, requireAuth, requireRole } = require('../middleware/authMiddleware');
+const { optionalAuth, requireAuth, requirePermission } = require('../middleware/authMiddleware');
 
 const workshopUploadDir = path.join(__dirname, '..', 'uploads', 'workshops');
 fs.mkdirSync(workshopUploadDir, { recursive: true });
@@ -35,7 +35,7 @@ const upload = multer({
   limits: { fileSize: Number(process.env.MAX_UPLOAD_SIZE || 5 * 1024 * 1024) },
 });
 
-const canManageWorkshops = requireRole('SUPER_ADMIN', 'ADMIN', 'MEDIA', 'RESEARCH');
+const canManageWorkshops = requirePermission('manage_workshops', 'workshops.manage');
 
 router.get('/', optionalAuth, listWorkshops);
 router.get('/stats', requireAuth, canManageWorkshops, workshopStats);

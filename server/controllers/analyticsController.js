@@ -74,6 +74,23 @@ const chartData = async () => {
     ORDER BY value DESC
   `);
 
+  const [workshopRegistrations] = await pool.query(`
+    SELECT workshops.title AS label, COUNT(workshop_registrations.id) AS value
+    FROM workshops
+    LEFT JOIN workshop_registrations ON workshop_registrations.workshop_id = workshops.id
+    GROUP BY workshops.id, workshops.title
+    ORDER BY value DESC
+    LIMIT 20
+  `);
+
+  const [abstractSubmissions] = await pool.query(`
+    SELECT DATE(created_at) AS label, COUNT(*) AS value
+    FROM abstracts
+    GROUP BY DATE(created_at)
+    ORDER BY label ASC
+    LIMIT 30
+  `);
+
   const [attendanceHeatmap] = await pool.query(`
     SELECT HOUR(checkin_time) AS label, COUNT(*) AS value
     FROM attendance_logs
@@ -94,6 +111,8 @@ const chartData = async () => {
     revenueTrend: revenueTrend.map((row) => ({ label: row.label, value: number(row.value) })),
     ticketDistribution: ticketDistribution.map((row) => ({ label: row.label, value: number(row.value) })),
     workshopOccupancy: workshopOccupancy.map((row) => ({ label: row.label, value: number(row.value), capacity: number(row.capacity), remaining: number(row.remaining) })),
+    workshopRegistrations: workshopRegistrations.map((row) => ({ label: row.label, value: number(row.value) })),
+    abstractSubmissions: abstractSubmissions.map((row) => ({ label: row.label, value: number(row.value) })),
     attendanceHeatmap: attendanceHeatmap.map((row) => ({ label: `${row.label}:00`, value: number(row.value) })),
     deviceSplit: deviceSplit.length ? deviceSplit.map((row) => ({ label: row.label, value: number(row.value) })) : [
       { label: 'mobile', value: 68 },

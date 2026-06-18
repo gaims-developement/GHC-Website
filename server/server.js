@@ -19,7 +19,8 @@ const { corsOptions } = require('./config/cors');
 const apiRoutes = require('./routes');
 const authRoutes = require('./routes/authRoutes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
-const { apiLimiter, csrfProtection, sanitizeBody } = require('./middleware/productionMiddleware');
+const { apiLimiter, apiRequestLog, csrfProtection, sanitizeBody } = require('./middleware/productionMiddleware');
+const { trackMutations } = require('./middleware/activityMiddleware');
 const { startCronJobs, stopCronJobs } = require('./services/cronService');
 
 const app = express();
@@ -45,6 +46,8 @@ app.use(cookieParser());
 app.use('/api', apiLimiter);
 app.use('/api', sanitizeBody);
 app.use('/api', csrfProtection);
+app.use('/api', apiRequestLog);
+app.use('/api', trackMutations);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/', (req, res) => {

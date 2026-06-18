@@ -9,9 +9,9 @@ const {
   validateCoupon,
   verifyPayment,
 } = require('../controllers/paymentController');
-const { requireAuth, requireRole } = require('../middleware/authMiddleware');
+const { requireAuth, requirePermission } = require('../middleware/authMiddleware');
 
-const canManagePayments = requireRole('SUPER_ADMIN', 'ADMIN');
+const canManagePayments = requirePermission('manage_payments', 'analytics.view');
 
 router.post('/create-payment-intent', createPaymentIntent);
 router.post('/payments/create-order', createOrder);

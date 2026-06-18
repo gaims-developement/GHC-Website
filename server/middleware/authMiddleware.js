@@ -45,6 +45,10 @@ const requireRole = (...roles) => (req, res, next) => {
 };
 
 const requirePermission = (...permissions) => (req, res, next) => {
+  if (req.user?.role === 'SUPER_ADMIN') {
+    return next();
+  }
+
   const userPermissions = req.user?.permissions || [];
   const allowed = permissions.some((permission) => userPermissions.includes(permission));
 

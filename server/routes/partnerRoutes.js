@@ -9,7 +9,7 @@ const {
   reorderPartners,
   updatePartner,
 } = require('../controllers/partnerController');
-const { optionalAuth, requireAuth, requireRole } = require('../middleware/authMiddleware');
+const { optionalAuth, requireAuth, requirePermission } = require('../middleware/authMiddleware');
 
 const partnerUploadDir = path.join(__dirname, '..', 'uploads', 'partners');
 fs.mkdirSync(partnerUploadDir, { recursive: true });
@@ -30,7 +30,7 @@ const upload = multer({
   limits: { fileSize: Number(process.env.MAX_UPLOAD_SIZE || 5 * 1024 * 1024) },
 });
 
-const canManagePartners = requireRole('SUPER_ADMIN', 'ADMIN', 'MEDIA');
+const canManagePartners = requirePermission('manage_sponsors', 'partners.manage');
 
 router.get('/', optionalAuth, listPartners);
 router.post('/', requireAuth, canManagePartners, upload.single('logo'), createPartner);
