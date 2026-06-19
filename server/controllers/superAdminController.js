@@ -39,11 +39,11 @@ const signToken = (user, extra = {}) =>
   );
 
 const dashboard = asyncHandler(async (_req, res) => {
-  const [[registrations]] = await pool.query('SELECT COUNT(*) AS total, SUM(registration_status = "pending") AS pending FROM registrations');
+  const [[registrations]] = await pool.query("SELECT COUNT(*) AS total, SUM(registration_status = 'pending') AS pending FROM registrations");
   const [[speakers]] = await pool.query('SELECT COUNT(*) AS total FROM speakers');
   const [[workshops]] = await pool.query('SELECT COUNT(*) AS total FROM workshops');
   const [[sponsors]] = await pool.query('SELECT COUNT(*) AS total FROM sponsors WHERE is_active = TRUE');
-  const [[abstracts]] = await pool.query('SELECT COUNT(*) AS total, SUM(status IN ("submitted", "under_review")) AS pending FROM abstracts');
+  const [[abstracts]] = await pool.query("SELECT COUNT(*) AS total, SUM(status IN ('submitted', 'under_review')) AS pending FROM abstracts");
   const [[users]] = await pool.query('SELECT COUNT(*) AS total FROM users');
   const [[payments]] = await pool.query(`
     SELECT
