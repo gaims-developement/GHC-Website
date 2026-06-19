@@ -43,6 +43,10 @@ app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use('/api', (req, res, next) => {
+  if (req.method === 'OPTIONS') return next('route');
+  next();
+});
 app.use('/api', apiLimiter);
 app.use('/api', sanitizeBody);
 app.use('/api', csrfProtection);
