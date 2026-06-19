@@ -68,7 +68,10 @@ let server;
 const startServer = async () => {
   await testConnection();
   await initializeDatabase();
-  server = app.listen(PORT, () => {
+  const http = require('http');
+  server = http.createServer(app);
+  server.maxHeaderSize = 32768;
+  server.listen(PORT, () => {
     console.log(`GHC API listening on port ${PORT}`);
     startCronJobs();
   });
