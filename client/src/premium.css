@@ -3758,6 +3758,7 @@ body {
 }
 
 .research-gradient-card::before {
+  pointer-events: none;
   position: absolute;
   inset: 0;
   padding: 1px;

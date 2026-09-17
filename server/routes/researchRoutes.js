@@ -54,7 +54,9 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (_req, file, cb) => {
-    cb(null, file.mimetype === 'application/pdf');
+    // allow PDF and DOCX
+    const allowed = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
+    cb(null, allowed.includes(file.mimetype));
   },
   limits: { fileSize: Number(process.env.MAX_RESEARCH_UPLOAD_SIZE || 10 * 1024 * 1024) },
 });
@@ -96,7 +98,7 @@ router.post('/awards', requireAuth, canManageAwards, saveAward);
 router.put('/awards/:id', requireAuth, canManageAwards, saveAward);
 router.get('/award-results', requireAuth, canManageAwards, listAwardResults);
 router.post('/award-results', requireAuth, canManageAwards, saveAwardResult);
-router.post('/submit', upload.single('pdf'), submitResearch);
+router.post('/submit', upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'declaration', maxCount: 1 }]), submitResearch);
 router.get('/:id', optionalAuth, getResearch);
 router.post('/', requireAuth, canManageResearch, upload.single('pdf'), createResearch);
 router.put('/:id', requireAuth, canManageResearch, upload.single('pdf'), updateResearch);

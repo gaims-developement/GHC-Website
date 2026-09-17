@@ -206,6 +206,7 @@ const modules = [
   ['announcements', 'Announcements', 'manage_announcements', 'announcements', 'Bell', 152, true],
   ['news', 'News', 'manage_news', 'news', 'Newspaper', 153, true],
   ['homepage', 'Homepage CMS', 'manage_homepage', 'homepage', 'Home', 154, true],
+  ['committees', 'Committees', 'manage_homepage', 'committees', 'Users', 154, true],
   ['banners', 'Hero Banners', 'manage_homepage', 'banners', 'Images', 155, true],
   ['gallery', 'Gallery', 'manage_gallery', 'gallery', 'Image', 156, true],
   ['campaigns', 'Campaigns', 'manage_campaigns', 'campaigns', 'Share2', 157, true],
@@ -480,10 +481,13 @@ const createSpeakerTables = async () => {
       keynote BOOLEAN DEFAULT FALSE,
       display_order INT DEFAULT 0,
       status ENUM('draft', 'confirmed', 'cancelled', 'published') DEFAULT 'draft',
+      speaker_type ENUM('current', 'past') DEFAULT 'current',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `);
+
+  await addColumnIfMissing('speakers', 'speaker_type', "ENUM('current', 'past') DEFAULT 'current'");
 
   await addColumnIfMissing('speakers', 'full_name', 'VARCHAR(255)');
   await addColumnIfMissing('speakers', 'organization', 'VARCHAR(255)');
@@ -1601,6 +1605,9 @@ const createResearchTables = async () => {
       email VARCHAR(255),
       phone VARCHAR(50),
       country VARCHAR(100),
+      city_state VARCHAR(255),
+      specialty VARCHAR(100),
+      year_of_study VARCHAR(50),
       category_id INT NULL,
       category ENUM('poster', 'oral', 'research_paper', 'case_report'),
       track VARCHAR(255),
@@ -1608,6 +1615,7 @@ const createResearchTables = async () => {
       abstract_text LONGTEXT,
       file_url TEXT,
       pdf_url TEXT,
+      declaration_url TEXT,
       submission_status ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft',
       status ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft',
       final_score DECIMAL(8,2),
@@ -2872,15 +2880,26 @@ const seedSpeakers = async () => {
   if (rows[0].count > 0) return;
 
   const speakers = [
-    ['Dr A Sharma', 'Director of Digital Health', 'AIIMS Delhi', 'Digital health leader focused on responsible clinical AI and connected care.', 'Digital Health', null, 'https://linkedin.com', null, true, true, 1, 'published'],
-    ['Dr Meera Rao', 'Professor of Public Health', 'GAIMS', 'Population health researcher working across prevention and equitable access.', 'Public Health Systems', null, 'https://linkedin.com', null, false, false, 2, 'published'],
-    ['Prof Kabir Shah', 'Chair, Clinical Intelligence', 'MedTech AI Lab', 'Clinical AI faculty working on safety, governance and workflow design.', 'AI in Healthcare', null, 'https://linkedin.com', null, true, false, 3, 'published'],
-    ['Dr Leena Menon', 'Consultant, Emergency Medicine', 'Global Care Network', 'Emergency medicine specialist and simulation faculty.', 'Emergency Medicine Readiness', null, 'https://linkedin.com', null, false, false, 4, 'draft'],
+    [
+      'Dr Sashi Kuppala (Invited)', '', '',
+      '',
+      'past', 'published', 1
+    ],
+    [
+      'Dr Meher Medavaram (Invited)', '', '',
+      '',
+      'past', 'published', 2
+    ],
+    [
+      'Dr Sowmya Vishwanathan (Invited)', '', '',
+      '',
+      'past', 'published', 3
+    ]
   ];
 
   await pool.query(
     `INSERT INTO speakers
-      (name, designation, institution, bio, topic, photo_url, linkedin_url, instagram_url, featured, keynote, display_order, status)
+      (name, designation, institution, bio, speaker_type, status, display_order)
      VALUES ?`,
     [speakers]
   );
@@ -2891,13 +2910,11 @@ const seedWorkshops = async () => {
   if (rows[0].count > 0) return;
 
   const workshops = [
-    ['Airway Management', 'Dept. of Anaesthesiology', 'Hands-on simulation for difficult airway planning, airway devices and emergency airway response.', 'Clinical Skills', 40, 31, '3 hrs', 'Simulation Lab A', '2026-09-18 09:00:00', 2500, null, true, 'published', 1],
-    ['CPR & COLS', 'Emergency Response Faculty', 'High-fidelity resuscitation drills aligned to current cardiac life support workflows.', 'Emergency Care', 60, 46, '2.5 hrs', 'Skills Hall 1', '2026-09-18 13:00:00', 1800, null, true, 'published', 2],
-    ['AI in Healthcare', 'Digital Health Lab', 'Applied clinical AI workshop covering use cases, governance, validation and workflow adoption.', 'Digital Health', 50, 39, '2 hrs', 'Innovation Studio', '2026-09-19 10:30:00', 2200, null, true, 'published', 3],
-    ['Research Methodology', 'Clinical Research Cell', 'Protocol design, ethics, abstract development and publication pathway mentoring.', 'Research', 45, 38, '3 hrs', 'Research Hub', '2026-09-19 14:00:00', 1600, null, false, 'published', 4],
-    ['Emergency Medicine', 'Global Care Network', 'Scenario-based triage, trauma response and emergency team coordination.', 'Emergency Care', 50, 50, '3 hrs', 'Simulation Lab B', '2026-09-20 09:30:00', 2400, null, false, 'closed', 5],
-    ['Suturing Skills', 'Surgical Skills Faculty', 'Foundational and advanced suturing practice using supervised procedural stations.', 'Clinical Skills', 36, 18, '2 hrs', 'Procedure Lab', '2026-09-20 12:30:00', 1500, null, false, 'draft', 6],
+    ['BLS', 'SET Facility AIIMS Delhi', 'Certificates will be provided.', 'Clinical Skills', 50, 0, '22nd and 23rd', 'AIIMS Delhi', '2026-09-22 09:00:00', 1500, null, true, 'published', 1],
+    ['Suturing and laproscopic', 'SET Facility AIIMS Delhi', 'Certificates will be provided.', 'Clinical Skills', 30, 0, '22nd and 23rd', 'AIIMS Delhi', '2026-09-22 13:00:00', 1500, null, true, 'published', 2],
+    ['Lumbar puncture and sites of injection', 'SET Facility AIIMS Delhi', 'Certificates will be provided.', 'Clinical Skills', 30, 0, '22nd and 23rd', 'AIIMS Delhi', '2026-09-22 15:00:00', 1500, null, true, 'published', 3]
   ];
+
 
   await pool.query(
     `INSERT INTO workshops
@@ -2931,11 +2948,10 @@ const seedTickets = async () => {
   const [rows] = await pool.query('SELECT COUNT(*) AS count FROM ticket_types');
   if (rows[0].count === 0) {
     const tickets = [
-      ['Student Delegate', 'Access for undergraduate and postgraduate students with conference sessions.', 2500, 'INR', 700, 700, true, true],
-      ['Professional Delegate', 'Full delegate access for clinicians, faculty and healthcare professionals.', 6000, 'INR', 800, 800, true, true],
-      ['Workshop Pass', 'Focused access to selected hands-on workshops and skills sessions.', 3500, 'INR', 300, 300, false, true],
-      ['VIP Delegate', 'Premium delegate access with priority seating and hosted networking.', 15000, 'INR', 100, 100, true, true],
-      ['Research Pass', 'Research hub access for abstract, poster and oral presentation delegates.', 3000, 'INR', 350, 350, false, true],
+      ['GAIMS Elites (Early Bird)', 'Early bird registration for GAIMS elites (Valid till Oct 5th).', 1500, 'INR', 700, 700, true, true],
+      ['GAIMS Elites (Late)', 'Late registration for GAIMS elites (Valid till mid Nov).', 2500, 'INR', 700, 700, false, true],
+      ['Non-Member (Early Bird)', 'Early bird registration for non-members (Valid till Oct 5th).', 2000, 'INR', 800, 800, true, true],
+      ['Non-Member (Late)', 'Late registration for non-members (Valid till mid Nov).', 3000, 'INR', 800, 800, false, true],
     ];
 
     await pool.query(
@@ -2965,6 +2981,96 @@ const seedTickets = async () => {
   }
 };
 
+const createVisaTables = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS visa_applications (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      application_id VARCHAR(50) UNIQUE,
+      full_name VARCHAR(255) NOT NULL,
+      date_of_birth DATE NOT NULL,
+      gender VARCHAR(50),
+      nationality VARCHAR(100) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      mobile VARCHAR(100) NOT NULL,
+      passport_number VARCHAR(100) NOT NULL,
+      passport_issue_date DATE,
+      passport_expiry_date DATE NOT NULL,
+      passport_issuing_country VARCHAR(100),
+      organisation VARCHAR(255) NOT NULL,
+      designation VARCHAR(150),
+      medical_college_hospital VARCHAR(255),
+      country_of_residence VARCHAR(100),
+      ghc_registration_id VARCHAR(100) NOT NULL,
+      participant_category VARCHAR(100) NOT NULL,
+      participant_category_other VARCHAR(255),
+      arrival_date DATE NOT NULL,
+      departure_date DATE NOT NULL,
+      accommodation_details TEXT,
+      purpose_of_visit TEXT,
+      passport_document TEXT NOT NULL,
+      declaration_accepted BOOLEAN NOT NULL DEFAULT 1,
+      status ENUM('Pending', 'Under Review', 'Approved', 'Letter Generated', 'Rejected') DEFAULT 'Pending',
+      admin_notes TEXT,
+      letter_generated BOOLEAN DEFAULT 0,
+      letter_number VARCHAR(100),
+      generated_letter_url TEXT,
+      submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      reviewed_at TIMESTAMP NULL,
+      approved_at TIMESTAMP NULL,
+      generated_at TIMESTAMP NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS visa_letter_settings (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      event_name VARCHAR(255) DEFAULT 'Global Health Conclave (GHC)',
+      event_dates VARCHAR(255) DEFAULT '22nd–24th November 2026',
+      venue VARCHAR(255) DEFAULT 'New Delhi, India',
+      organizer_name VARCHAR(255) DEFAULT 'GAIMS',
+      collaboration_org VARCHAR(255) DEFAULT 'AIIMS Student Association',
+      general_email VARCHAR(255) DEFAULT 'sec@gaims.org',
+      conference_email VARCHAR(255) DEFAULT 'vpe@gaims.org',
+      signatory_name VARCHAR(255) DEFAULT 'Dr. Example Name',
+      signatory_designation VARCHAR(255) DEFAULT 'Organizing Secretary',
+      contact_number VARCHAR(100) DEFAULT '+91 8169011833',
+      official_logo_url TEXT,
+      official_letterhead_url TEXT,
+      footer_text TEXT,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+
+  const [settings] = await pool.query('SELECT COUNT(*) AS count FROM visa_letter_settings');
+  if (settings[0].count === 0) {
+    await pool.query('INSERT INTO visa_letter_settings (id) VALUES (1)');
+  }
+};
+
+const createCommitteeTables = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS committee_members (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      committee_type ENUM('organising', 'jury', 'scientific') NOT NULL,
+      name VARCHAR(255) NOT NULL,
+      designation VARCHAR(255),
+      organization VARCHAR(255),
+      committee_role VARCHAR(255),
+      biography TEXT,
+      photo_url VARCHAR(512),
+      linkedin_url VARCHAR(512),
+      twitter_url VARCHAR(512),
+      instagram_url VARCHAR(512),
+      display_order INT DEFAULT 0,
+      status ENUM('draft', 'published') DEFAULT 'draft',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+};
+
 const initializeDatabase = async () => {
   try {
     await createAuthTables();
@@ -2983,6 +3089,7 @@ const initializeDatabase = async () => {
     await createFormTables();
     await createMobileTables();
     await createCoreArchitectureTables();
+    await createCommitteeTables();
     await seedAuthData();
     await seedCoreArchitectureData();
     await seedSpeakers();
@@ -3014,6 +3121,7 @@ module.exports = {
   createFormTables,
   createMobileTables,
   createCoreArchitectureTables,
+  createVisaTables,
   seedCoreArchitectureData,
   seedAuthData,
   seedCoupons,
@@ -3021,4 +3129,5 @@ module.exports = {
   seedWorkshops,
   seedResearch,
   seedTickets,
+  createCommitteeTables,
 };

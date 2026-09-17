@@ -39,6 +39,7 @@ import Checkin from "./pages/Checkin";
 import Certificates from "./pages/Certificates";
 import CertificateDirectory from "./pages/CertificateDirectory";
 import CertificateReports from "./pages/CertificateReports";
+import CommitteesCMS from "./pages/CommitteesCMS";
 import Operations from "./pages/Operations";
 import Logistics from "./pages/Logistics";
 import LogisticsDirectory from "./pages/LogisticsDirectory";
@@ -63,6 +64,9 @@ import AdminSettings from "./pages/AdminSettings";
 import CmsControls from "./pages/CmsControls";
 import TeamManagement from "./pages/TeamManagement";
 import TeamMonitoring from "./pages/TeamMonitoring";
+import VisaApplications from "./pages/VisaApplications";
+import VisaApplicationDetails from "./pages/VisaApplicationDetails";
+import VisaSettings from "./pages/VisaSettings";
 import "./admin.css";
 
 const api = axios.create({
@@ -157,6 +161,7 @@ const pages = {
   "certificate-signatures": (props) => <CertificateDirectory {...props} type="certificate-signatures" />,
   "certificate-accreditation": (props) => <CertificateDirectory {...props} type="certificate-accreditation" />,
   "certificate-reports": CertificateReports,
+  committees: CommitteesCMS,
   operations: Operations,
   logistics: Logistics,
   accommodation: (props) => <LogisticsDirectory {...props} type="accommodation" />,
@@ -190,6 +195,11 @@ const pages = {
   emergency: (props) => <LogisticsDirectory {...props} type="emergency" />,
   "logistics-reports": LogisticsReports,
   system: SystemAdmin,
+
+  // Visa Applications
+  "visa-applications": (props) => <VisaApplications {...props} />,
+  "visa-settings": (props) => <VisaSettings {...props} />,
+
   "system-audit-logs": (props) => <SystemDirectory {...props} type="audit-logs" />,
   "system-users": (props) => <SystemDirectory {...props} type="users" />,
   "system-roles": (props) => <SystemDirectory {...props} type="roles" />,
@@ -235,6 +245,7 @@ const pageFromPath = () => {
   if (parts[1] === "forms" && parts[2]) return `form-${parts[2]}`;
   if (parts[1] === "mobile" && parts[2]) return `mobile-${parts[2]}`;
   if (parts[1] === "core" && parts[2]) return `core-${parts[2]}`;
+  if (parts[1] === "visa-applications" && parts[2] && parts[2] !== "settings") return `visa-application-${parts[2]}`;
   return parts[1] || null;
 };
 
@@ -333,6 +344,7 @@ function AdminApp({ initialPage = "dashboard" }) {
       : pageId.startsWith("form-") ? pageId.replace(/^form-(\d+)-submissions$/, "/admin/forms/$1/submissions").replace(/^form-(\d+)$/, "/admin/forms/$1")
       : pageId.startsWith("mobile-") ? pageId.replace(/^mobile-(.+)$/, "/admin/mobile/$1")
       : pageId.startsWith("core-") ? pageId.replace(/^core-(.+)$/, "/admin/core/$1")
+      : pageId.startsWith("visa-application-") ? pageId.replace(/^visa-application-(.+)$/, "/admin/visa-applications/$1")
       : `/admin/${pageId}`;
     window.history.pushState({}, "", path);
   };
@@ -371,7 +383,7 @@ function AdminApp({ initialPage = "dashboard" }) {
     return <Login api={api} onLogin={handleLogin} />;
   }
 
-  const Page = pages[activePage] || (activePage.startsWith("team-") ? TeamManagement : activePage.startsWith("registration-") ? Registrations : activePage.startsWith("sponsor-") ? Sponsors : activePage.startsWith("event-") ? Events : activePage.match(/^form-\d+-submissions$/) ? FormSubmissions : activePage.match(/^form-\d+$/) ? FormBuilder : null);
+  const Page = pages[activePage] || (activePage.startsWith("team-") ? TeamManagement : activePage.startsWith("registration-") ? Registrations : activePage.startsWith("sponsor-") ? Sponsors : activePage.startsWith("event-") ? Events : activePage.match(/^form-\d+-submissions$/) ? FormSubmissions : activePage.match(/^form-\d+$/) ? FormBuilder : activePage.startsWith("visa-application-") ? VisaApplicationDetails : null);
 
   return (
     <DashboardLayout

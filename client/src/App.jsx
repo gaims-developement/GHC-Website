@@ -4,7 +4,7 @@ import axios from "axios";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { setPageSeo, trackEvent } from "./utils/seo";
 import { apiUrl } from "./config/api";
 import MobileRadialNav from "./components/MobileRadialNav";
@@ -42,7 +42,9 @@ import {
   Stethoscope,
   Bookmark,
   Settings,
+  Trophy,
   Users,
+  Ticket,
   Wrench,
   X,
 } from "lucide-react";
@@ -57,20 +59,15 @@ const PartnershipPortal = lazy(() => import("./pages/PartnershipPortal"));
 const WorkshopDetail = lazy(() => import("./pages/WorkshopDetail"));
 const WorkshopRegister = lazy(() => import("./pages/WorkshopRegister"));
 const GooglePayTest = lazy(() => import("./pages/GooglePayTest"));
+import Footer from "./components/Footer";
 const VerifyCertificate = lazy(() => import("./pages/VerifyCertificate"));
 const DynamicForm = lazy(() => import("./pages/DynamicForm"));
+const Nominations = lazy(() => import("./pages/Nominations"));
+const Committees = lazy(() => import("./pages/Committees"));
+const VisaApplication = lazy(() => import("./pages/VisaApplication"));
+import VisaCTA from "./components/VisaCTA";
 
-const navLinks = [
-  ["Home", "home"],
-  ["About", "about"],
-  ["Tracks", "tracks"],
-  ["Speakers", "world-class-speakers"],
-  ["Workshops", "workshops-experience"],
-  ["Timeline", "ghc-timeline"],
-  ["Research", "research-hub"],
-  ["Register", "registration-cta"],
-  ["Contact", "contact"],
-];
+import { navLinks } from "./config/nav";
 
 const impactCards = [
   { title: "Global Reach", text: "Policy • Research • Innovation", icon: Globe2 },
@@ -114,62 +111,27 @@ const parseJsonConfig = (value) => {
   }
 };
 
-const mockSpeakers = [
-  {
-    featured: true,
-    photo: "keynote-am",
-    initials: "AM",
-    name: "Dr. Aarya Menon",
-    institution: "Global Health Systems Institute",
-    designation: "Director, International Health Policy",
-    topic: "Reimagining Healthcare Beyond Borders",
-  },
-  { photo: "ks", initials: "KS", name: "Prof. Kabir Shah", institution: "MedTech AI Lab", designation: "Chair, Clinical Intelligence", topic: "AI Safety in Patient Care" },
-  { photo: "lr", initials: "LR", name: "Dr. Leena Rao", institution: "National Public Health Forum", designation: "Epidemiologist", topic: "Population Health at Scale" },
-  { photo: "ok", initials: "OK", name: "Dr. Omar Khalid", institution: "Planetary Health Council", designation: "Climate Health Lead", topic: "Resilient Hospitals" },
-  { photo: "ms", initials: "MS", name: "Dr. Mira Sen", institution: "Women's Care Collaborative", designation: "Maternal Health Specialist", topic: "Equity Across the Lifespan" },
-  { photo: "ec", initials: "EC", name: "Prof. Ethan Cole", institution: "Translational Research Network", designation: "Research Strategy Advisor", topic: "From Abstract to Impact" },
-];
+const mockSpeakers = [];
 
-const mockWorkshops = [
-  { title: "Airway Management", capacity: 40, faculty: "Dept. of Anaesthesiology", remaining: 9, duration: "3 hrs" },
-  { title: "CPR & COLS", capacity: 60, faculty: "Emergency Response Faculty", remaining: 14, duration: "2.5 hrs" },
-  { title: "AI in Healthcare", capacity: 50, faculty: "Digital Health Lab", remaining: 11, duration: "2 hrs" },
-  { title: "Research Methodology", capacity: 45, faculty: "Clinical Research Cell", remaining: 7, duration: "3 hrs" },
-  { title: "Emergency Medicine", capacity: 36, faculty: "Emergency Medicine Unit", remaining: 5, duration: "4 hrs" },
-  { title: "Suturing Skills", capacity: 30, faculty: "Surgical Skills Studio", remaining: 6, duration: "2 hrs" },
-];
+const mockWorkshops = [];
+
 
 const defaultScheduleActivities = {
-  day1: [
-    { time: "09:00", title: "Opening Keynote", speaker_name: "Dr. Aisha Malik", speaker_designation: "WHO Director", category: "Keynote" },
-    { time: "10:30", title: "Global Health Policy Panel", speaker_name: "Prof. Daniel Mehta", speaker_designation: "Health Systems Chair", category: "Panel" },
-    { time: "12:00", title: "Networking Break", speaker_name: "GHC Hospitality Team", speaker_designation: "Delegate Lounge", category: "Break" },
-    { time: "14:00", title: "Clinical Skills Workshop", speaker_name: "Dr. Naina Kapoor", speaker_designation: "Simulation Lead", category: "Workshop" },
-  ],
-  day2: [
-    { time: "09:30", title: "Research Poster Walk", speaker_name: "Academic Review Board", speaker_designation: "GHC Research Hub", category: "Workshop" },
-    { time: "11:00", title: "AI in Healthcare Forum", speaker_name: "Dr. Kenji Sato", speaker_designation: "Digital Health Advisor", category: "Panel" },
-    { time: "16:00", title: "Awards Review", speaker_name: "Research Jury", speaker_designation: "Scientific Committee", category: "Networking" },
-  ],
-  day3: [
-    { time: "09:30", title: "Public Health Roundtable", speaker_name: "Dr. Mira Shah", speaker_designation: "Policy Fellow", category: "Panel" },
-    { time: "12:30", title: "Delegate Networking", speaker_name: "GHC Community Team", speaker_designation: "Partner Lounge", category: "Networking" },
-    { time: "15:00", title: "Closing Plenary", speaker_name: "GAIMS Leadership", speaker_designation: "Conclave Secretariat", category: "Keynote" },
-  ],
+  day1: [],
+  day2: [],
+  day3: [],
 };
 
 const scheduleDays = [
-  { key: "day1", title: "Conference Day 1", status: "Dates will be announced soon", subtitle: "Opening · Keynotes · Panels" },
-  { key: "day2", title: "Conference Day 2", status: "Dates will be announced soon", subtitle: "Research · Workshops · Awards" },
-  { key: "day3", title: "Conference Day 3", status: "Dates will be announced soon", subtitle: "Roundtables · Networking · Closing" },
+  { key: "day1", title: "Conference Day 1", status: "November 22, 2026", subtitle: "Opening · Keynotes · Panels" },
+  { key: "day2", title: "Conference Day 2", status: "November 23, 2026", subtitle: "Research · Workshops · Awards" },
+  { key: "day3", title: "Conference Day 3", status: "November 24, 2026", subtitle: "Roundtables · Networking · Closing" },
 ];
 
 const partnerGroups = {
-  Academic: ["GAIMS", "Health Policy School", "Clinical Skills Academy", "Global Research Forum"],
-  NGO: ["CareAccess", "Public Health Action", "Wellbeing Trust", "Planetary Health Alliance"],
-  Media: ["HealthWire", "MedJournal", "Science Daily Forum", "Global Care News"],
-  Sponsors: ["BioBridge", "MedTech Forum", "CareNet", "HealthX"],
+  Sponsors: ["AAPI"],
+  "Digital Partner": ["Clirnet"],
+  "Medical Education": ["Uworld"],
 };
 
 const heroTitle = "Global Healthcare Conclave 2026";
@@ -202,22 +164,34 @@ function useMockResource(endpoint, mockData) {
 function Navbar() {
   const [open, setOpen] = useState(false);
 
+  const handleNavClick = (e, label, id) => {
+    if (label !== "Register" && label !== "Nomination" && label !== "Committees") {
+      const el = document.getElementById(id);
+      if (el) {
+        e.preventDefault();
+        el.scrollIntoView({ behavior: 'smooth' });
+        window.history.pushState({}, '', `/#${id}`);
+      }
+    }
+    setOpen(false);
+  };
+
   return (
     <header className="site-navbar fixed left-0 right-0 top-0 z-50 px-4 pt-4 sm:px-6">
       <nav className="glass-nav mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-5">
-        <a href="#home" className="flex items-center gap-3" aria-label="Global Healthcare Conclave home">
+        <a href="/" className="flex items-center gap-3" aria-label="Global Healthcare Conclave home">
           <span className="brand-mark">
             <Stethoscope className="h-5 w-5" />
           </span>
           <span>
             <span className="block font-['Sora'] text-sm font-bold text-[#081B33]">GHC 2026</span>
-            <span className="block text-[0.68rem] uppercase tracking-[0.24em] text-[#0D47A1]/70">GAIMS Global Summit</span>
+            <span className="block text-[0.68rem] uppercase tracking-[0.24em] text-[#0D47A1]/70">Global Health Conclave</span>
           </span>
         </a>
 
         <div className="hidden items-center gap-1 lg:flex">
           {navLinks?.map(([label, id]) => (
-            <a key={id} href={label === "Register" ? "/register" : `#${id}`} className="nav-link">
+            <a key={id} href={label === "Register" ? "/register" : label === "Nomination" ? "/nominations" : label === "Committees" ? "/committees" : `/#${id}`} onClick={(e) => handleNavClick(e, label, id)} className="nav-link">
               {label}
             </a>
           ))}
@@ -235,7 +209,7 @@ function Navbar() {
       {open && (
         <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="mobile-menu mx-auto mt-3 max-w-7xl p-3 lg:hidden">
           {navLinks?.map(([label, id]) => (
-            <a key={id} href={label === "Register" ? "/register" : `#${id}`} onClick={() => setOpen(false)} className="block rounded-2xl px-4 py-3 text-sm font-semibold text-[#081B33]/75 hover:bg-[#4FC3F7]/10 hover:text-[#0D47A1]">
+            <a key={id} href={label === "Register" ? "/register" : label === "Nomination" ? "/nominations" : label === "Committees" ? "/committees" : `/#${id}`} onClick={(e) => handleNavClick(e, label, id)} className="block rounded-2xl px-4 py-3 text-sm font-semibold text-[#081B33]/75 hover:bg-[#4FC3F7]/10 hover:text-[#0D47A1]">
               {label}
             </a>
           ))}
@@ -417,10 +391,7 @@ function Hero({ banner }) {
   const heroDescription = banner?.subtitle || defaultHeroDescription;
   const heroButtonText = banner?.button_text || defaultHeroButtonText;
   const heroLink = banner?.button_link || defaultHeroLink;
-  const [introActive, setIntroActive] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.sessionStorage.getItem("ghcHeroIntroSeen") !== "true";
-  });
+  const [introActive, setIntroActive] = useState(false);
 
   useEffect(() => {
     if (!introActive) return undefined;
@@ -485,7 +456,7 @@ function Hero({ banner }) {
         <div className="relative z-10">
           <motion.div className="hero-pill" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: finalDelay, duration: 0.7, ease: "easeOut" }}>
             <MapPin className="h-4 w-4 text-[#ff3b8b]" />
-            New Delhi · Dates will be announced soon
+            New Delhi · November 22-24, 2026
           </motion.div>
           <motion.h1
             className="kinetic-title mt-7 font-['Sora'] text-5xl font-bold leading-[0.96] text-[#081B33] sm:text-6xl lg:text-7xl"
@@ -503,6 +474,14 @@ function Hero({ banner }) {
               </span>
             ))}
           </motion.h1>
+          <motion.div
+            className="mt-4 text-sm font-medium uppercase tracking-widest text-white"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: finalDelay + 0.25, duration: 0.75 }}
+          >
+            In collaboration with <span className="text-[#ff3b8b]">AIIMS Student Association</span>
+          </motion.div>
           <motion.p className="mt-6 max-w-2xl text-xl leading-8 text-[#12385f]/78" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: finalDelay + 0.42, duration: 0.75 }}>
             {heroDescription}
           </motion.p>
@@ -642,19 +621,30 @@ function StatsStrip() {
 
 function About() {
   return (
-    <section id="about" className="section-shell reveal-section">
-      <div className="asym-grid">
-        <SectionHeading eyebrow="About GHC" title="A healthcare forum designed for global coordination." />
-        <div className="glass-card p-6 md:p-8">
-          <p className="text-lg leading-8 text-[#12385f]/76">
-            Global Healthcare Conclave is the flagship global health initiative of GAIMS, bringing together healthcare professionals, researchers, students and innovators to build practical answers for tomorrow's health systems.
-          </p>
-          <div className="mt-7 grid gap-3 sm:grid-cols-3">
-            {["Clinical excellence", "Research exchange", "Policy leadership"]?.map((item) => (
-              <div key={item} className="mini-proof"><Check className="h-4 w-4" />{item}</div>
-            ))}
+    <section id="about" className="section-shell relative overflow-hidden reveal-section">
+      <div className="absolute top-1/2 -right-32 -z-10 h-[500px] w-[500px] -translate-y-1/2 rounded-full bg-gradient-to-br from-[#E91E63]/20 to-[#4FC3F7]/20 blur-[120px]" aria-hidden="true" />
+      
+      <div className="asym-grid items-center gap-12 md:gap-16">
+        <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
+          <SectionHeading eyebrow="About GHC" title="A healthcare forum designed for global coordination." />
+        </motion.div>
+        
+        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2 }} className="group relative">
+          <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-[#E91E63] to-[#4FC3F7] opacity-20 blur transition duration-1000 group-hover:opacity-40" />
+          <div className="glass-card relative p-8 md:p-10 shadow-2xl backdrop-blur-xl bg-[#081b33]/80 border border-white/10 rounded-2xl">
+            <p className="font-['Inter'] text-lg leading-relaxed text-slate-200">
+              Global Healthcare Conclave is the flagship global health initiative of GAIMS, bringing together healthcare professionals, researchers, students and innovators to build practical answers for tomorrow's health systems.
+            </p>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+              {["Clinical excellence", "Research exchange", "Policy leadership"]?.map((item) => (
+                <div key={item} className="flex items-center gap-2 rounded-full border border-[#4FC3F7]/30 bg-[#4FC3F7]/10 px-4 py-2 font-['Sora'] text-sm font-semibold text-[#4FC3F7] transition hover:bg-[#4FC3F7]/20 hover:scale-105">
+                  <Check className="h-4 w-4" />
+                  {item}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );
@@ -733,6 +723,7 @@ function Tracks() {
 }
 
 function SpeakerPhoto({ speaker, featured = false }) {
+  if (!speaker) return null;
   const photoUrl = speaker?.photoUrl?.startsWith("/uploads") ? apiUrl(speaker.photoUrl) : speaker?.photoUrl;
 
   return (
@@ -789,26 +780,86 @@ function WorldClassSpeakers() {
         <span className="api-chip">GET {endpoint}</span>
       </div>
       <div className="speaker-luxury-grid">
-        <motion.article className="featured-speaker-card" whileHover={{ y: -8, scale: 1.01 }}>
-          <SpeakerPhoto speaker={featured} featured />
-          <div className="featured-speaker-content">
-            <p className="section-kicker">Featured Keynote</p>
-            <h3>{featured?.name}</h3>
-            <p className="speaker-institution">{featured?.institution}</p>
-            <p className="speaker-designation">{featured?.designation}</p>
-            <div className="speaker-topic">
-              <Sparkles className="h-4 w-4" />
-              {featured?.topic}
+        {featured ? (
+          <>
+            <motion.article className="featured-speaker-card" whileHover={{ y: -8, scale: 1.01 }}>
+              <SpeakerPhoto speaker={featured} featured />
+              <div className="featured-speaker-content">
+                <p className="section-kicker">Featured Keynote</p>
+                <h3>{featured?.name}</h3>
+                <p className="speaker-institution">{featured?.institution}</p>
+                <p className="speaker-designation">{featured?.designation}</p>
+                <div className="speaker-topic">
+                  <Sparkles className="h-4 w-4" />
+                  {featured?.topic}
+                </div>
+              </div>
+            </motion.article>
+            <div className="speaker-circle-grid">
+              {secondarySpeakers?.map((speaker) => (
+                <SpotlightCard key={speaker.name} className="speaker-circle-card">
+                  <SpeakerPhoto speaker={speaker} />
+                  <h3>{speaker.name}</h3>
+                  <p>{speaker.designation}</p>
+                  <span>{speaker.topic}</span>
+                </SpotlightCard>
+              ))}
             </div>
+          </>
+        ) : (
+          <div className="glass-card w-full p-10 text-center opacity-60 col-span-full">
+            <h3 className="text-xl font-['Sora'] text-white">Speakers will be announced soon.</h3>
           </div>
-        </motion.article>
-        <div className="speaker-circle-grid">
-          {secondarySpeakers?.map((speaker) => (
-            <SpotlightCard key={speaker.name} className="speaker-circle-card">
-              <SpeakerPhoto speaker={speaker} />
-              <h3>{speaker.name}</h3>
-              <p>{speaker.designation}</p>
-              <span>{speaker.topic}</span>
+        )}
+      </div>
+
+      <div className="mt-20">
+        <SectionHeading eyebrow="Legacy" title="Past Speakers" text="Distinguished faculty and visionaries from our previous editions." />
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {[
+            {
+              name: "Dr Mukesh Bhatia",
+              designation: "Founder, DBMCI",
+              achievements: "Pioneer in PG Medical Entrance education. Mentored millions of medical students."
+            },
+            {
+              name: "Dr Randeep Guleria",
+              designation: "Former Director, AIIMS New Delhi",
+              achievements: "Padma Shri Awardee. Lead architect of India's COVID-19 pandemic response."
+            },
+            {
+              name: "Dr Minu Bajpai",
+              designation: "Executive Director, NBE",
+              achievements: "Renowned Paediatric Surgeon and academician. Former Head of Department at AIIMS."
+            },
+            {
+              name: "Dr Rakesh Garg",
+              designation: "Additional Professor, AIIMS New Delhi",
+              achievements: "Expert in Anesthesiology, Pain Medicine and Critical Care. Over 200+ publications."
+            },
+            {
+              name: "Dr Tanmay Motiwala",
+              designation: "Paediatric Surgeon & Influencer",
+              achievements: "Inspiring voice in the medical community with focus on surgical education."
+            },
+            {
+              name: "Lt Gen Dr DP Vats",
+              designation: "Former Director, AFMC Pune",
+              achievements: "Rajya Sabha MP. Param Vishisht Seva Medal (PVSM) awardee. Eminent Ophthalmologist."
+            },
+            {
+              name: "Dr Yogendra Malik",
+              designation: "Former Advisor to CM, Haryana",
+              achievements: "Eminent medical educationist and health policy maker."
+            }
+          ].map(speaker => (
+            <SpotlightCard key={speaker.name} className="glass-card p-6 flex flex-col items-center text-center">
+              <SpeakerPhoto speaker={{ ...speaker, initials: speaker.name.split(" ").slice(1, 3).map(n => n[0]).join("") }} />
+              <h3 className="mt-5 font-['Sora'] text-lg font-semibold text-white/90">{speaker.name}</h3>
+              <p className="mt-1 text-sm font-medium text-[#4FC3F7]">{speaker.designation}</p>
+              <p className="mt-4 text-sm text-slate-400 leading-relaxed border-t border-white/10 pt-4 w-full">
+                {speaker.achievements}
+              </p>
             </SpotlightCard>
           ))}
         </div>
@@ -868,6 +919,40 @@ function WorkshopsExperience() {
             </div>
           </motion.article>
         );})}
+      </div>
+    </section>
+  );
+}
+
+function AwardsSection() {
+  const awards = [
+    { title: "Nomination Award", description: "Recognizing outstanding contributions and excellence in healthcare. Nominate deserving individuals for their remarkable impact.", icon: Award },
+    { title: "GAIMS Position Holder Award", description: "Honoring the leadership, dedication, and service of GAIMS position holders across the country.", icon: Trophy },
+  ];
+
+  return (
+    <section id="awards" className="section-shell reveal-section">
+      <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+        <SectionHeading eyebrow="Awards & Recognition" title="Honoring Excellence." text="Celebrate the achievements of individuals and leaders making a profound impact. The award function will be held on the final day." />
+      </div>
+      <div className="research-action-grid">
+        {awards.map((award) => {
+          const Icon = award.icon;
+          return (
+            <motion.article key={award.title} className="research-gradient-card research-action-card" whileHover={{ y: -9, scale: 1.01 }}>
+              <div className="track-icon"><Icon className="h-6 w-6" /></div>
+              <h3>{award.title}</h3>
+              <p>{award.description}</p>
+              {award.title === "Nomination Award" && (
+                <div className="research-card-actions">
+                  <Link to="/nominations" className="hero-button-primary">
+                    Submit Nomination <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              )}
+            </motion.article>
+          );
+        })}
       </div>
     </section>
   );
@@ -1220,12 +1305,48 @@ function ResearchHub() {
   );
 }
 
+function PanelDiscussionSection() {
+  const panels = [
+    { title: "HPV and Cervical Cancer", icon: HeartPulse, description: "Discussing prevention, early detection, and the latest treatment protocols." },
+    { title: "Stem Cell", icon: Dna, description: "Exploring regenerative medicine and ethical frontiers in stem cell research." },
+    { title: "Medical Education", icon: ClipboardCheck, description: "Navigating the evolving landscape for medical students." },
+    { title: "AI in Healthcare", icon: BrainCircuit, description: "Leveraging artificial intelligence for clinical decision support and automation." },
+  ];
+
+  return (
+    <section id="panel-discussion" className="section-shell reveal-section">
+      <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+        <SectionHeading eyebrow="Expert Forums" title="Panel Discussions." text="Engage with thought leaders on critical healthcare topics and future directions." />
+      </div>
+      <div className="research-action-grid">
+        {panels.map((panel) => {
+          const Icon = panel.icon;
+          return (
+            <motion.article key={panel.title} className="research-gradient-card research-action-card" whileHover={{ y: -9, scale: 1.01 }}>
+              <div className="track-icon"><Icon className="h-6 w-6" /></div>
+              <h3>{panel.title}</h3>
+              <p>{panel.description}</p>
+              {panel.title === "Medical Education" && (
+                <div className="research-guideline-list mt-4">
+                  <span>Undergraduate (UG)</span>
+                  <span>Postgraduate (PG)</span>
+                  <span>Foreign Medical Graduates (FMG)</span>
+                </div>
+              )}
+            </motion.article>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function VenueSection() {
   const info = [
-    { icon: MapPin, title: "Location", text: "GAIMS Convention Centre, Ahmedabad" },
+    { icon: MapPin, title: "Location", text: "Tentative Le meridian new delhi, tentative AIIMS Delhi" },
     { icon: Plane, title: "Travel", text: "Airport transfer guidance and city arrival desk" },
     { icon: Hotel, title: "Accommodation", text: "Curated delegate hotel blocks near the venue" },
-    { icon: BadgeCheck, title: "Delegate Info", text: "On-site help desk, badges, meals and workshop routing" },
+    { icon: BadgeCheck, title: "Delegate Info", text: "On-site help desk, badges, lunch and workshop routing" },
   ];
 
   return (
@@ -1309,6 +1430,71 @@ function PartnerMarquee({ partners = [] }) {
   );
 }
 
+function PastOrganisations() {
+  return (
+    <section id="past-organisations" className="section-shell reveal-section">
+      <div className="mx-auto max-w-7xl px-5 md:px-8">
+        <SectionHeading eyebrow="Partnerships" title="Our Past Organisations" text="We have successfully collaborated with the most prestigious medical organizations across India." />
+        <div className="mt-8 flex flex-wrap justify-center gap-6">
+          {[
+            "FAIMA", "MSAI", "IMA JDN", "AFPI", "IRCF", "AEME", "GJMS", "MGT", "SMR"
+          ].map(org => (
+            <SpotlightCard key={org} className="glass-card p-6 flex flex-col items-center justify-center text-center w-[160px] h-[160px] rounded-2xl">
+              <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-4">
+                <Globe2 className="h-8 w-8 text-[#4FC3F7]" />
+              </div>
+              <h3 className="font-['Sora'] text-sm font-semibold text-white/90">{org}</h3>
+            </SpotlightCard>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PricingSection() {
+  const tiers = [
+    { name: "GAIMS Elites", early: "₹1,500", late: "₹2,500" },
+    { name: "Non-Member", early: "₹2,000", late: "₹3,000" },
+  ];
+
+  return (
+    <section id="pricing" className="section-shell reveal-section">
+      <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+        <SectionHeading eyebrow="Registration Fees" title="Conference Passes." text="Secure your delegate pass for the Global Healthcare Conclave 2026." />
+      </div>
+      
+      <div className="research-action-grid">
+        <motion.article className="research-gradient-card research-action-card" whileHover={{ y: -9, scale: 1.01 }}>
+          <div className="track-icon"><Ticket className="h-6 w-6" /></div>
+          <h3>Early Bird Registration</h3>
+          <p>Last date for early registration: <strong>October 5th</strong></p>
+          <div className="research-guideline-list mt-4">
+            {tiers.map(t => (
+              <span key={t.name} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                {t.name} <strong>{t.early}</strong>
+              </span>
+            ))}
+          </div>
+        </motion.article>
+
+        <motion.article className="research-gradient-card research-action-card" whileHover={{ y: -9, scale: 1.01 }}>
+          <div className="track-icon"><Clock3 className="h-6 w-6" /></div>
+          <h3>Late Registration</h3>
+          <p>Last date for late registration: <strong>Mid November</strong></p>
+          <div className="research-guideline-list mt-4">
+            {tiers.map(t => (
+              <span key={t.name} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                {t.name} <strong>{t.late}</strong>
+              </span>
+            ))}
+          </div>
+        </motion.article>
+      </div>
+    </section>
+  );
+}
+
 function RegistrationCTA() {
   return (
     <section id="registration-cta" className="section-shell reveal-section">
@@ -1335,45 +1521,6 @@ function RegistrationCTA() {
     </section>
   );
 }
-
-function Footer() {
-  return (
-    <footer id="contact" className="footer-shell reveal-section">
-      <div className="newsletter-card">
-        <div>
-          <p className="section-kicker">Newsletter</p>
-          <h2>Stay inside the GHC circle.</h2>
-          <p>Receive speaker announcements, abstract deadlines, workshop releases and partner updates.</p>
-        </div>
-        <form>
-          <input type="email" placeholder="Email address" aria-label="Email address" />
-          <button aria-label="Subscribe"><Mail className="h-5 w-5" /></button>
-        </form>
-      </div>
-
-      <div className="mx-auto grid max-w-7xl gap-10 px-5 pb-12 pt-12 md:px-8 lg:grid-cols-[1.2fr_0.8fr_0.8fr]">
-        <div>
-          <div className="flex items-center gap-3">
-            <span className="brand-mark"><Stethoscope className="h-5 w-5" /></span>
-            <h3 className="font-['Sora'] text-xl font-bold">Global Healthcare Conclave 2026</h3>
-          </div>
-          <p className="mt-5 max-w-md leading-7 text-[#12385f]/62">The flagship global health initiative of GAIMS for clinicians, researchers, students and innovators.</p>
-        </div>
-        <div>
-          <h4 className="footer-heading">Quick links</h4>
-          <div className="mt-5 grid gap-3">
-            {navLinks?.slice(1)?.map(([label, id]) => <a key={id} href={`#${id}`}>{label}</a>)}
-          </div>
-        </div>
-        <div>
-          <h4 className="footer-heading">Contact</h4>
-          <p className="mt-5 text-sm leading-7 text-[#12385f]/62">GAIMS Global Healthcare Conclave Office<br />conference@gaims.org</p>
-        </div>
-      </div>
-    </footer>
-  );
-}
-
 function App() {
   const appRef = useRef(null);
   const location = useLocation();
@@ -1387,6 +1534,9 @@ function App() {
   const isGooglePayTestRoute = location.pathname.startsWith("/google-pay-test");
   const isVerifyCertificateRoute = location.pathname.startsWith("/verify-certificate");
   const isDynamicFormRoute = location.pathname.startsWith("/forms/");
+  const isNominationsRoute = location.pathname.startsWith("/nominations");
+  const isCommitteesRoute = location.pathname.startsWith("/committees");
+  const isVisaRoute = location.pathname.startsWith("/visa-application");
   const [installPrompt, setInstallPrompt] = useState(null);
   const [homepageSync, setHomepageSync] = useState({ banners: [], homepage: [], mediaPartners: [], notifications: [], seo: [] });
   const [partners, setPartners] = useState([]);
@@ -1401,7 +1551,8 @@ function App() {
       isWorkshopRegisterRoute ||
       isGooglePayTestRoute ||
       isVerifyCertificateRoute ||
-      isDynamicFormRoute
+      isDynamicFormRoute ||
+      isNominationsRoute
     ) {
       return undefined;
     }
@@ -1459,10 +1610,11 @@ function App() {
       isWorkshopRegisterRoute ||
       isGooglePayTestRoute ||
       isVerifyCertificateRoute ||
-      isDynamicFormRoute
+      isDynamicFormRoute ||
+      isNominationsRoute
     ) {
       setPageSeo({
-        title: isDynamicFormRoute ? "GHC Form" : isVerifyCertificateRoute ? "Verify Certificate" : isGooglePayTestRoute ? "Google Pay Test" : isWorkshopRegisterRoute ? "Workshop Registration" : isWorkshopCmsRoute ? "Workshop Manager" : isWorkshopDetailRoute ? "Workshop Details" : isPartnerRoute ? "Partner Portal" : isAbstractRoute ? "Abstract Registration" : isRegisterRoute ? "Register" : isAdminRoute ? "Admin" : "Global Healthcare Conclave 2026",
+        title: isNominationsRoute ? "GHC Awards 2026 — Nominations" : isDynamicFormRoute ? "GHC Form" : isVerifyCertificateRoute ? "Verify Certificate" : isGooglePayTestRoute ? "Google Pay Test" : isWorkshopRegisterRoute ? "Workshop Registration" : isWorkshopCmsRoute ? "Workshop Manager" : isWorkshopDetailRoute ? "Workshop Details" : isPartnerRoute ? "Partner Portal" : isAbstractRoute ? "Abstract Registration" : isRegisterRoute ? "Register" : isAdminRoute ? "Admin" : "Global Healthcare Conclave 2026",
         description: isWorkshopDetailRoute
           ? "Workshop details for Global Healthcare Conclave 2026."
           : isPartnerRoute
@@ -1472,7 +1624,7 @@ function App() {
           : isRegisterRoute
           ? "Register for Global Healthcare Conclave 2026 with secure ticket checkout."
           : "Global Healthcare Conclave 2026 by GAIMS: speakers, workshops, research, venue, partners and registration.",
-        path: isDynamicFormRoute ? location.pathname : isVerifyCertificateRoute ? "/verify-certificate" : isGooglePayTestRoute ? "/google-pay-test" : isWorkshopRegisterRoute ? location.pathname : isWorkshopCmsRoute ? "/admin/workshops" : isWorkshopDetailRoute ? location.pathname : isPartnerRoute ? "/partnership" : isAbstractRoute ? "/abstract-registration" : isRegisterRoute ? "/register" : isAdminRoute ? "/admin" : "/",
+        path: isNominationsRoute ? "/nominations" : isDynamicFormRoute ? location.pathname : isVerifyCertificateRoute ? "/verify-certificate" : isGooglePayTestRoute ? "/google-pay-test" : isWorkshopRegisterRoute ? location.pathname : isWorkshopCmsRoute ? "/admin/workshops" : isWorkshopDetailRoute ? location.pathname : isPartnerRoute ? "/partnership" : isAbstractRoute ? "/abstract-registration" : isRegisterRoute ? "/register" : isAdminRoute ? "/admin" : "/",
         schema: {
           "@context": "https://schema.org",
           "@type": "Event",
@@ -1520,7 +1672,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (isAdminRoute || isRegisterRoute || isAbstractRoute || isPartnerRoute || isWorkshopDetailRoute || isWorkshopRegisterRoute || isGooglePayTestRoute || isVerifyCertificateRoute || isDynamicFormRoute) {
+    if (isAdminRoute || isRegisterRoute || isAbstractRoute || isPartnerRoute || isWorkshopDetailRoute || isWorkshopRegisterRoute || isGooglePayTestRoute || isVerifyCertificateRoute || isDynamicFormRoute || isNominationsRoute) {
       return undefined;
     }
 
@@ -1643,6 +1795,31 @@ function App() {
         <MobileRadialNav />
       </>
     );
+  } else if (isNominationsRoute) {
+    routeContent = (
+      <>
+        <Suspense fallback={<div className="admin-loading">Loading nominations...</div>}><Nominations /></Suspense>
+        <MobileRadialNav />
+      </>
+    );
+  } else if (isVisaRoute) {
+    routeContent = (
+      <>
+        <Suspense fallback={<div className="admin-loading">Loading visa application...</div>}><VisaApplication /></Suspense>
+        <MobileRadialNav />
+      </>
+    );
+  } else if (isCommitteesRoute) {
+    routeContent = (
+      <div ref={appRef} className="min-h-screen overflow-hidden bg-[#081B33] text-white">
+        <Navbar />
+        <main>
+          <Suspense fallback={<div className="admin-loading text-white">Loading committees...</div>}><Committees /></Suspense>
+        </main>
+        <Footer />
+        <MobileRadialNav />
+      </div>
+    );
   } else if (isPartnerRoute) {
     routeContent = (
       <>
@@ -1672,10 +1849,15 @@ function App() {
         <Tracks />
         <WorldClassSpeakers />
         <WorkshopsExperience />
+        <AwardsSection />
         <GHCTimeline />
         <ResearchHub />
+        <PanelDiscussionSection />
         <VenueSection />
         <PartnerMarquee />
+        <PastOrganisations />
+        <PricingSection />
+        <VisaCTA />
         <RegistrationCTA />
       </main>
       <Footer />

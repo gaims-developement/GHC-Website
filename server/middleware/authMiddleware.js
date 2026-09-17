@@ -9,7 +9,9 @@ const requireAuth = (req, res, next) => {
   const token = getToken(req);
 
   if (!token) {
-    return res.status(401).json({ message: 'Authentication required' });
+    const err = new Error('Auth debug');
+    console.log('Authentication required for path:', req.originalUrl, req.method, req.route?.path);
+    return res.status(401).json({ message: 'Authentication required', stack: err.stack, matchedRoute: req.route?.path });
   }
 
   try {

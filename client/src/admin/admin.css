@@ -321,6 +321,24 @@
 .admin-sidebar nav {
   display: grid;
   gap: 0.45rem;
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 0.5rem;
+}
+
+/* Custom scrollbar for sidebar */
+.admin-sidebar nav::-webkit-scrollbar {
+  width: 4px;
+}
+.admin-sidebar nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.admin-sidebar nav::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+.admin-sidebar nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .admin-sidebar nav button,

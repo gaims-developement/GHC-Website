@@ -10,24 +10,31 @@ const reviewRoles = ['SUPER_ADMIN', 'ADMIN', 'RESEARCH'];
 
 const toBoolean = (value) => value === true || value === 'true' || value === '1' || value === 1;
 
-const sanitizePayload = (body, file) => ({
-  title: body.title?.trim(),
-  authors: body.authors?.trim(),
-  presentingAuthor: body.presentingAuthor || body.presenting_author,
-  correspondingAuthor: body.correspondingAuthor || body.corresponding_author,
-  institution: body.institution?.trim(),
-  email: body.email?.trim(),
-  phone: body.phone?.trim(),
-  country: body.country?.trim(),
-  categoryId: body.categoryId || body.category_id,
-  category: body.category || 'poster',
-  track: body.track?.trim(),
-  keywords: body.keywords?.trim(),
-  abstractText: body.abstractText || body.abstract_text,
-  pdfUrl: file ? `/uploads/research/${file.filename}` : body.pdfUrl || body.pdf_url,
-  status: body.status || 'draft',
-  awardNomination: toBoolean(body.awardNomination ?? body.award_nomination),
-});
+const sanitizePayload = (body, fileOrFiles) => {
+  const files = fileOrFiles?.pdf ? fileOrFiles : fileOrFiles ? { pdf: [fileOrFiles] } : null;
+  return {
+    title: body.title?.trim(),
+    authors: body.authors?.trim() || body.presentingAuthor || body.name,
+    presentingAuthor: body.presentingAuthor || body.presenting_author || body.name,
+    correspondingAuthor: body.correspondingAuthor || body.corresponding_author,
+    institution: body.institution?.trim() || body.college?.trim(),
+    email: body.email?.trim(),
+    phone: body.phone?.trim(),
+    country: body.country?.trim(),
+    city_state: (body.cityState || body.city_state)?.trim(),
+    specialty: body.specialty?.trim(),
+    year_of_study: (body.yearOfStudy || body.year_of_study)?.trim(),
+    categoryId: body.categoryId || body.category_id,
+    category: body.category || 'poster',
+    track: body.track?.trim(),
+    keywords: body.keywords?.trim(),
+    abstractText: body.abstractText || body.abstract_text || 'See attached PDF',
+    pdfUrl: files?.pdf ? `/uploads/research/${files.pdf[0].filename}` : body.pdfUrl || body.pdf_url,
+    declaration_url: files?.declaration ? `/uploads/research/${files.declaration[0].filename}` : body.declaration_url,
+    status: body.status || 'draft',
+    awardNomination: toBoolean(body.awardNomination ?? body.award_nomination),
+  };
+};
 
 const logDecision = (req, action, recordId, metadata = null) =>
   ActivityLog.logActivity({ userId: req.user?.id || null, action, module: 'scientific', recordId: String(recordId), metadata }).catch(() => {});
@@ -39,15 +46,14 @@ const validate = (payload) => {
   return null;
 };
 
-const validatePublicSubmission = (payload, file) => {
+const validatePublicSubmission = (payload, files) => {
   if (!payload.presentingAuthor) return 'Personal details are required';
   if (!payload.email) return 'Email is required';
   if (!payload.institution) return 'Institution is required';
   if (!payload.title) return 'Title is required';
-  if (!payload.authors) return 'Authors are required';
-  if (!payload.abstractText) return 'Abstract is required';
   if (!validCategories.includes(payload.category)) return 'Invalid category';
-  if (!file) return 'PDF upload is required';
+  if (!files?.pdf) return 'Abstract PDF upload is required';
+  if (!files?.declaration) return 'Declaration form upload is required';
   return null;
 };
 
@@ -75,20 +81,31 @@ const createResearch = asyncHandler(async (req, res) => {
 
 const submitResearch = asyncHandler(async (req, res) => {
   const payload = {
-    ...sanitizePayload(req.body, req.file),
+    ...sanitizePayload(req.body, req.files),
     status: 'submitted',
   };
-  const error = validatePublicSubmission(payload, req.file);
+  const error = validatePublicSubmission(payload, req.files);
   if (error) return res.status(400).json({ message: error });
 
   const driveUpload = await uploadResearchPdf({
-    file: req.file,
+    file: req.files?.pdf?.[0],
     category: payload.category,
     title: payload.title,
   });
 
   if (driveUpload?.webViewLink) {
     payload.pdfUrl = driveUpload.webViewLink;
+  }
+
+  const declUpload = await uploadResearchPdf({
+    file: req.files?.declaration?.[0],
+    category: payload.category,
+    title: payload.title,
+    suffix: 'declaration'
+  });
+
+  if (declUpload?.webViewLink) {
+    payload.declaration_url = declUpload.webViewLink;
   }
 
   const submission = await Research.create(payload);

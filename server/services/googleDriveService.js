@@ -68,7 +68,7 @@ const ensureFolder = async (drive, name, parentId) => {
   return data.id;
 };
 
-const uploadResearchPdf = async ({ file, category, title }) => {
+const uploadResearchPdf = async ({ file, category, title, suffix = '' }) => {
   const drive = getDriveClient();
   if (!drive || !file) return null;
 
@@ -81,7 +81,7 @@ const uploadResearchPdf = async ({ file, category, title }) => {
 
   const { data } = await drive.files.create({
     requestBody: {
-      name: `${safeTitle}-${Date.now()}${extension}`,
+      name: `${safeTitle}${suffix ? `-${suffix}` : ''}-${Date.now()}${extension}`,
       parents: [categoryFolderId],
     },
     media: {
@@ -91,12 +91,58 @@ const uploadResearchPdf = async ({ file, category, title }) => {
     fields: 'id, webViewLink, webContentLink',
   });
 
-  return {
-    fileId: data.id,
-    webViewLink: data.webViewLink,
-    webContentLink: data.webContentLink,
-    folder: `GHC2026/${categoryFolder}`,
-  };
+  return { id: data.id, url: data.webViewLink, download: data.webContentLink };
 };
 
-module.exports = { uploadResearchPdf };
+const uploadVisaDocument = async ({ file, applicantName }) => {
+  const drive = getDriveClient();
+  if (!drive || !file) return null;
+
+  const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID
+    || (await ensureFolder(drive, 'GHC2026'));
+  const visaFolderId = await ensureFolder(drive, 'Visa Applications', rootFolderId);
+  const passportsFolderId = await ensureFolder(drive, 'Passports', visaFolderId);
+  
+  const safeName = (applicantName || 'applicant').replace(/[<>:"/\\|?*\x00-\x1F]/g, '').slice(0, 90);
+  const extension = path.extname(file.originalname || '.pdf') || '.pdf';
+
+  const { data } = await drive.files.create({
+    requestBody: {
+      name: `${safeName}-Passport-${Date.now()}${extension}`,
+      parents: [passportsFolderId],
+    },
+    media: {
+      mimeType: file.mimetype || 'application/pdf',
+      body: fs.createReadStream(file.path),
+    },
+    fields: 'id, webViewLink, webContentLink',
+  });
+
+  return { id: data.id, url: data.webViewLink, download: data.webContentLink };
+};
+
+const uploadGeneratedLetter = async ({ filePath, applicationId }) => {
+  const drive = getDriveClient();
+  if (!drive || !filePath) return null;
+
+  const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID
+    || (await ensureFolder(drive, 'GHC2026'));
+  const visaFolderId = await ensureFolder(drive, 'Visa Applications', rootFolderId);
+  const lettersFolderId = await ensureFolder(drive, 'Generated Letters', visaFolderId);
+  
+  const { data } = await drive.files.create({
+    requestBody: {
+      name: `${applicationId}.pdf`,
+      parents: [lettersFolderId],
+    },
+    media: {
+      mimeType: 'application/pdf',
+      body: fs.createReadStream(filePath),
+    },
+    fields: 'id, webViewLink, webContentLink',
+  });
+
+  return { id: data.id, url: data.webViewLink, download: data.webContentLink };
+};
+
+module.exports = { uploadResearchPdf, uploadVisaDocument, uploadGeneratedLetter };

@@ -1,6 +1,10 @@
 const normalizeBaseUrl = (value) => String(value || "").trim().replace(/\/+$/, "");
 
-const configuredApiUrl = normalizeBaseUrl(import.meta.env.VITE_API_URL);
+const configuredApiUrl = normalizeBaseUrl(
+  import.meta.env.DEV 
+    ? "http://localhost:3000" 
+    : import.meta.env.VITE_API_URL || ""
+);
 
 export const API_BASE_URL = configuredApiUrl.endsWith("/api")
   ? configuredApiUrl.slice(0, -4)

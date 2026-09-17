@@ -1,7 +1,7 @@
 const dns = require('dns').promises;
 const mysql = require('mysql2/promise');
 
-const requiredDatabaseEnv = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
+const requiredDatabaseEnv = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_NAME'];
 let poolInstance;
 
 const isBlank = (value) => value === undefined || value === null || String(value).trim() === '';

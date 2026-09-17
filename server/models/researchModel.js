@@ -18,6 +18,10 @@ const normalize = (item) => item && ({
   abstractText: item.abstract_text,
   pdfUrl: item.file_url || item.pdf_url,
   fileUrl: item.file_url || item.pdf_url,
+  declarationUrl: item.declaration_url,
+  cityState: item.city_state,
+  specialty: item.specialty,
+  yearOfStudy: item.year_of_study,
   status: item.submission_status || item.status,
   submissionStatus: item.submission_status || item.status,
   finalScore: item.final_score === null ? null : Number(item.final_score),
@@ -46,8 +50,8 @@ const findById = async (id) => {
 const create = async (data) => {
   const [result] = await pool.query(
     `INSERT INTO abstracts
-      (abstract_id, title, authors, corresponding_author, presenting_author, institution, email, phone, country, category_id, category, track, keywords, abstract_text, file_url, pdf_url, status, submission_status, submitted_at, award_nomination)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (abstract_id, title, authors, corresponding_author, presenting_author, institution, email, phone, country, city_state, specialty, year_of_study, category_id, category, track, keywords, abstract_text, file_url, pdf_url, declaration_url, status, submission_status, submitted_at, award_nomination)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.abstractId || null,
       data.title,
@@ -58,6 +62,9 @@ const create = async (data) => {
       data.email || null,
       data.phone || null,
       data.country || null,
+      data.city_state || null,
+      data.specialty || null,
+      data.year_of_study || null,
       data.categoryId || null,
       data.category || 'poster',
       data.track || null,
@@ -65,13 +72,14 @@ const create = async (data) => {
       data.abstractText || null,
       data.pdfUrl || null,
       data.pdfUrl || null,
+      data.declaration_url || null,
       data.status || 'draft',
       data.status || 'draft',
       data.status === 'submitted' ? new Date() : null,
       Boolean(data.awardNomination),
     ]
   );
-  await pool.query('UPDATE abstracts SET abstract_id = CONCAT("GHC-ABS-", LPAD(id, 5, "0")) WHERE id = ? AND abstract_id IS NULL', [result.insertId]);
+  await pool.query('UPDATE abstracts SET abstract_id = CONCAT(\'GHC-ABS-\', LPAD(id, 5, \'0\')) WHERE id = ? AND abstract_id IS NULL', [result.insertId]);
   return findById(result.insertId);
 };
 
@@ -86,6 +94,9 @@ const update = async (id, data) => {
       email = ?,
       phone = ?,
       country = ?,
+      city_state = ?,
+      specialty = ?,
+      year_of_study = ?,
       category_id = ?,
       category = ?,
       track = ?,
@@ -93,6 +104,7 @@ const update = async (id, data) => {
       abstract_text = ?,
       file_url = COALESCE(?, file_url),
       pdf_url = COALESCE(?, pdf_url),
+      declaration_url = COALESCE(?, declaration_url),
       status = ?,
       submission_status = ?,
       award_nomination = ?
@@ -106,6 +118,9 @@ const update = async (id, data) => {
       data.email || null,
       data.phone || null,
       data.country || null,
+      data.city_state || null,
+      data.specialty || null,
+      data.year_of_study || null,
       data.categoryId || null,
       data.category || 'poster',
       data.track || null,
@@ -113,6 +128,7 @@ const update = async (id, data) => {
       data.abstractText || null,
       data.pdfUrl || null,
       data.pdfUrl || null,
+      data.declaration_url || null,
       data.status || 'draft',
       data.status || 'draft',
       Boolean(data.awardNomination),

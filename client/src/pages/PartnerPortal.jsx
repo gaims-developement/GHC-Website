@@ -2,13 +2,6 @@ import { ArrowLeft, ArrowRight, BarChart3, Building2, Crown, Download, Globe2, M
 import { motion, useReducedMotion } from "framer-motion";
 import PartnershipReveal from "../components/PartnershipReveal";
 
-const stats = [
-  ["5,000+", "Delegates"],
-  ["40+", "Countries"],
-  ["60+", "Partners"],
-  ["3 Days", "Conference"],
-];
-
 const perks = [
   [Globe2, "Global Reach", "Access 5,000+ delegates from 40+ countries live and hybrid."],
   [Mic, "Speaking Slots", "Keynote and panel opportunities with a captive expert audience."],
@@ -96,11 +89,7 @@ export default function PartnerPortal() {
         </div>
       </motion.section>
 
-      <motion.section className="partner-stats-strip" initial="hidden" animate="visible" transition={{ staggerChildren: shouldReduceMotion ? 0 : 0.11, delayChildren: shouldReduceMotion ? 0 : 0.24 }}>
-        {stats.map(([value, label]) => (
-          <motion.div key={label} variants={itemReveal} transition={revealTransition}><strong>{value}</strong><span>{label}</span></motion.div>
-        ))}
-      </motion.section>
+
 
       <section className="partner-section">
         <h2>Why Partner With Us</h2>

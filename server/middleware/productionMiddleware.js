@@ -48,7 +48,8 @@ const csrfProtection = (req, res, next) => {
   }
 
   if (process.env.CSRF_DISABLED === 'true') return next();
-  if (!req.headers.authorization && !req.cookies?.token) return next();
+  if (req.headers.authorization) return next();
+  if (!req.cookies?.token) return next();
   if (req.path.includes('/payments/verify')) return next();
 
   const cookieToken = req.cookies?.csrf_token;

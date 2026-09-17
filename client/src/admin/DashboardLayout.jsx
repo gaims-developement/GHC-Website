@@ -47,6 +47,7 @@ import {
   PackageCheck,
   PenLine,
   Presentation,
+  PlaneTakeoff,
   RadioTower,
   Rocket,
   MoreHorizontal,
@@ -123,6 +124,7 @@ const icons = {
   PackageCheck,
   PenLine,
   Presentation,
+  PlaneTakeoff,
   QrCode,
   RadioTower,
   Rocket,
@@ -211,6 +213,11 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
             );
           })}
         </nav>
+
+        <button className="admin-logout" style={{ marginBottom: "10px", color: "white" }} onClick={() => window.location.href = "/"}>
+          <Home size={18} />
+          Back to Website
+        </button>
 
         <button className="admin-logout" onClick={onLogout}>
           <LogOut size={18} />

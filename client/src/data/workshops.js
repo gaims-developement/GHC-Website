@@ -18,100 +18,7 @@ export const createWorkshopSlug = (title = "") => {
   return slug || `workshop-${Date.now()}`;
 };
 
-export const defaultWorkshops = [
-  {
-    id: "ws-001",
-    slug: "ai-assisted-diagnostics-in-clinical-practice",
-    title: "AI-Assisted Diagnostics in Clinical Practice",
-    category: "AI & Health",
-    duration: "2 hrs",
-    facilitator: { name: "Dr. Priya Nair", initials: "PN", designation: "Clinical AI Lead" },
-    seats: { filled: 22, total: 30 },
-    date: "Dates will be announced soon",
-    startTime: "10:00",
-    endTime: "12:00",
-    time: "10:00 AM",
-    room: "Hall B, Level 2",
-    description: "",
-    agenda: [],
-    requirements: [],
-    image: "",
-    learningOutcomes: ["Understand clinical AI use cases", "Assess workflow readiness", "Identify governance and validation checkpoints"],
-    whoShouldAttend: ["Clinicians", "Residents", "Digital health teams"],
-    prerequisites: "Basic understanding of clinical workflows.",
-    faqs: [{ question: "Is coding required?", answer: "No. The workshop focuses on clinical adoption and governance." }],
-    featured: true,
-  },
-  {
-    id: "ws-002",
-    slug: "global-health-policy-frameworks-for-low-resource-settings",
-    title: "Global Health Policy: Frameworks for Low-Resource Settings",
-    category: "Policy Lab",
-    duration: "3 hrs",
-    facilitator: { name: "Prof. James Okafor", initials: "JO", designation: "Health Policy Chair" },
-    seats: { filled: 14, total: 25 },
-    date: "Dates will be announced soon",
-    startTime: "14:00",
-    endTime: "17:00",
-    time: "02:00 PM",
-    room: "Conference Room 4A",
-    description: "",
-    agenda: [],
-    requirements: [],
-    image: "",
-    learningOutcomes: ["Map policy barriers", "Design implementation frameworks", "Review case studies for low-resource settings"],
-    whoShouldAttend: ["Policy students", "Public health professionals", "NGO teams"],
-    prerequisites: "Interest in global health policy.",
-    faqs: [],
-    featured: false,
-  },
-  {
-    id: "ws-003",
-    slug: "advanced-surgical-simulation-lab",
-    title: "Advanced Surgical Simulation Lab",
-    category: "Clinical Skills",
-    duration: "4 hrs",
-    facilitator: { name: "Dr. Elena Russo", initials: "ER", designation: "Simulation Lab Director" },
-    seats: { filled: 30, total: 30 },
-    date: "Dates will be announced soon",
-    startTime: "09:00",
-    endTime: "13:00",
-    time: "09:00 AM",
-    room: "Skills Lab, Level 1",
-    description: "",
-    agenda: [],
-    requirements: [],
-    image: "",
-    learningOutcomes: ["Practice structured simulation drills", "Review procedural safety principles", "Improve team communication"],
-    whoShouldAttend: ["Medical students", "Surgical residents", "Skills lab educators"],
-    prerequisites: "Clinical skills lab attire recommended.",
-    faqs: [],
-    featured: true,
-  },
-  {
-    id: "ws-004",
-    slug: "research-methodology-and-abstract-writing",
-    title: "Research Methodology & Abstract Writing",
-    category: "Research",
-    duration: "2.5 hrs",
-    facilitator: { name: "Dr. Amir Hassan", initials: "AH", designation: "Research Methods Faculty" },
-    seats: { filled: 8, total: 30 },
-    date: "Dates will be announced soon",
-    startTime: "13:00",
-    endTime: "15:30",
-    time: "01:00 PM",
-    room: "Seminar Room 2",
-    description: "",
-    agenda: [],
-    requirements: [],
-    image: "",
-    learningOutcomes: ["Structure strong abstracts", "Choose suitable research methods", "Prepare for poster or oral presentation"],
-    whoShouldAttend: ["Students", "Early-career researchers", "Faculty mentors"],
-    prerequisites: "Bring a draft research idea if available.",
-    faqs: [],
-    featured: false,
-  },
-];
+export const defaultWorkshops = [];
 
 export const getInitials = (name = "") => {
   const initials = name
@@ -125,9 +32,10 @@ export const getInitials = (name = "") => {
 };
 
 export const formatWorkshopDate = (date) => {
-  if (!date) return "Dates will be announced soon";
-  if (/Will be announced soon/i.test(date)) return "Dates will be announced soon";
-  if (/June\s+(14|15|16),\s+2026/i.test(date)) return "Dates will be announced soon";
+  if (!date) return "November 22-24, 2026";
+  if (/Will be announced soon/i.test(date)) return "November 22-24, 2026";
+  if (/June\s+(14|15|16),\s+2026/i.test(date)) return "November 22-24, 2026";
+  if (/Dates will be announced soon/i.test(date)) return "November 22-24, 2026";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
   return new Intl.DateTimeFormat("en", { month: "long", day: "numeric", year: "numeric" }).format(new Date(`${date}T00:00:00`));
 };

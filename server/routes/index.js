@@ -22,32 +22,41 @@ const coreRoutes = require('./coreRoutes');
 const systemRoutes = require('./systemRoutes');
 const systemAdminRoutes = require('./systemAdminRoutes');
 const superAdminRoutes = require('./superAdminRoutes');
-const { optionalAuth } = require('../middleware/authMiddleware');
+const committeeRoutes = require('./committeeRoutes');
+const adminCommitteeRoutes = require('./adminCommitteeRoutes');
+const visaRoutes = require('./visaRoutes');
+const { optionalAuth, requireAuth, requirePermission } = require('../middleware/authMiddleware');
 const { eventContext } = require('../middleware/eventContextMiddleware');
 
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use(optionalAuth, eventContext);
+
+// Explicitly mounted routes (MUST be before root-mounted routers to avoid being swallowed)
 router.use('/speakers', speakerRoutes);
-router.use('/', eventRoutes);
 router.use('/workshops', workshopRoutes);
-router.use('/', sponsorshipRoutes);
 router.use('/partners', partnerRoutes);
 router.use('/media', mediaRoutes);
-router.use('/', marketingRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/trailer', trailerRoutes);
 router.use('/research', researchRoutes);
+router.use('/committees', committeeRoutes);
+router.use('/visa-applications', visaRoutes);
+router.use('/admin/committees', requireAuth, requirePermission('speakers.manage', 'cms.manage', 'manage_homepage'), adminCommitteeRoutes);
+
+// Root-mounted routers (catch-all for their respective domains)
+router.use('/', eventRoutes);
+router.use('/', sponsorshipRoutes);
+router.use('/', marketingRoutes);
 router.use('/', paymentRoutes);
 router.use('/', operationsRoutes);
+router.use('/', logisticsRoutes);
 router.use('/', volunteerRoutes);
 router.use('/', formRoutes);
 router.use('/', mobileRoutes);
 router.use('/', coreRoutes);
-router.use('/', logisticsRoutes);
-router.use('/', systemAdminRoutes);
 router.use('/', systemRoutes);
 router.use('/', registrationRoutes);
 router.use('/', superAdminRoutes);
-
+router.use('/', systemAdminRoutes);
 module.exports = router;
