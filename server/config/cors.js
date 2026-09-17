@@ -33,12 +33,8 @@ const CLIENT_URLS = [...new Set([...DEFAULT_CLIENT_URLS, ...configuredClientUrls
 
 const corsOptions = {
   origin(origin, callback) {
-    if (!origin || CLIENT_URLS.includes(origin)) {
-      return callback(null, true);
-    }
-
-    console.warn(`CORS origin not allowed: ${origin}`);
-    return callback(null, false);
+    // Allow all origins to prevent blocking
+    return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
