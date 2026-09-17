@@ -40,6 +40,7 @@ import {
   ShieldCheck,
   Sparkles,
   Stethoscope,
+  Book,
   Bookmark,
   Settings,
   Trophy,
@@ -63,6 +64,8 @@ import Footer from "./components/Footer";
 const VerifyCertificate = lazy(() => import("./pages/VerifyCertificate"));
 const DynamicForm = lazy(() => import("./pages/DynamicForm"));
 const Nominations = lazy(() => import("./pages/Nominations"));
+const BoardMeetingRegister = lazy(() => import("./pages/BoardMeetingRegister"));
+const AnnualMeetingInvite = lazy(() => import("./pages/AnnualMeetingInvite"));
 const Committees = lazy(() => import("./pages/Committees"));
 const VisaApplication = lazy(() => import("./pages/VisaApplication"));
 import VisaCTA from "./components/VisaCTA";
@@ -531,6 +534,48 @@ function Hero({ banner }) {
             fill="url(#heroSquiggleGradient)"
           />
         </svg>
+      </div>
+    </section>
+  );
+}
+
+function ParticipatingCountries() {
+  const countries = [
+    { name: "India", code: "in" },
+    { name: "Georgia", code: "ge" },
+    { name: "Mauritius", code: "mu" },
+    { name: "Nepal", code: "np" },
+    { name: "Moldova", code: "md" },
+    { name: "Egypt", code: "eg" },
+    { name: "Nigeria", code: "ng" },
+    { name: "Uzbekistan", code: "uz" },
+    { name: "United States", code: "us" },
+    { name: "United Kingdom", code: "gb" },
+  ];
+
+  return (
+    <section id="participating-countries" className="section-shell reveal-section">
+      <SectionHeading eyebrow="Global Reach" title="Participating Countries" text="Delegates, researchers, and policymakers from across the globe." />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-10">
+        {countries.map((country, index) => (
+          <motion.div
+            key={country.name}
+            className="flex flex-col items-center justify-center p-6 rounded-2xl border border-[#0D47A1]/10 bg-white/50 backdrop-blur-sm hover:shadow-lg transition-all"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ delay: index * 0.05, duration: 0.5 }}
+            whileHover={{ y: -5, scale: 1.05 }}
+          >
+            <img 
+              src={`https://flagcdn.com/w80/${country.code}.png`} 
+              alt={`${country.name} flag`} 
+              className="w-16 h-auto shadow-sm rounded-sm mb-4"
+              loading="lazy"
+            />
+            <h3 className="font-['Sora'] font-semibold text-[#081B33] text-center text-sm">{country.name}</h3>
+          </motion.div>
+        ))}
       </div>
     </section>
   );
@@ -1535,6 +1580,8 @@ function App() {
   const isNominationsRoute = location.pathname.startsWith("/nominations");
   const isCommitteesRoute = location.pathname.startsWith("/committees");
   const isVisaRoute = location.pathname.startsWith("/visa-application");
+  const isBoardMeetingRoute = location.pathname.startsWith("/board-meeting-register");
+  const isAnnualMeetingRoute = location.pathname.startsWith("/annual-meeting-invite");
   const [installPrompt, setInstallPrompt] = useState(null);
   const [homepageSync, setHomepageSync] = useState({ banners: [], homepage: [], mediaPartners: [], notifications: [], seo: [] });
   const [partners, setPartners] = useState([]);
@@ -1793,6 +1840,20 @@ function App() {
         <MobileRadialNav />
       </>
     );
+  } else if (isBoardMeetingRoute) {
+    routeContent = (
+      <>
+        <Suspense fallback={<div className="admin-loading">Loading...</div>}><BoardMeetingRegister /></Suspense>
+        <MobileRadialNav />
+      </>
+    );
+  } else if (isAnnualMeetingRoute) {
+    routeContent = (
+      <>
+        <Suspense fallback={<div className="admin-loading">Loading...</div>}><AnnualMeetingInvite /></Suspense>
+        <MobileRadialNav />
+      </>
+    );
   } else if (isNominationsRoute) {
     routeContent = (
       <>
@@ -1840,6 +1901,7 @@ function App() {
       <Navbar />
       <main>
         <Hero banner={activeHeroBanner} />
+        <ParticipatingCountries />
         <WatchVision />
         <StatsStrip />
         <About />

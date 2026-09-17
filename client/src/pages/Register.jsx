@@ -472,6 +472,14 @@ function Register() {
                   <div className="ticket-seats">{ticket.remaining} seats remaining</div>
                 </button>
               ))}
+              
+              {/* Invite-Only Section */}
+              <div className="ticket-card" style={{ opacity: 0.7, cursor: 'not-allowed', borderColor: 'rgba(255,255,255,0.05)' }}>
+                <div className="ticket-icon" style={{ color: 'rgba(255,255,255,0.4)' }}><Ticket size={24} /></div>
+                <div className="ticket-name" style={{ color: 'rgba(255,255,255,0.6)' }}>GAIMS Annual Meeting</div>
+                <div className="ticket-desc" style={{ color: 'rgba(255,255,255,0.4)' }}>This meeting is by invitation only. Only for authorised personels.</div>
+                <div className="ticket-price" style={{ background: 'none', WebkitTextFillColor: 'rgba(255,255,255,0.4)', fontSize: '1.2rem' }}>Invite Only</div>
+              </div>
             </div>
           </div>
         )}
