@@ -77,14 +77,12 @@ const impactCards = [
 ];
 
 const tracks = [
-  { title: "Digital Health & AI", icon: BrainCircuit, text: "Clinical intelligence, connected care, diagnostics and responsible automation." },
-  { title: "Global Health Policy", icon: Globe2, text: "Health diplomacy, equity frameworks and resilient cross-border systems." },
-  { title: "Public Health", icon: Users, text: "Population health, epidemiology, prevention and scalable community outcomes." },
-  { title: "Mental Health", icon: HeartPulse, text: "Integrated wellbeing, accessible care models and student health leadership." },
-  { title: "Women's Health", icon: Dna, text: "Maternal care, reproductive equity, lifespan health and inclusive research." },
-  { title: "Climate Health", icon: Leaf, text: "Planetary health risks, climate-ready hospitals and sustainable systems." },
-  { title: "Research", icon: Microscope, text: "Translational science, student inquiry, publication pathways and evidence exchange." },
-  { title: "Leadership", icon: ShieldCheck, text: "Healthcare governance, ethics, institutional strategy and future skills." },
+  { title: "Panel Discussions", icon: Users, text: "Engage with thought leaders on critical healthcare topics and future directions." },
+  { title: "Awards", icon: Trophy, text: "Honoring excellence and outstanding contributions in global healthcare." },
+  { title: "Networking", icon: Globe2, text: "Connect with professionals, researchers, and students from around the world." },
+  { title: "Keynote Sessions", icon: Sparkles, text: "Inspiring talks from renowned experts shaping the future of medicine." },
+  { title: "CMEs", icon: Book, text: "Continuing Medical Education sessions to upgrade clinical knowledge." },
+  { title: "Workshops", icon: Wrench, text: "Hands-on training and skill-building in specialized medical fields." },
 ];
 
 const apiEndpoints = {
@@ -336,7 +334,7 @@ function SplineGlobe({ className = "" }) {
 }
 
 function AnimatedTrackHeading({ onComplete }) {
-  const title = "Focused tracks for the future of care.";
+  const title = "Key highlights of the conclave.";
   const words = title.split(" ");
 
   return (
@@ -358,7 +356,7 @@ function AnimatedTrackHeading({ onComplete }) {
           visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: "easeOut" } },
         }}
       >
-        Conference Tracks
+        Highlights
       </motion.p>
       <h2 className="section-title" aria-label={title}>
         {words.map((word, index) => (

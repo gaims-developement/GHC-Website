@@ -1,6 +1,8 @@
 const DEFAULT_CLIENT_URLS = [
   'https://globalhealthconclave.netlify.app',
   'https://www.globalhealthconclave.netlify.app',
+  'https://ghc.gaims.org',
+  'https://www.ghc.gaims.org',
   'http://localhost:5173',
   'http://localhost:3000',
 ];
