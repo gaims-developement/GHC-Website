@@ -1,5 +1,6 @@
 import { BadgeCheck, Camera, ClipboardCheck, History, QrCode, Search, ShieldCheck, TicketCheck } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
+import { Html5QrcodeScanner, Html5QrcodeScanType } from "html5-qrcode";
 
 function Checkin({ api }) {
   const [stats, setStats] = useState({ total: 0, checkedIn: 0, pendingArrivals: 0 });
@@ -9,6 +10,8 @@ function Checkin({ api }) {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const scannerRef = useRef(null);
+  
   const load = useCallback(() => {
     api.get("/api/checkin").then((response) => {
       setStats(response.data.stats || { total: 0, checkedIn: 0, pendingArrivals: 0 });
@@ -16,16 +19,12 @@ function Checkin({ api }) {
     }).catch(() => {});
   }, [api]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const scan = async () => {
-    if (!scanValue.trim()) return;
+  const scan = async (valueToScan = scanValue) => {
+    if (!valueToScan || !valueToScan.trim()) return;
     setBusy(true);
     setMessage("");
     try {
-      const response = await api.post("/api/checkin/scan", { qrData: scanValue.trim() });
+      const response = await api.post("/api/checkin/scan", { qrData: valueToScan.trim() });
       setResult(response.data);
       setScanValue("");
       load();
@@ -37,13 +36,53 @@ function Checkin({ api }) {
     }
   };
 
+  useEffect(() => {
+    load();
+    
+    // Initialize real scanner
+    const scanner = new Html5QrcodeScanner(
+      "reader",
+      {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
+        rememberLastUsedCamera: true,
+      },
+      false
+    );
+
+    scannerRef.current = scanner;
+
+    let lastScanValue = "";
+
+    scanner.render(
+      (decodedText) => {
+        if (decodedText !== lastScanValue) {
+          lastScanValue = decodedText;
+          setScanValue(decodedText);
+          scan(decodedText);
+          
+          // Clear after a few seconds so it can be scanned again
+          setTimeout(() => {
+            lastScanValue = "";
+          }, 3000);
+        }
+      },
+      (error) => {}
+    );
+
+    return () => {
+      if (scannerRef.current) {
+        scannerRef.current.clear().catch(console.error);
+      }
+    };
+  }, [load]);
+
   return (
     <div className="admin-speakers-page checkin-page">
       <section className="checkin-scanner-panel">
-        <div className="scanner-frame">
-          <Camera size={42} />
-          <span />
-          <p>QR scanner ready</p>
+        <div className="scanner-frame" style={{ width: "100%", maxWidth: "500px", margin: "0 auto", padding: "20px" }}>
+          <div id="reader"></div>
         </div>
         <label className="scanner-input">
           <Search size={18} />

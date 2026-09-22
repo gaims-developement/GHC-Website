@@ -25,6 +25,7 @@ const superAdminRoutes = require('./superAdminRoutes');
 const committeeRoutes = require('./committeeRoutes');
 const adminCommitteeRoutes = require('./adminCommitteeRoutes');
 const visaRoutes = require('./visaRoutes');
+const locationRoutes = require('./locationRoutes');
 const { optionalAuth, requireAuth, requirePermission } = require('../middleware/authMiddleware');
 const { eventContext } = require('../middleware/eventContextMiddleware');
 
@@ -42,6 +43,7 @@ router.use('/trailer', trailerRoutes);
 router.use('/research', researchRoutes);
 router.use('/committees', committeeRoutes);
 router.use('/visa-applications', visaRoutes);
+router.use('/locations', locationRoutes);
 router.use('/admin/committees', requireAuth, requirePermission('speakers.manage', 'cms.manage', 'manage_homepage'), adminCommitteeRoutes);
 
 // Root-mounted routers (catch-all for their respective domains)

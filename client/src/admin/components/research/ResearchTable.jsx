@@ -1,16 +1,25 @@
-import { Award, Edit3, Eye, Trash2, UserCheck, X } from "lucide-react";
+import { Award, Edit3, Eye, Trash2, UserCheck, X, ShieldAlert, Star, Send, CheckCircle, FileX, RotateCcw } from "lucide-react";
 
-function ResearchTable({ onAssignReviewer, onAward, onDelete, onEdit, onReject, onReview, submissions }) {
-  const renderActions = (submission, mobile = false) => (
-    <div className={mobile ? "speaker-actions mobile-actions" : "speaker-actions"}>
-      <button onClick={() => onEdit(submission)} title="Edit"><Edit3 size={16} />{mobile && "Edit"}</button>
-      <button onClick={() => onReview(submission)} title="Review"><Eye size={16} />{mobile && "Review"}</button>
-      {onAssignReviewer && <button onClick={() => onAssignReviewer(submission)} title="Assign reviewer"><UserCheck size={16} />{mobile && "Assign"}</button>}
-      <button onClick={() => onAward(submission)} title="Award"><Award size={16} />{mobile && "Award"}</button>
-      <button onClick={() => onReject(submission)} title="Reject"><X size={16} />{mobile && "Reject"}</button>
-      <button onClick={() => onDelete(submission)} title="Delete"><Trash2 size={16} />{mobile && "Delete"}</button>
-    </div>
-  );
+function ResearchTable({ onAssignReviewer, onAward, onDelete, onEdit, onReject, onReview, onIntegrity, onScore, onRevisionRequest, onApprove, onPreview, submissions, registeredEmails }) {
+  const isRegistered = (email) => registeredEmails && registeredEmails.includes(email.toLowerCase());
+
+  const renderActions = (submission, mobile = false) => {
+    const isFinal = submission.status === 'accepted' || submission.status === 'rejected';
+
+    return (
+      <div className={mobile ? "speaker-actions mobile-actions" : "speaker-actions"}>
+        <button onClick={() => onPreview(submission)} title="Preview"><Eye size={16} />{mobile && "Preview"}</button>
+        <button onClick={() => onScore(submission)} title="Scoring"><Star size={16} />{mobile && "Scoring"}</button>
+        {!isFinal && (
+          <>
+            <button onClick={() => onApprove(submission)} title="Approve" style={{color: 'green'}}><CheckCircle size={16} />{mobile && "Approve"}</button>
+            <button onClick={() => onReject(submission)} title="Reject" style={{color: 'red'}}><FileX size={16} />{mobile && "Reject"}</button>
+            <button onClick={() => onRevisionRequest(submission)} title="Request Revision"><RotateCcw size={16} />{mobile && "Revision"}</button>
+          </>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div>
@@ -21,12 +30,13 @@ function ResearchTable({ onAssignReviewer, onAward, onDelete, onEdit, onReject, 
               <h3>{submission.title}</h3>
               <span className={`status-pill ${submission.status}`}>{submission.status}</span>
             </div>
-            <p>{submission.institution}</p>
+            <p>{submission.presentingAuthor}</p>
             <dl>
-              <div><dt>Category</dt><dd>{submission.category}</dd></div>
-              <div><dt>Track</dt><dd>{submission.track}</dd></div>
-              <div><dt>Score</dt><dd>{submission.reviewScore ?? "Pending"}</dd></div>
-              <div><dt>Award</dt><dd>{submission.awardNomination ? "Nominee" : "No"}</dd></div>
+              <div><dt>Institution</dt><dd>{submission.institution || "Not provided"}</dd></div>
+              <div><dt>Category</dt><dd>{submission.category || "Not provided"}</dd></div>
+              <div><dt>UG / PG</dt><dd>{submission.yearOfStudy || "Not provided"}</dd></div>
+              <div><dt>AI Plag</dt><dd>{submission.aiPercentage !== null ? `${submission.aiPercentage}%` : "Not scored"}</dd></div>
+              <div><dt>Plag</dt><dd>{submission.plagiarismPercentage !== null ? `${submission.plagiarismPercentage}%` : "Not scored"}</dd></div>
             </dl>
             {renderActions(submission, true)}
           </article>
@@ -36,27 +46,47 @@ function ResearchTable({ onAssignReviewer, onAward, onDelete, onEdit, onReject, 
         <table className="speaker-table">
           <thead>
             <tr>
-              <th>Title</th>
-              <th>Institution</th>
-              <th>Category</th>
-              <th>Track</th>
-              <th>Status</th>
-              <th>Score</th>
-              <th>Actions</th>
+              <th>TITLE OF THE RESEARCH</th>
+              <th>NAME</th>
+              <th>INSTITUTION</th>
+              <th>CATEGORY</th>
+              <th>UG / PG</th>
+              <th>STATUS</th>
+              <th>AI PLAGIARISM</th>
+              <th>PLAGIARISM</th>
+              <th>ACTIONS</th>
             </tr>
           </thead>
           <tbody>
             {submissions?.map((submission) => (
               <tr key={submission.id}>
                 <td>
-                  <strong>{submission.title}</strong>
-                  <small>{submission.presentingAuthor}</small>
+                  <strong title={submission.title} style={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden'
+                  }}>{submission.title}</strong>
+                  {submission.versions?.length > 0 && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}>
+                      <strong style={{ color: '#666' }}>Prior versions:</strong>
+                      {submission.versions.map((v) => (
+                        <a key={v.id} href={v.pdfUrl || v.pdf_url} target="_blank" rel="noreferrer" style={{ display: 'inline-block', margin: '0 4px', color: '#0056b3' }}>
+                          v{v.version_number || v.versionNumber}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </td>
-                <td>{submission.institution}</td>
-                <td>{submission.category}</td>
-                <td>{submission.track}</td>
-                <td><span className={`status-pill ${submission.status}`}>{submission.status}</span></td>
-                <td>{submission.reviewScore ?? "Pending"}</td>
+                <td>{submission.presentingAuthor || "Not provided"}</td>
+                <td>{submission.institution || "Not provided"}</td>
+                <td>{submission.category || "Not provided"}</td>
+                <td>{submission.yearOfStudy || "Not provided"}</td>
+                <td>
+                  <span className={`status-pill ${submission.status}`}>{submission.status}</span>
+                </td>
+                <td>{submission.aiPercentage !== null ? `${submission.aiPercentage}%` : "Not scored"}</td>
+                <td>{submission.plagiarismPercentage !== null ? `${submission.plagiarismPercentage}%` : "Not scored"}</td>
                 <td>{renderActions(submission)}</td>
               </tr>
             ))}
@@ -68,3 +98,4 @@ function ResearchTable({ onAssignReviewer, onAward, onDelete, onEdit, onReject, 
 }
 
 export default ResearchTable;
+

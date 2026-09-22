@@ -17,6 +17,7 @@ const {
   listCoupons,
   listRegistrations,
   listTickets,
+  lookupRegistration,
   markBadgeGenerated,
   refundRegistration,
   registrationDashboard,
@@ -40,6 +41,7 @@ const canExportRegistrations = requirePermission('export_registration_data');
 const canManageTickets = requirePermission('manage_registrations');
 
 router.post('/register', createRegistration);
+router.get('/register/lookup/:query', lookupRegistration);
 router.get('/register/dashboard', requireAuth, canViewRegistrations, registrationDashboard);
 router.get('/register', requireAuth, canViewRegistrations, listRegistrations);
 router.get('/register/export.csv', requireAuth, canExportRegistrations, exportRegistrationsCsv);

@@ -10,7 +10,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: Number(process.env.CORE_UPLOAD_LIMIT_MB || 30) * 1024 * 1024 } });
 
-router.use(requireAuth);
+router.use('/core', requireAuth);
 
 router.get('/core/dashboard', requirePermission('manage_core_architecture'), controller.dashboard);
 router.get('/core/search', requirePermission('manage_core_architecture'), controller.globalSearch);

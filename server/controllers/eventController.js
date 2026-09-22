@@ -289,6 +289,66 @@ const saveVenue = asyncHandler(async (req, res) => {
   return listVenues(req, res);
 });
 
+const listCafes = asyncHandler(async (_req, res) => {
+  const [cafes] = await pool.query('SELECT * FROM cafes ORDER BY name ASC');
+  res.json({ cafes });
+});
+
+const saveCafe = asyncHandler(async (req, res) => {
+  if (!req.body.name?.trim()) return res.status(400).json({ message: 'Name is required' });
+  const values = [
+    req.body.name.trim(),
+    clean(req.body.address),
+    clean(req.body.googleMapsLink || req.body.google_maps_link),
+    clean(req.body.description),
+    req.body.status || 'active',
+    req.body.isActive === undefined ? true : bool(req.body.isActive),
+  ];
+  if (req.params.id) {
+    await pool.query(
+      `UPDATE cafes SET name = ?, address = ?, google_maps_link = ?, description = ?, status = ?, is_active = ? WHERE id = ?`,
+      [...values, req.params.id]
+    );
+  } else {
+    await pool.query(
+      `INSERT INTO cafes (name, address, google_maps_link, description, status, is_active) VALUES (?, ?, ?, ?, ?, ?)`,
+      values
+    );
+  }
+  await log(req, req.params.id ? 'updated_cafe' : 'created_cafe', 'cafes', req.params.id || req.body.name);
+  return listCafes(req, res);
+});
+
+const listStays = asyncHandler(async (_req, res) => {
+  const [stays] = await pool.query('SELECT * FROM stays ORDER BY name ASC');
+  res.json({ stays });
+});
+
+const saveStay = asyncHandler(async (req, res) => {
+  if (!req.body.name?.trim()) return res.status(400).json({ message: 'Name is required' });
+  const values = [
+    req.body.name.trim(),
+    clean(req.body.address),
+    clean(req.body.googleMapsLink || req.body.google_maps_link),
+    clean(req.body.description),
+    req.body.status || 'active',
+    req.body.isActive === undefined ? true : bool(req.body.isActive),
+  ];
+  if (req.params.id) {
+    await pool.query(
+      `UPDATE stays SET name = ?, address = ?, google_maps_link = ?, description = ?, status = ?, is_active = ? WHERE id = ?`,
+      [...values, req.params.id]
+    );
+  } else {
+    await pool.query(
+      `INSERT INTO stays (name, address, google_maps_link, description, status, is_active) VALUES (?, ?, ?, ?, ?, ?)`,
+      values
+    );
+  }
+  await log(req, req.params.id ? 'updated_stay' : 'created_stay', 'stays', req.params.id || req.body.name);
+  return listStays(req, res);
+});
+
 const addRegistration = asyncHandler(async (req, res) => {
   const [[event]] = await pool.query('SELECT capacity, waitlist_enabled FROM events WHERE id = ? LIMIT 1', [req.params.id]);
   const [[count]] = await pool.query("SELECT COUNT(*) AS total FROM event_registrations WHERE event_id = ? AND attendance_status != 'waitlisted'", [req.params.id]);
@@ -384,6 +444,8 @@ module.exports = {
   listEvents,
   listRecords,
   listVenues,
+  listCafes,
+  listStays,
   publicSync,
   reports,
   saveEvent,
@@ -392,5 +454,7 @@ module.exports = {
   savePayment,
   saveResource,
   saveVenue,
+  saveCafe,
+  saveStay,
   setEventStatus,
 };

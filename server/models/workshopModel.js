@@ -19,6 +19,7 @@ const parseJson = (value, fallback = []) => {
 
 const normalize = (workshop) => workshop && ({
   id: workshop.id,
+  workshopCode: workshop.workshop_code,
   slug: workshop.slug || slugify(workshop.title),
   title: workshop.title,
   faculty: workshop.faculty,
@@ -67,10 +68,11 @@ const findBySlug = async (slug) => {
 const create = async (data) => {
   const [result] = await pool.query(
     `INSERT INTO workshops
-      (title, slug, faculty, description, workshop_type, requirements, learning_outcomes, who_should_attend, faq, prerequisites, capacity, registered_count, duration, venue, date, price, image_url, featured, status, display_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (title, workshop_code, slug, faculty, description, workshop_type, requirements, learning_outcomes, who_should_attend, faq, prerequisites, capacity, registered_count, duration, venue, date, price, image_url, featured, status, display_order)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.title,
+      data.workshopCode || null,
       data.slug || slugify(data.title),
       data.faculty || null,
       data.description || null,
@@ -99,6 +101,7 @@ const update = async (id, data) => {
   await pool.query(
     `UPDATE workshops SET
       title = ?,
+      workshop_code = ?,
       slug = ?,
       faculty = ?,
       description = ?,
@@ -121,6 +124,7 @@ const update = async (id, data) => {
      WHERE id = ?`,
     [
       data.title,
+      data.workshopCode || null,
       data.slug || slugify(data.title),
       data.faculty || null,
       data.description || null,

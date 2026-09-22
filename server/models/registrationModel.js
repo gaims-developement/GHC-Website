@@ -289,12 +289,31 @@ const stats = async (req = null) => {
   };
 };
 
+const findByPhoneOrRegistrationId = async (query, req = null) => {
+  const where = ['(r.phone = ? OR r.registration_id = ? OR r.email = ?)'];
+  const params = [query, query, query];
+  applyEventScope(where, params, req, 'r.event_id');
+  
+  const [rows] = await pool.query(
+    `SELECT r.*, COALESCE(c.name, t.name) AS ticket_name, COALESCE(c.price, t.price) AS ticket_price, COALESCE(c.currency, t.currency) AS ticket_currency
+     FROM registrations r
+     LEFT JOIN registration_categories c ON c.id = r.category_id
+     LEFT JOIN ticket_types t ON t.id = r.ticket_type_id
+     WHERE ${where.join(' AND ')}
+     ORDER BY r.created_at DESC
+     LIMIT 1`,
+    params
+  );
+  return normalizeRegistration(rows[0]);
+};
+
 module.exports = {
   checkIn,
   createRegistration,
   createTicket,
   deleteTicket,
   findRegistrationById,
+  findByPhoneOrRegistrationId,
   findTicketById,
   listRegistrations,
   listTickets,

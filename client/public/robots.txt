@@ -1,5 +1,10 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /admin/
+Disallow: /forms/
+Disallow: /google-pay-test
+Disallow: /api/
+Disallow: /uploads/
 
 Sitemap: https://ghc.gaims.org/sitemap.xml

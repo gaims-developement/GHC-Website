@@ -32,6 +32,7 @@ app.set('trust proxy', 1);
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
+    xFrameOptions: false,
   })
 );
 app.use((req, _res, next) => {

@@ -4,7 +4,7 @@ const { optionalAuth, requireAuth, requirePermission } = require('../middleware/
 
 router.get('/public/logistics-sync', optionalAuth, publicSync);
 
-router.use(requireAuth);
+router.use(['/logistics', '/accommodations', '/accommodation-bookings', '/transport-routes', '/transport-bookings', '/vendor-categories', '/vendors', '/inventory', '/inventory-allocations', '/volunteers', '/security', '/emergency', '/logistics-tasks'], requireAuth);
 router.get('/logistics/dashboard', requirePermission('manage_venues', 'manage_halls'), dashboard);
 router.get('/logistics/reports', requirePermission('manage_venues', 'manage_inventory'), reports);
 

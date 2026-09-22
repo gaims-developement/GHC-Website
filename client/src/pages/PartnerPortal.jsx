@@ -1,5 +1,8 @@
 import { ArrowLeft, ArrowRight, BarChart3, Building2, Crown, Download, Globe2, Medal, Mic, Star, Users, Megaphone, Activity } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { apiUrl } from "../config/api";
 import PartnershipReveal from "../components/PartnershipReveal";
 
 const perks = [
@@ -71,6 +74,45 @@ export default function PartnerPortal() {
   };
   const revealTransition = { duration: shouldReduceMotion ? 0.1 : 1.02, ease: [0.22, 1, 0.36, 1] };
 
+  const [live, setLive] = useState({ tiers: [], sponsors: [] });
+
+  useEffect(() => {
+    let active = true;
+    axios
+      .get(apiUrl("/api/sponsorship/public"))
+      .then((response) => {
+        if (!active) return;
+        setLive({
+          tiers: response.data?.tiers || [],
+          sponsors: response.data?.sponsors || [],
+        });
+      })
+      .catch(() => {
+        /* keep the static fallbacks below */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const toneCycle = ["platinum", "gold", "silver"];
+  const tierIcons = [Crown, Star, Medal];
+  const staticTierByKey = Object.fromEntries(tiers.map((tier) => [tier.name.toLowerCase(), tier]));
+  const displayTiers = live.tiers.length
+    ? live.tiers.map((tier, index) => {
+        const staticTier = staticTierByKey[String(tier.name).toLowerCase()];
+        return {
+          name: tier.name,
+          price: staticTier?.price || (index === 0 ? "Custom Pricing" : "Let's discuss"),
+          icon: staticTier?.icon || tierIcons[index % tierIcons.length],
+          tone: staticTier?.tone || toneCycle[index % toneCycle.length],
+          badge: staticTier?.badge || (index === 0 ? "Most Exclusive" : undefined),
+          cta: staticTier?.cta || `Apply for ${tier.name}`,
+          perks: staticTier?.perks || (tier.description ? [tier.description.split(/[.;]\s*/).filter(Boolean).join("; ")] : ["Customised partnership package tailored to your goals."]),
+        };
+      })
+    : tiers;
+
   return (
     <PartnershipReveal>
     <main className="partner-page">
@@ -104,10 +146,10 @@ export default function PartnerPortal() {
         </motion.div>
       </section>
 
-      <section className="partner-section">
+<section className="partner-section">
         <h2>Partnership Tiers</h2>
         <motion.div className="partner-tier-stack" initial="hidden" animate="visible" transition={{ staggerChildren: shouldReduceMotion ? 0 : 0.12, delayChildren: shouldReduceMotion ? 0 : 0.48 }}>
-          {tiers.map((tier) => {
+          {displayTiers.map((tier) => {
             const Icon = tier.icon;
             return (
               <motion.article key={tier.name} className={`partner-tier-card ${tier.tone}`} variants={itemReveal} transition={revealTransition}>
@@ -124,6 +166,34 @@ export default function PartnerPortal() {
           })}
         </motion.div>
       </section>
+
+      {live.sponsors.length > 0 && (
+        <section className="partner-section">
+          <h2>Our Sponsors &amp; Partners</h2>
+          <motion.div className="partner-sponsor-grid" initial="hidden" animate="visible" transition={{ staggerChildren: shouldReduceMotion ? 0 : 0.06, delayChildren: shouldReduceMotion ? 0 : 0.52 }}>
+            {live.sponsors.map((sponsor) => {
+              const logoUrl = sponsor.logoUrl?.startsWith("/uploads") ? apiUrl(sponsor.logoUrl) : sponsor.logoUrl;
+              return (
+                <motion.a
+                  key={sponsor.id}
+                  className="partner-sponsor-card"
+                  href={sponsor.website || undefined}
+                  target={sponsor.website ? "_blank" : undefined}
+                  rel="noreferrer"
+                  variants={itemReveal}
+                  transition={revealTransition}
+                >
+                  <span className="partner-sponsor-logo">
+                    {logoUrl ? <img src={logoUrl} alt={sponsor.companyName} loading="lazy" /> : sponsor.companyName.slice(0, 2).toUpperCase()}
+                  </span>
+                  <strong>{sponsor.companyName}</strong>
+                  <small>{sponsor.tierName || "Partner"}</small>
+                </motion.a>
+              );
+            })}
+          </motion.div>
+        </section>
+      )}
 
       <section className="partner-section">
         <h2>Trusted By</h2>

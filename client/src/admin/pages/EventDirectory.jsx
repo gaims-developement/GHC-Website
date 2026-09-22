@@ -1,4 +1,4 @@
-import { CheckCircle2, CreditCard, FileCheck2, FolderUp, MessageSquareText, Plus, Ticket, MapPinned } from "lucide-react";
+import { CheckCircle2, CreditCard, FileCheck2, FolderUp, MessageSquareText, Plus, Ticket, MapPinned, Coffee, Hotel } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 const configs = {
@@ -15,9 +15,25 @@ const configs = {
     empty: { name: "", address: "", city: "", state: "", country: "", googleMapsLink: "", contactPerson: "", contactNumber: "", capacity: 0, description: "", status: "active", isActive: true },
     fields: [["name", "Name"], ["address", "Address"], ["city", "City"], ["state", "State"], ["country", "Country"], ["googleMapsLink", "Google Maps Link"], ["contactPerson", "Contact Person"], ["contactNumber", "Contact Number"], ["capacity", "Capacity", "number"], ["description", "Description", "textarea"], ["status", "Status", "select", ["active", "inactive"]]],
   },
+  cafes: {
+    title: "Cafes",
+    endpoint: "/api/cafes",
+    key: "cafes",
+    icon: Coffee,
+    empty: { name: "", address: "", description: "", googleMapsLink: "", status: "active", isActive: true },
+    fields: [["name", "Name"], ["address", "Address"], ["googleMapsLink", "Google Maps Link"], ["description", "Description", "textarea"], ["status", "Status", "select", ["active", "inactive"]]],
+  },
+  stays: {
+    title: "Stays",
+    endpoint: "/api/stays",
+    key: "stays",
+    icon: Hotel,
+    empty: { name: "", address: "", description: "", googleMapsLink: "", status: "active", isActive: true },
+    fields: [["name", "Name"], ["address", "Address"], ["googleMapsLink", "Google Maps Link"], ["description", "Description", "textarea"], ["status", "Status", "select", ["active", "inactive"]]],
+  },
 };
 
-function EventDirectory({ api, type = "event-registrations" }) {
+function EventDirectory({ api, type = "event-registrations", hideHeader = false }) {
   const config = configs[type] || configs["event-registrations"];
   const Icon = config.icon;
   const [items, setItems] = useState([]);
@@ -86,11 +102,13 @@ function EventDirectory({ api, type = "event-registrations" }) {
 
   return (
     <div className="admin-speakers-page event-workspace">
-      <section className="admin-panel">
-        <p className="admin-eyebrow">Events CMS</p>
-        <h1>{config.title}</h1>
-        <p className="admin-muted">Manage event operations with audit logging and permission-based access.</p>
-      </section>
+      {!hideHeader && (
+        <section className="admin-panel">
+          <p className="admin-eyebrow">Events CMS</p>
+          <h1>{config.title}</h1>
+          <p className="admin-muted">Manage event operations with audit logging and permission-based access.</p>
+        </section>
+      )}
       {message && <div className="admin-success">{message}</div>}
       {error && <div className="admin-error">{error}</div>}
       <section className="admin-panel">

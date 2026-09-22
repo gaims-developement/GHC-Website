@@ -113,7 +113,6 @@ function Dashboard({ user, api }) {
     { label: "Scientific abstracts", value: metricValue(superDashboard.kpis.abstracts), icon: FileText },
     { label: "Total users", value: metricValue(superDashboard.kpis.users), icon: Users },
     { label: "Pending approvals", value: metricValue(superDashboard.kpis.pendingApprovals), icon: Activity },
-    { label: "Revenue summary", value: metricValue(superDashboard.kpis.revenue, (value) => `INR ${Number(value || 0).toLocaleString("en-IN")}`), icon: Banknote },
   ] : [];
 
   const kpis = user.role === "SUPER_ADMIN" ? superKpis : [
@@ -133,7 +132,6 @@ function Dashboard({ user, api }) {
     { label: "Award nominees", value: metricValue(researchStats.awardNominees), icon: Award },
     { label: "Registrations", value: metricValue(registrationStats.total), icon: QrCode },
     { label: "Checked in", value: metricValue(registrationStats.attendance), icon: TicketCheck },
-    { label: "Revenue", value: metricValue(paymentStats.revenue, formatRevenue), icon: Banknote },
   ];
 
   return (

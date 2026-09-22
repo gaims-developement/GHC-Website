@@ -2,7 +2,7 @@ const router = require('express').Router();
 const controller = require('../controllers/systemAdminController');
 const { requireAuth, requirePermission } = require('../middleware/authMiddleware');
 
-router.use(requireAuth);
+router.use('/system-admin', requireAuth);
 
 router.get('/system-admin/dashboard', requirePermission('manage_system'), controller.dashboard);
 router.get('/system-admin/audit-logs', requirePermission('view_audit_logs'), controller.auditLogs);
@@ -14,6 +14,7 @@ router.get('/system-admin/api-monitoring', requirePermission('view_system_report
 router.get('/system-admin/database', requirePermission('view_system_reports'), controller.databaseMonitoring);
 router.get('/system-admin/cloudinary', requirePermission('view_system_reports'), controller.cloudinaryMonitoring);
 router.get('/system-admin/email', requirePermission('view_system_reports'), controller.emailMonitoring);
+router.post('/system-admin/email/test', requirePermission('manage_system'), controller.testEmail);
 
 router.get('/system-admin/notifications', requirePermission('manage_system'), controller.notifications);
 router.post('/system-admin/notifications', requirePermission('manage_system'), controller.notifications);

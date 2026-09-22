@@ -41,7 +41,7 @@ const upload = multer({
 
 router.get('/public/marketing-sync', optionalAuth, publicSync);
 
-router.use(requireAuth);
+router.use('/marketing', requireAuth);
 router.get('/marketing/dashboard', requirePermission('manage_announcements', 'manage_news', 'manage_homepage', 'manage_gallery', 'manage_campaigns'), dashboard);
 router.get('/marketing/analytics', requirePermission('manage_announcements', 'manage_news', 'manage_campaigns', 'manage_gallery'), analytics);
 router.get('/marketing/:type', listContent);

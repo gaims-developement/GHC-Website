@@ -29,22 +29,40 @@ const normalize = (item) => item && ({
   reviewNotes: item.review_notes,
   reviewerId: item.reviewer_id,
   awardNomination: Boolean(item.award_nomination),
+  aiPercentage: item.ai_percentage !== null ? Number(item.ai_percentage) : null,
+  plagiarismPercentage: item.plagiarism_percentage !== null ? Number(item.plagiarism_percentage) : null,
+  currentVersion: item.current_version || 1,
+  revisionToken: item.revision_token,
+  revisionTokenExpires: item.revision_token_expires,
+  versions: item.versions || [],
   createdAt: item.created_at,
   updatedAt: item.updated_at,
 });
 
-const list = async ({ includeAll = false } = {}) => {
-  const where = includeAll ? '' : "WHERE status = 'accepted'";
+const list = async ({ includeAll = false, reviewerId = null } = {}) => {
+  let where = includeAll ? '' : "WHERE status = 'accepted'";
+  const params = [];
+  
+  if (reviewerId) {
+    where = "WHERE reviewer_id = ?";
+    params.push(reviewerId);
+  }
+  
   const [rows] = await pool.query(
     `SELECT * FROM abstracts ${where}
-     ORDER BY award_nomination DESC, category ASC, created_at DESC`
+     ORDER BY award_nomination DESC, category ASC, created_at DESC`,
+    params
   );
   return rows.map(normalize);
 };
 
 const findById = async (id) => {
   const [rows] = await pool.query('SELECT * FROM abstracts WHERE id = ? LIMIT 1', [id]);
-  return normalize(rows[0]);
+  if (!rows.length) return null;
+  const abstract = rows[0];
+  const [versions] = await pool.query('SELECT * FROM abstract_versions WHERE abstract_id = ? ORDER BY version_number DESC', [id]);
+  abstract.versions = versions;
+  return normalize(abstract);
 };
 
 const create = async (data) => {
@@ -81,6 +99,21 @@ const create = async (data) => {
   );
   await pool.query('UPDATE abstracts SET abstract_id = CONCAT(\'GHC-ABS-\', LPAD(id, 5, \'0\')) WHERE id = ? AND abstract_id IS NULL', [result.insertId]);
   return findById(result.insertId);
+};
+
+const updateIntegrity = async (id, data) => {
+  await pool.query(
+    `UPDATE abstracts SET
+      ai_percentage = ?,
+      plagiarism_percentage = ?
+     WHERE id = ?`,
+    [
+      data.aiPercentage !== undefined ? data.aiPercentage : null,
+      data.plagiarismPercentage !== undefined ? data.plagiarismPercentage : null,
+      id
+    ]
+  );
+  return findById(id);
 };
 
 const update = async (id, data) => {
@@ -138,10 +171,7 @@ const update = async (id, data) => {
   return findById(id);
 };
 
-const remove = async (id) => {
-  const [result] = await pool.query('DELETE FROM abstracts WHERE id = ?', [id]);
-  return result.affectedRows > 0;
-};
+
 
 const review = async (id, data) => {
   await pool.query(
@@ -194,4 +224,46 @@ const stats = async () => {
   };
 };
 
-module.exports = { create, findById, list, remove, review, setAward, setStatus, stats, update };
+const findByToken = async (token) => {
+  const [rows] = await pool.query('SELECT id FROM abstracts WHERE revision_token = ? AND revision_token_expires > NOW() LIMIT 1', [token]);
+  if (!rows.length) return null;
+  return findById(rows[0].id);
+};
+
+const createVersion = async (abstractId, versionNumber, pdfUrl, declarationUrl) => {
+  await pool.query(
+    'INSERT INTO abstract_versions (abstract_id, version_number, pdf_url, declaration_url) VALUES (?, ?, ?, ?)',
+    [abstractId, versionNumber, pdfUrl, declarationUrl]
+  );
+};
+
+const requestRevision = async (id, token, expires) => {
+  await pool.query(
+    'UPDATE abstracts SET status = ?, submission_status = ?, revision_token = ?, revision_token_expires = ? WHERE id = ?',
+    ['revision_requested', 'revision_requested', token, expires, id]
+  );
+  return findById(id);
+};
+
+const saveRevision = async (id, newVersion, pdfUrl, declarationUrl) => {
+  const abstract = await findById(id);
+  if (abstract) {
+    await createVersion(id, abstract.currentVersion, abstract.pdfUrl, abstract.declarationUrl);
+    await pool.query(
+      `UPDATE abstracts SET 
+        pdf_url = COALESCE(?, pdf_url), 
+        file_url = COALESCE(?, file_url), 
+        declaration_url = COALESCE(?, declaration_url), 
+        current_version = ?, 
+        status = 'under_review', 
+        submission_status = 'under_review', 
+        revision_token = NULL, 
+        revision_token_expires = NULL 
+       WHERE id = ?`,
+      [pdfUrl, pdfUrl, declarationUrl, newVersion, id]
+    );
+  }
+  return findById(id);
+};
+
+module.exports = { create, findById, findByToken, createVersion, requestRevision, saveRevision, list, review, setAward, setStatus, stats, update, updateIntegrity };

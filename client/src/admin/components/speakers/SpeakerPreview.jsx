@@ -1,3 +1,5 @@
+import { getImageUrl } from "../../../config/api";
+
 function initials(name = "") {
   return name
     .split(" ")
@@ -15,7 +17,7 @@ function SpeakerPreview({ speaker }) {
     <aside className="speaker-preview">
       <p className="admin-eyebrow">Live preview</p>
       <div className="speaker-preview-photo">
-        {previewUrl ? <img src={previewUrl} alt="" /> : <span>{initials(speaker.name)}</span>}
+        {previewUrl ? <img src={getImageUrl(previewUrl)} alt="" /> : <span>{initials(speaker.name)}</span>}
       </div>
       <h3>{speaker.name || "Speaker name"}</h3>
       <p>{speaker.designation || "Designation"}</p>

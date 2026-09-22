@@ -116,10 +116,6 @@ export default function Committees() {
       <section className="relative z-20 pb-32 px-4 md:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-16">
-            <h2 className="text-3xl font-['Sora'] font-bold text-white mb-4 text-center">Meet the Committees</h2>
-            <p className="text-center text-slate-400 max-w-2xl mx-auto mb-10">
-              Behind every successful Global Health Conclave is a team of leaders, experts and professionals working together to shape the experience.
-            </p>
             
             <div className="flex flex-col md:flex-row gap-4 justify-center">
               {committees.map((committee) => {

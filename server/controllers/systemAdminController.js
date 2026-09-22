@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
+const { sendTemplateEmail } = require('../services/mailService');
 
 const limit = (value, fallback = 50) => Math.min(Math.max(Number(value) || fallback, 1), 200);
 
@@ -156,6 +157,20 @@ const emailMonitoring = asyncHandler(async (_req, res) => {
   res.json({ summary, logs });
 });
 
+const testEmail = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: 'Recipient email is required.' });
+  }
+
+  try {
+    await sendTemplateEmail('test_email', email);
+    res.json({ success: true, message: 'Test email sent successfully.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Email failed', error: error.message || String(error) });
+  }
+});
+
 const notifications = asyncHandler(async (req, res) => {
   if (req.method === 'GET') {
     const [rows] = await pool.query('SELECT * FROM system_notifications ORDER BY created_at DESC LIMIT 100');
@@ -288,6 +303,7 @@ module.exports = {
   dashboard,
   databaseMonitoring,
   emailMonitoring,
+  testEmail,
   featureFlags,
   loginLogs,
   maintenance,

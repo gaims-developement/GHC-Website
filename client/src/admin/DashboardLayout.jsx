@@ -153,12 +153,18 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-  const visibleNavItems = (user.modules || []).map((module) => ({
-    id: module.route_key || module.routeKey,
-    label: module.label,
-    icon: icons[module.icon] || LayoutDashboard,
-    keywords: [module.module_key || module.moduleKey, module.permission_key || module.permissionKey].filter(Boolean),
-  })).filter((item) => item.id);
+  const visibleNavItems = (user.modules || [])
+    .filter((m) => (m.route_key || m.routeKey) !== "judges")
+    .map((module) => {
+      const id = module.route_key || module.routeKey;
+      return {
+        id: id === "venues" ? "hospitality" : id,
+        label: id === "venues" ? "Hospitality" : module.label,
+        icon: icons[module.icon] || LayoutDashboard,
+        keywords: [module.module_key || module.moduleKey, module.permission_key || module.permissionKey].filter(Boolean),
+      };
+    })
+    .filter((item) => item.id);
   const primaryMobileItems = visibleNavItems.slice(0, 4);
   const query = searchQuery.trim().toLowerCase();
   const searchResults = query

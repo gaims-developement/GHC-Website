@@ -26,6 +26,7 @@ const {
   speakerAnalytics,
   speakerStats,
   updateSpeaker,
+  rescheduleSession,
 } = require('../controllers/speakerController');
 const { optionalAuth, requireAuth, requirePermission } = require('../middleware/authMiddleware');
 
@@ -63,6 +64,7 @@ router.get('/analytics', requireAuth, canManageSpeakers, speakerAnalytics);
 router.get('/sessions', requireAuth, canManageSessions, listSessions);
 router.post('/sessions', requireAuth, canManageSessions, saveSession);
 router.put('/sessions/:id', requireAuth, canManageSessions, saveSession);
+router.patch('/sessions/:id/reschedule', requireAuth, canManageSessions, rescheduleSession);
 router.delete('/sessions/:id', requireAuth, canManageSessions, deleteSession);
 router.get('/tracks', requireAuth, canManageTracks, listTracks);
 router.post('/tracks', requireAuth, canManageTracks, saveTrack);

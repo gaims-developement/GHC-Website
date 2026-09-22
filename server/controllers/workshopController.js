@@ -31,6 +31,7 @@ const parseFaq = (value) => {
 
 const sanitizePayload = (body, file) => ({
   title: body.title?.trim(),
+  workshopCode: body.workshopCode || body.workshop_code || body.workshopId || null,
   slug: (body.slug?.trim() || slugify(body.title)),
   faculty: body.faculty?.trim(),
   description: body.description?.trim(),

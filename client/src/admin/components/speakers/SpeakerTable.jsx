@@ -1,4 +1,5 @@
 import { Edit3, Send, Star, Trash2 } from "lucide-react";
+import { getImageUrl } from "../../../config/api";
 
 function SpeakerTable({ speakers, onEdit, onDelete, onPublish, onFeature }) {
   return (
@@ -41,7 +42,7 @@ function SpeakerTable({ speakers, onEdit, onDelete, onPublish, onFeature }) {
               <tr key={speaker.id}>
                 <td>
                   <span className="speaker-table-photo">
-                    {speaker.photoUrl ? <img src={speaker.photoUrl} alt="" /> : speaker.name?.slice(0, 2).toUpperCase()}
+                    {speaker.photoUrl ? <img src={getImageUrl(speaker.photoUrl)} alt="" /> : speaker.name?.slice(0, 2).toUpperCase()}
                   </span>
                 </td>
                 <td>

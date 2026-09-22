@@ -94,6 +94,49 @@ function AdminSettings({ api }) {
     }
   };
 
+  const toggleCallStatus = async () => {
+    const newValue = !settings.registration.abstractSubmissionOpen;
+    
+    // Optimistically update UI
+    setSettings((current) => ({
+      ...current,
+      registration: {
+        ...current.registration,
+        abstractSubmissionOpen: newValue,
+      },
+    }));
+
+    const newSettings = {
+      ...settings,
+      registration: {
+        ...settings.registration,
+        abstractSubmissionOpen: newValue
+      }
+    };
+    
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const response = await api.put("/api/settings", newSettings);
+      setSettings({ ...emptySettings, ...(response.data.settings || {}) });
+      setUpdatedAt(response.data.updatedAt || null);
+      setSuccess(`Abstract calls have been ${newValue ? 'opened' : 'closed'}.`);
+    } catch (err) {
+      setError(err.response?.data?.message || "Unable to update call status.");
+      // Revert on error
+      setSettings((current) => ({
+        ...current,
+        registration: {
+          ...current.registration,
+          abstractSubmissionOpen: !newValue,
+        },
+      }));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return <div className="admin-loading">Loading settings...</div>;
   }
@@ -134,10 +177,35 @@ function AdminSettings({ api }) {
         </div>
 
         <div className="admin-panel settings-section">
+          <div className="admin-panel-heading"><h2>Call Status</h2></div>
+          <div className="settings-toggle-list" style={{ marginTop: '0.5rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <button
+                type="button"
+                onClick={toggleCallStatus}
+                disabled={saving}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  fontWeight: 'bold',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: settings.registration.abstractSubmissionOpen ? '#10b981' : '#ef4444',
+                  transition: 'background-color 0.3s'
+                }}
+              >
+                {settings.registration.abstractSubmissionOpen ? "Stop Calls" : "Start Calls"}
+              </button>
+              <span className="admin-muted">
+                {settings.registration.abstractSubmissionOpen ? "Calls are currently open." : "Calls are currently closed."}
+              </span>
+            </div>
+          </div>
+
           <div className="admin-panel-heading"><h2>Registration</h2></div>
           <div className="settings-toggle-list">
             <label><input type="checkbox" checked={settings.registration.registrationOpen} onChange={(event) => setNestedValue("registration", "registrationOpen", event.target.checked)} /> Registration open</label>
-            <label><input type="checkbox" checked={settings.registration.abstractSubmissionOpen} onChange={(event) => setNestedValue("registration", "abstractSubmissionOpen", event.target.checked)} /> Abstract submission open</label>
           </div>
         </div>
 

@@ -52,6 +52,15 @@ const getSettings = asyncHandler(async (_req, res) => {
   return res.json(result);
 });
 
+const getPublicSettings = asyncHandler(async (_req, res) => {
+  const result = await Settings.get();
+  return res.json({
+    registration: {
+      abstractSubmissionOpen: result.settings.registration?.abstractSubmissionOpen ?? true
+    }
+  });
+});
+
 const updateSettings = asyncHandler(async (req, res) => {
   const payload = sanitize(req.body || {});
   const error = validate(payload);
@@ -61,4 +70,4 @@ const updateSettings = asyncHandler(async (req, res) => {
   return res.json(result);
 });
 
-module.exports = { getSettings, updateSettings };
+module.exports = { getSettings, getPublicSettings, updateSettings };

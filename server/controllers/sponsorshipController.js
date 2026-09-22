@@ -422,6 +422,27 @@ const reports = asyncHandler(async (_req, res) => {
   res.json({ byStatus, revenueByTier, trends, deliverables, occupancy });
 });
 
+const publicPartners = asyncHandler(async (_req, res) => {
+  const [tiers] = await pool.query(`
+    SELECT id, name, description, priority_order AS priorityOrder, website_visibility AS websiteVisibility
+    FROM sponsor_tiers
+    WHERE is_active = TRUE AND website_visibility = TRUE
+    ORDER BY priority_order ASC, name ASC
+  `);
+  const [sponsors] = await pool.query(`
+    SELECT sponsors.id, sponsors.company_name AS companyName, sponsors.logo_url AS logoUrl,
+           sponsors.website, sponsor_tiers.name AS tierName, sponsor_tiers.priority_order AS tierOrder
+    FROM sponsors
+    INNER JOIN sponsor_tiers ON sponsor_tiers.id = sponsors.tier_id
+    WHERE sponsors.is_active = TRUE
+      AND sponsors.status IN ('confirmed', 'payment_pending', 'completed')
+      AND sponsor_tiers.is_active = TRUE
+      AND sponsor_tiers.website_visibility = TRUE
+    ORDER BY sponsor_tiers.priority_order ASC, sponsors.company_name ASC
+  `);
+  res.json({ tiers, sponsors });
+});
+
 module.exports = {
   allocateStall,
   archiveSponsor,
@@ -438,6 +459,7 @@ module.exports = {
   listSponsors,
   listStalls,
   listTiers,
+  publicPartners,
   reports,
   saveCommunication,
   saveContract,

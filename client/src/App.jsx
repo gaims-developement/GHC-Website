@@ -5,7 +5,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
 import { useLocation, Link } from "react-router-dom";
-import { setPageSeo, trackEvent } from "./utils/seo";
+import { buildEventSchema, findSeoEntry, mergeSeoEntry, setPageSeo } from "./utils/seo";
 import { apiUrl } from "./config/api";
 import MobileRadialNav from "./components/MobileRadialNav";
 import GlobeCanvas from "./components/GlobeCanvas";
@@ -25,10 +25,12 @@ import {
   Clock3,
   CreditCard,
   Dna,
+  Download,
   FileText,
   Globe2,
   HeartPulse,
   Hotel,
+  Info,
   Leaf,
   Mail,
   MapPin,
@@ -54,8 +56,10 @@ gsap.registerPlugin(ScrollTrigger);
 
 const AdminApp = lazy(() => import("./admin/AdminApp"));
 const Spline = lazy(() => import("@splinetool/react-spline"));
+const Venue = lazy(() => import("./pages/Venue"));
 const Register = lazy(() => import("./pages/Register"));
 const AbstractRegister = lazy(() => import("./pages/AbstractRegister"));
+const AbstractRevision = lazy(() => import("./pages/AbstractRevision"));
 const PartnershipPortal = lazy(() => import("./pages/PartnershipPortal"));
 const WorkshopDetail = lazy(() => import("./pages/WorkshopDetail"));
 const WorkshopRegister = lazy(() => import("./pages/WorkshopRegister"));
@@ -68,7 +72,9 @@ const BoardMeetingRegister = lazy(() => import("./pages/BoardMeetingRegister"));
 const AnnualMeetingInvite = lazy(() => import("./pages/AnnualMeetingInvite"));
 const Committees = lazy(() => import("./pages/Committees"));
 const VisaApplication = lazy(() => import("./pages/VisaApplication"));
+const AboutGHC = lazy(() => import("./pages/AboutGHC"));
 import VisaCTA from "./components/VisaCTA";
+const QRAttendance = lazy(() => import("./pages/QRAttendance"));
 
 import { navLinks } from "./config/nav";
 
@@ -94,23 +100,6 @@ const apiEndpoints = {
 };
 
 const publicMarketingSyncEndpoint = "/api/marketing/public/marketing-sync";
-const homepageSeoKeys = new Set(["home", "homepage", "default", "index"]);
-
-const findHomepageSection = (sections, name) =>
-  sections?.find((section) => String(section.section_name || "").trim().toLowerCase() === String(name).trim().toLowerCase());
-
-const findSeoPage = (seoItems) =>
-  seoItems?.find((item) => item.page_key && homepageSeoKeys.has(String(item.page_key).trim().toLowerCase()));
-
-const parseJsonConfig = (value) => {
-  if (!value) return null;
-  if (typeof value === "object") return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return null;
-  }
-};
 
 const mockSpeakers = [];
 
@@ -166,7 +155,7 @@ function Navbar() {
   const [open, setOpen] = useState(false);
 
   const handleNavClick = (e, label, id) => {
-    if (label !== "Register" && label !== "Nomination" && label !== "Committees") {
+    if (label !== "Register" && label !== "Nomination" && label !== "Committees" && label !== "Venue" && label !== "About") {
       const el = document.getElementById(id);
       if (el) {
         e.preventDefault();
@@ -181,18 +170,17 @@ function Navbar() {
     <header className="site-navbar fixed left-0 right-0 top-0 z-50 px-4 pt-4 sm:px-6">
       <nav className="glass-nav mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-5">
         <a href="/" className="flex items-center gap-3" aria-label="Global Healthcare Conclave home">
-          <span className="brand-mark">
-            <Stethoscope className="h-5 w-5" />
+          <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-white/20">
+            <img src="/assets/logos/ghclogo.jpeg" alt="GHC Logo" className="h-full w-full object-cover" />
           </span>
           <span>
             <span className="block font-['Sora'] text-sm font-bold text-[#081B33]">GHC 2026</span>
-            <span className="block text-[0.68rem] uppercase tracking-[0.24em] text-[#0D47A1]/70">Global Health Conclave</span>
           </span>
         </a>
 
         <div className="hidden items-center gap-1 lg:flex">
           {navLinks?.map(([label, id]) => (
-            <a key={id} href={label === "Register" ? "/register" : label === "Nomination" ? "/nominations" : label === "Committees" ? "/committees" : `/#${id}`} onClick={(e) => handleNavClick(e, label, id)} className="nav-link">
+            <a key={id} href={label === "Register" ? "/register" : label === "Nomination" ? "/nominations" : label === "Committees" ? "/committees" : label === "Venue" ? "/venue" : label === "About" ? "/about" : `/#${id}`} onClick={(e) => handleNavClick(e, label, id)} className="nav-link whitespace-nowrap">
               {label}
             </a>
           ))}
@@ -210,7 +198,7 @@ function Navbar() {
       {open && (
         <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="mobile-menu mx-auto mt-3 max-w-7xl p-3 lg:hidden">
           {navLinks?.map(([label, id]) => (
-            <a key={id} href={label === "Register" ? "/register" : label === "Nomination" ? "/nominations" : label === "Committees" ? "/committees" : `/#${id}`} onClick={(e) => handleNavClick(e, label, id)} className="block rounded-2xl px-4 py-3 text-sm font-semibold text-[#081B33]/75 hover:bg-[#4FC3F7]/10 hover:text-[#0D47A1]">
+            <a key={id} href={label === "Register" ? "/register" : label === "Nomination" ? "/nominations" : label === "Committees" ? "/committees" : label === "Venue" ? "/venue" : label === "About" ? "/about" : `/#${id}`} onClick={(e) => handleNavClick(e, label, id)} className="block rounded-2xl px-4 py-3 text-sm font-semibold text-[#081B33]/75 hover:bg-[#4FC3F7]/10 hover:text-[#0D47A1]">
               {label}
             </a>
           ))}
@@ -393,6 +381,17 @@ function Hero({ banner }) {
   const heroButtonText = banner?.button_text || defaultHeroButtonText;
   const heroLink = banner?.button_link || defaultHeroLink;
   const [introActive, setIntroActive] = useState(false);
+  const [abstractOpen, setAbstractOpen] = useState(true);
+
+  useEffect(() => {
+    axios.get(apiUrl("/api/settings/public"))
+      .then(res => {
+        if (res.data?.registration?.abstractSubmissionOpen !== undefined) {
+          setAbstractOpen(res.data.registration.abstractSubmissionOpen);
+        }
+      })
+      .catch(err => console.error("Failed to load public settings:", err));
+  }, []);
 
   useEffect(() => {
     if (!introActive) return undefined;
@@ -455,6 +454,11 @@ function Hero({ banner }) {
 
       <div className="hero-mobile-shell mx-auto grid min-h-screen max-w-7xl items-center gap-10 px-4 pb-10 pt-32 md:px-8 lg:grid-cols-2 lg:pt-24">
         <div className="relative z-10">
+          <motion.div className="flex gap-4 mb-6" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: finalDelay, duration: 0.7, ease: "easeOut" }}>
+            <img src="/assets/logos/ghclogo.jpeg" alt="GHC Logo" className="h-16 md:h-20 w-auto rounded-xl shadow-lg bg-white p-1 object-contain" />
+            <img src="/assets/logos/gaims.png" alt="GAIMS Logo" className="h-16 md:h-20 w-auto rounded-xl shadow-lg bg-white p-1 object-contain" />
+            <img src="/assets/logos/aiimsstudentassociation.jpg" alt="AIIMS Student Association Logo" className="h-16 md:h-20 w-auto rounded-xl shadow-lg bg-white p-1 object-contain" />
+          </motion.div>
           <motion.div className="hero-pill" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: finalDelay, duration: 0.7, ease: "easeOut" }}>
             <MapPin className="h-4 w-4 text-[#ff3b8b]" />
             New Delhi · November 22-24, 2026
@@ -476,7 +480,7 @@ function Hero({ banner }) {
             ))}
           </motion.h1>
           <motion.div
-            className="mt-4 text-sm font-medium uppercase tracking-widest text-white"
+            className="mt-4 text-base md:text-lg lg:text-xl font-bold uppercase tracking-widest text-white drop-shadow-md"
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: finalDelay + 0.25, duration: 0.75 }}
@@ -489,7 +493,6 @@ function Hero({ banner }) {
           <motion.div className="mt-8 flex flex-wrap gap-3" initial="hidden" animate="visible" variants={{ hidden: {}, visible: { transition: { delayChildren: finalDelay + 0.62, staggerChildren: 0.09 } } }}>
             {[
               <a href={heroLink} className="hero-button-primary">{heroButtonText} <ArrowRight className="h-4 w-4" /></a>,
-              <a href="/abstract-registration" className="hero-button-secondary">Submit Abstract <FileText className="h-4 w-4" /></a>,
               <PartnerCTAButton href="#partner-marquee" variant="hero">Become Partner <BadgeCheck className="h-4 w-4" /></PartnerCTAButton>,
               <a href="#watch-vision" className="hero-button-secondary" onClick={scrollToTrailer}>Watch Trailer <Play className="h-4 w-4" /></a>,
             ].map((button, index) => (
@@ -504,6 +507,26 @@ function Hero({ banner }) {
                 {button}
               </motion.span>
             ))}
+          </motion.div>
+
+          <motion.div 
+            className="mt-6 flex flex-col items-start gap-3 bg-white/[0.03] p-4 rounded-2xl border border-white/10"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: finalDelay + 0.8, duration: 0.62 }}
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold font-['DM_Sans']">
+              <span className="relative flex h-3 w-3">
+                {abstractOpen && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-emerald-400"></span>}
+                <span className={`relative inline-flex rounded-full h-3 w-3 ${abstractOpen ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+              </span>
+              <span className={abstractOpen ? 'text-emerald-400' : 'text-red-400'}>
+                {abstractOpen ? 'Calls are currently open' : 'Calls are currently closed'}
+              </span>
+            </div>
+            <a href="/abstract-registration" className={`hero-button-secondary border ${abstractOpen ? 'border-emerald-500/30 hover:border-emerald-500/60 hover:bg-emerald-500/10' : 'border-red-500/30 hover:border-red-500/60 hover:bg-red-500/10 opacity-80'}`}>
+              Submit Abstract <FileText className="h-4 w-4" />
+            </a>
           </motion.div>
         </div>
 
@@ -553,29 +576,45 @@ function ParticipatingCountries() {
     { name: "United Kingdom", code: "gb" },
   ];
 
+  const doubledCountries = [...countries, ...countries];
+
   return (
-    <section id="participating-countries" className="section-shell reveal-section">
+    <section id="participating-countries" className="section-shell reveal-section relative overflow-hidden" style={{ paddingBottom: '4rem' }}>
+      {/* Decorative background blobs */}
+      <div className="absolute top-10 left-10 w-72 h-72 bg-blue-100/50 rounded-full mix-blend-multiply filter blur-[60px] opacity-60 pointer-events-none" />
+      <div className="absolute top-10 right-10 w-72 h-72 bg-cyan-100/50 rounded-full mix-blend-multiply filter blur-[60px] opacity-60 pointer-events-none" />
+      <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 w-96 h-96 bg-indigo-100/50 rounded-full mix-blend-multiply filter blur-[80px] opacity-60 pointer-events-none" />
+
       <SectionHeading eyebrow="Global Reach" title="Participating Countries" text="Delegates, researchers, and policymakers from across the globe." />
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-10">
-        {countries.map((country, index) => (
-          <motion.div
-            key={country.name}
-            className="flex flex-col items-center justify-center p-6 rounded-2xl border border-[#0D47A1]/10 bg-white/50 backdrop-blur-sm hover:shadow-lg transition-all"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ delay: index * 0.05, duration: 0.5 }}
-            whileHover={{ y: -5, scale: 1.05 }}
-          >
-            <img 
-              src={`https://flagcdn.com/w80/${country.code}.png`} 
-              alt={`${country.name} flag`} 
-              className="w-16 h-auto shadow-sm rounded-sm mb-4"
-              loading="lazy"
-            />
-            <h3 className="font-['Sora'] font-semibold text-[#081B33] text-center text-sm">{country.name}</h3>
-          </motion.div>
-        ))}
+      
+      <div className="partner-marquee mt-14 relative z-10">
+        <div className="partner-marquee-track">
+          {doubledCountries.map((country, index) => (
+            <div
+              key={`${country.code}-${index}`}
+              className="group relative flex flex-col items-center justify-center p-8 rounded-[2rem] bg-white/70 backdrop-blur-xl border border-white/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_8px_30px_-4px_rgba(13,71,161,0.12)] transition-all duration-500 overflow-hidden hover:border-[#0D47A1]/20 hover:-translate-y-2 w-[220px] shrink-0"
+            >
+              {/* Subtle gradient background on hover */}
+              <div className="absolute inset-0 bg-gradient-to-br from-[#0D47A1]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+              
+              <div className="relative z-10 w-24 h-24 rounded-full border-[4px] border-white shadow-sm mb-6 overflow-hidden group-hover:shadow-md transition-all duration-500 group-hover:scale-110 ring-4 ring-transparent group-hover:ring-[#0D47A1]/5">
+                <img 
+                  src={`https://flagcdn.com/w160/${country.code}.png`} 
+                  alt={`${country.name} flag`} 
+                  className="w-full h-full object-cover scale-110 group-hover:scale-100 transition-transform duration-700 ease-out"
+                  loading="lazy"
+                />
+              </div>
+              
+              <h3 className="font-['Sora'] font-bold text-[#081B33] text-center text-[15px] relative z-10 group-hover:text-[#0D47A1] transition-colors duration-300">
+                {country.name}
+              </h3>
+              
+              {/* Animated underline */}
+              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 h-1 w-0 bg-gradient-to-r from-[#0D47A1] to-[#00BCD4] rounded-full group-hover:w-10 transition-all duration-500 ease-out opacity-0 group-hover:opacity-100" />
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -610,7 +649,7 @@ function WatchVision() {
   const hasVideo = Boolean(trailer?.videoUrl);
 
   return (
-    <section id="watch-vision" className="watch-vision-section section-shell reveal-section">
+    <section id="watch-vision" className="watch-vision-section section-shell reveal-section" style={{ paddingTop: '4rem' }}>
       <SectionHeading eyebrow="Featured Video" title={title} text={description} />
 
       <motion.div
@@ -813,42 +852,25 @@ function WorldClassSpeakers() {
     }).catch(() => {});
   }, []);
 
-  const featured = speakerData?.find((speaker) => speaker.featured) ?? speakerData?.[0];
-  const secondarySpeakers = speakerData?.filter((speaker) => speaker.name !== featured?.name);
-
   return (
     <section id="world-class-speakers" className="section-shell reveal-section">
       <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
-        <SectionHeading eyebrow="World Class Speakers" title="Keynotes and faculty shaping global care." text="Mock data is wired through a frontend hook ready for the future speaker API." />
-        <span className="api-chip">GET {endpoint}</span>
+        <SectionHeading eyebrow="World Class Speakers" title="Keynotes and faculty shaping global care." />
       </div>
-      <div className="speaker-luxury-grid">
-        {featured ? (
-          <>
-            <motion.article className="featured-speaker-card" whileHover={{ y: -8, scale: 1.01 }}>
-              <SpeakerPhoto speaker={featured} featured />
-              <div className="featured-speaker-content">
-                <p className="section-kicker">Featured Keynote</p>
-                <h3>{featured?.name}</h3>
-                <p className="speaker-institution">{featured?.institution}</p>
-                <p className="speaker-designation">{featured?.designation}</p>
-                <div className="speaker-topic">
-                  <Sparkles className="h-4 w-4" />
-                  {featured?.topic}
-                </div>
-              </div>
-            </motion.article>
-            <div className="speaker-circle-grid">
-              {secondarySpeakers?.map((speaker) => (
-                <SpotlightCard key={speaker.name} className="speaker-circle-card">
-                  <SpeakerPhoto speaker={speaker} />
-                  <h3>{speaker.name}</h3>
-                  <p>{speaker.designation}</p>
-                  <span>{speaker.topic}</span>
-                </SpotlightCard>
-              ))}
-            </div>
-          </>
+      <div className="w-full">
+        {speakerData?.length > 0 ? (
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {speakerData.map((speaker) => (
+              <SpotlightCard key={speaker.name} className="glass-card p-6 flex flex-col items-center text-center">
+                <SpeakerPhoto speaker={speaker} />
+                <h3 className="mt-5 font-['Sora'] text-lg font-semibold text-white/90">{speaker.name}</h3>
+                <p className="mt-1 text-sm font-medium text-[#4FC3F7]">{speaker.designation}</p>
+                <p className="mt-4 text-sm text-slate-400 leading-relaxed border-t border-white/10 pt-4 w-full">
+                  {speaker.topic || speaker.institution || "Speaker Topic"}
+                </p>
+              </SpotlightCard>
+            ))}
+          </div>
         ) : (
           <div className="glass-card w-full p-10 text-center opacity-60 col-span-full">
             <h3 className="text-xl font-['Sora'] text-white">Speakers will be announced soon.</h3>
@@ -935,7 +957,6 @@ function WorkshopsExperience() {
           <SectionHeading eyebrow="Workshops Experience" title="Premium clinical and research skill rooms." text="Each workshop is structured around capacity, faculty depth and delegate readiness." />
           <p className="workshop-swipe-hint">Swipe left to see all the workshops.</p>
         </div>
-        <span className="api-chip">GET {endpoint}</span>
       </div>
       <div className="workshop-slider">
         {workshopData?.map((workshop) => {
@@ -969,14 +990,14 @@ function WorkshopsExperience() {
 
 function AwardsSection() {
   const awards = [
-    { title: "Nomination Award", description: "Recognizing outstanding contributions and excellence in healthcare. Nominate deserving individuals for their remarkable impact.", icon: Award },
+    { title: "GAIMS Healthcare Achiever Awards", description: "Recognizing outstanding contributions and excellence in healthcare. Nominate deserving individuals for their remarkable impact.", icon: Award },
     { title: "GAIMS Position Holder Award", description: "Honoring the leadership, dedication, and service of GAIMS position holders across the country.", icon: Trophy },
   ];
 
   return (
     <section id="awards" className="section-shell reveal-section">
       <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
-        <SectionHeading eyebrow="Awards & Recognition" title="Honoring Excellence." text="Celebrate the achievements of individuals and leaders making a profound impact. The award function will be held on the final day." />
+        <SectionHeading eyebrow="GAIMS Healthcare Achiever Awards" title="Honoring Excellence." text="Celebrate the achievements of individuals and leaders making a profound impact. The award function will be held on the final day." />
       </div>
       <div className="research-action-grid">
         {awards.map((award) => {
@@ -986,7 +1007,7 @@ function AwardsSection() {
               <div className="track-icon"><Icon className="h-6 w-6" /></div>
               <h3>{award.title}</h3>
               <p>{award.description}</p>
-              {award.title === "Nomination Award" && (
+              {award.title === "GAIMS Healthcare Achiever Awards" && (
                 <div className="research-card-actions">
                   <Link to="/nominations" className="hero-button-primary">
                     Submit Nomination <ArrowRight className="h-4 w-4" />
@@ -1313,10 +1334,12 @@ const formatScheduleTime = (time) => {
 };
 
 function ResearchHub() {
+  const [guidelinesOpen, setGuidelinesOpen] = useState(false);
+
   return (
-    <section id="research-hub" className="section-shell reveal-section">
+    <section id="research-hub" className="section-shell reveal-section relative">
       <div className="mb-10 flex flex-col justify-between gap-5 md:flex-row md:items-end">
-        <SectionHeading eyebrow="Research Hub" title="Submit rigorous healthcare research for GHC 2026." />
+        <SectionHeading eyebrow="Call for Abstract" title="Submit your research and present it to a global audience at GHC" />
         <div className="flex flex-wrap gap-3">
           <a href="/abstract-registration" className="hero-button-primary">Submit Abstract <ArrowRight className="h-4 w-4" /></a>
         </div>
@@ -1332,10 +1355,10 @@ function ResearchHub() {
             <span>Ethics</span>
             <span>Formats</span>
           </div>
-          <div className="research-card-actions">
-            <a href="#research-guidelines" className="hero-button-secondary">View Guidelines <FileText className="h-4 w-4" /></a>
-            <a href="/templates/ghc-research-abstract-template.txt" download className="hero-button-secondary">Download Template <FileText className="h-4 w-4" /></a>
+          <div className="research-card-actions mt-4">
+            <button onClick={() => setGuidelinesOpen(true)} className="hero-button-secondary">View Guidelines <FileText className="h-4 w-4" /></button>
           </div>
+          <div className="card-hover-border"></div>
         </motion.article>
         <motion.article className="research-gradient-card research-action-card" whileHover={{ y: -9, scale: 1.01 }}>
           <div className="track-icon"><Microscope className="h-6 w-6" /></div>
@@ -1344,6 +1367,115 @@ function ResearchHub() {
           <a href="/abstract-registration" className="hero-button-primary research-card-submit">Submit Abstract <ArrowRight className="h-4 w-4" /></a>
         </motion.article>
       </div>
+
+      <AnimatePresence>
+        {guidelinesOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 text-left">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+              onClick={() => setGuidelinesOpen(false)}
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-4xl max-h-[90vh] bg-[#0d2a4a] border border-white/10 rounded-3xl shadow-2xl flex flex-col z-10 overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex-none p-6 md:p-8 border-b border-white/10 relative">
+                <h2 className="text-2xl md:text-3xl font-bold text-white pr-10 font-['Sora']">Research Submission Guidelines</h2>
+                <button
+                  onClick={() => setGuidelinesOpen(false)}
+                  className="absolute top-1/2 -translate-y-1/2 right-6 z-20 w-10 h-10 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center text-white hover:bg-white hover:text-[#081B33] shadow-sm transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div data-lenis-prevent="true" className="flex-1 overflow-y-auto min-h-0 custom-scrollbar p-6 md:p-8 space-y-6 text-white/80 leading-relaxed text-sm md:text-base w-full font-['DM_Sans']">
+                <div className="bg-[#ff3d7f]/10 border border-[#ff3d7f]/20 rounded-2xl p-6">
+                  <p className="font-bold text-[#ff3d7f] text-lg mb-2 flex items-center gap-2"><Info className="w-5 h-5"/> Important Note</p>
+                  <p>Last date for Submission: <strong>30th October , 2026.</strong></p>
+                  <ul className="list-disc list-inside mt-4 space-y-2">
+                    <li>The file must be in <strong>PDF or DOCX</strong> format and not more than <strong>10 MB</strong> in size.</li>
+                    <li>All data entered must be accurate and verified.</li>
+                    <li>Abstracts may include tables and references.</li>
+                    <li>Word Limit: <strong>350–400 words</strong>.</li>
+                    <li>No AI-generated content. Plagiarism up to 10% allowed. (We will use a standardized tool to screen).</li>
+                    <li>If you are the presenting author, you can submit <strong>only one poster</strong> for presentation. You cannot be the presenting author on more than one submission. You may still be a co-author on other submissions — but you can present only one.</li>
+                    <li>Cash prize and Certificate of presentation will <strong>only be given to presenting author</strong>.</li>
+                  </ul>
+                </div>
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
+                    <h3 className="font-bold text-xl text-white mb-4 border-b border-white/10 pb-2">Research Abstract Format</h3>
+                    <ul className="space-y-1 opacity-80">
+                      <li>1. TITLE</li>
+                      <li>2. AUTHOR & CO-AUTHOR DETAILS</li>
+                      <li>3. INTRODUCTION</li>
+                      <li>4. AIMS & OBJECTIVES</li>
+                      <li>5. METHODOLOGY</li>
+                      <li>6. RESULTS</li>
+                      <li>7. CONCLUSION</li>
+                      <li>8. KEYWORDS</li>
+                      <li>9. References (Optional)</li>
+                      <li>10. Tables (Optional)</li>
+                    </ul>
+                  </div>
+                  <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
+                    <h3 className="font-bold text-xl text-white mb-4 border-b border-white/10 pb-2">Case Abstract Format</h3>
+                    <ul className="space-y-1 opacity-80">
+                      <li>1. TITLE</li>
+                      <li>2. INTRODUCTION</li>
+                      <li>3. AUTHOR & CO-AUTHOR DETAILS</li>
+                      <li>4. CASE DESCRIPTION</li>
+                    </ul>
+                    <p className="mt-4 text-xs opacity-60 italic">Note: The Case Description should include History, Examination, Investigations, Diagnosis, Treatment, and Follow-up presented together under the single CASE DESCRIPTION heading.</p>
+                  </div>
+                </div>
+
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6 flex flex-col md:flex-row gap-6 items-center justify-between">
+                  <div>
+                    <h3 className="font-bold text-blue-400 text-lg mb-2">Declaration Form</h3>
+                    <p className="text-sm">Please download, sign, and submit the declaration form along with your abstract.</p>
+                  </div>
+                  <a href="/assets/forms/GHC%20Poster%20Presenter%20Declaration%20Form%201.docx" download className="inline-flex items-center gap-2 whitespace-nowrap px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-xl transition-colors">
+                    <Download className="w-4 h-4" /> Download Form
+                  </a>
+                </div>
+
+                <div className="bg-[#ff3d7f]/10 border border-[#ff3d7f]/20 rounded-2xl p-6 mt-6">
+                  <h3 className="font-bold text-[#ff3d7f] text-lg mb-4">For Queries, Contact:</h3>
+                  <ul className="space-y-3">
+                    <li className="flex items-center gap-3">
+                      <span className="font-bold text-white w-32">Email:</span>
+                      <a href="mailto:ghcscientific@gmail.com" className="hover:text-[#ff3d7f] transition-colors">ghcscientific@gmail.com</a>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <span className="font-bold text-white w-32">Girik Subbudhi:</span>
+                      <a href="tel:+918169011833" className="hover:text-[#ff3d7f] transition-colors">+91 8169011833</a>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <span className="font-bold text-white w-32">Guarav Jayadev:</span>
+                      <a href="tel:+917022408203" className="hover:text-[#ff3d7f] transition-colors">+91 7022408203</a>
+                    </li>
+                    <li className="flex items-center gap-3">
+                      <span className="font-bold text-white w-32">Prakhar Bhajpai:</span>
+                      <a href="tel:+919758523839" className="hover:text-[#ff3d7f] transition-colors">+91 97585 23839</a>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
@@ -1436,35 +1568,31 @@ function PartnerMarquee({ partners = [] }) {
         website: partner.website,
       }))
     : Object.entries(partnerGroups).flatMap(([category, names]) => names.map((name) => ({ category, name, type: "logo" })));
-  const doubledItems = [...marqueeItems, ...marqueeItems];
 
   return (
-    <section id="partner-marquee" className="partner-marquee-section reveal-section">
+    <section id="sponsors" className="partner-marquee-section reveal-section py-16">
       <div className="mx-auto max-w-7xl px-5 md:px-8">
-        <div className="partner-marquee-heading">
-          <SectionHeading eyebrow="Partner Marquee" title="Academic, NGO, media and sponsor partners." />
+        <div className="mb-12 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+          <SectionHeading eyebrow="Sponsors" title="Our Sponsors" text="Academic, NGO, media and sponsor partners." />
           <PartnerCTAButton href="/partnership" variant="section">
             Become a Partner <ArrowRight className="h-3 w-3" />
           </PartnerCTAButton>
         </div>
-      </div>
-      <div className="partner-marquee">
-        <div className="partner-marquee-track">
-          {doubledItems?.map((item, index) => {
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+          {marqueeItems?.map((item, index) => {
             const logoUrl = item.logo?.startsWith("/uploads") ? apiUrl(item.logo) : item.logo;
             const partnerKey = item.id ? `partner-${item.id}-${index}` : `${item.category}-${item.name}-${index}`;
 
             return (
-              <a
-                className="partner-logo"
+              <div
+                className="group relative flex flex-col items-center justify-center p-6 bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white/90 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_15px_30px_-5px_rgba(79,195,247,0.3)] hover:-translate-y-2 transition-all duration-400 overflow-hidden cursor-default"
                 key={partnerKey}
-                href={item.website || "#"}
-                target={item.website ? "_blank" : undefined}
-                rel={item.website ? "noreferrer noopener" : undefined}
+                style={{ minHeight: "180px" }}
               >
-                <span>{item.category}</span>
-                {logoUrl ? <img src={logoUrl} alt={item.name} /> : item.name}
-              </a>
+                <div className="absolute inset-0 bg-gradient-to-br from-[#0D47A1]/5 to-[#4FC3F7]/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <span className="relative z-10 mb-5 text-[11px] font-bold uppercase tracking-widest text-[#0D47A1] bg-[#0D47A1]/10 px-3 py-1 rounded-full">{item.category}</span>
+                {logoUrl ? <img src={logoUrl} alt={item.name} className="relative z-10 max-h-16 w-auto object-contain group-hover:scale-110 transition-transform duration-500 ease-out" /> : <div className="relative z-10 text-center font-['Sora'] font-bold text-lg md:text-xl text-[#081B33] px-2">{item.name}</div>}
+              </div>
             );
           })}
         </div>
@@ -1477,16 +1605,25 @@ function PastOrganisations() {
   return (
     <section id="past-organisations" className="section-shell reveal-section">
       <div className="mx-auto max-w-7xl px-5 md:px-8">
-        <SectionHeading eyebrow="Partnerships" title="Our Past Organisations" text="We have successfully collaborated with the most prestigious medical organizations across India." />
-        <div className="mt-8 flex flex-wrap justify-center gap-6">
+        <SectionHeading eyebrow="Partnerships" title="Our Past Collaborating Organisations" />
+        <div className="mt-8 flex flex-nowrap justify-center gap-6 overflow-x-auto">
           {[
-            "FAIMA", "MSAI", "IMA JDN", "AFPI", "IRCF", "AEME", "GJMS", "MGT", "SMR"
+            { name: "FAIMA", logo: "/assets/logos/faima.jpg" },
+            { name: "AFPI", logo: "/assets/logos/afpi.png" },
+            { name: "IRCF", logo: "/assets/logos/ircf.jpg" },
+            { name: "AEME", logo: "/assets/logos/aeme.jpg" },
+            { name: "GJMS", logo: "/assets/logos/GJMS logo.png" },
+            { name: "SMR", logo: null }
           ].map(org => (
-            <SpotlightCard key={org} className="glass-card p-6 flex flex-col items-center justify-center text-center w-[160px] h-[160px] rounded-2xl">
-              <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-4">
-                <Globe2 className="h-8 w-8 text-[#4FC3F7]" />
+            <SpotlightCard key={org.name} className="glass-card p-6 flex flex-col items-center justify-center text-center w-[140px] h-[140px] shrink-0 rounded-2xl">
+              <div className="w-16 h-16 rounded-full bg-white/10 flex items-center justify-center mb-4 overflow-hidden">
+                {org.logo ? (
+                  <img src={org.logo} alt={org.name} className="w-full h-full object-contain bg-white p-1" />
+                ) : (
+                  <Globe2 className="h-8 w-8 text-[#4FC3F7]" />
+                )}
               </div>
-              <h3 className="font-['Sora'] text-sm font-semibold text-white/90">{org}</h3>
+              <h3 className="font-['Sora'] text-sm font-semibold text-white/90">{org.name}</h3>
             </SpotlightCard>
           ))}
         </div>
@@ -1497,7 +1634,7 @@ function PastOrganisations() {
 
 function PricingSection() {
   const tiers = [
-    { name: "GAIMS Elites", early: "₹1,500", late: "₹2,500" },
+    { name: "GAIMS Elite Member", early: "₹1,500", late: "₹2,500" },
     { name: "Non-Member", early: "₹2,000", late: "₹3,000" },
   ];
 
@@ -1523,8 +1660,8 @@ function PricingSection() {
 
         <motion.article className="research-gradient-card research-action-card" whileHover={{ y: -9, scale: 1.01 }}>
           <div className="track-icon"><Clock3 className="h-6 w-6" /></div>
-          <h3>Late Registration</h3>
-          <p>Last date for late registration: <strong>Mid November</strong></p>
+          <h3>Registration</h3>
+          <p>Last date for registration: <strong>Mid November</strong></p>
           <div className="research-guideline-list mt-4">
             {tiers.map(t => (
               <span key={t.name} style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -1533,6 +1670,12 @@ function PricingSection() {
             ))}
           </div>
         </motion.article>
+      </div>
+      
+      <div className="mt-10 flex justify-center">
+        <a href="https://portal.gaims.org" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full bg-[#0D47A1] px-8 py-4 font-['Sora'] text-sm font-bold text-white shadow-lg shadow-blue-900/20 transition-transform hover:-translate-y-1 hover:bg-[#081B33]">
+          Join GAIMS - ₹999 only <ArrowRight className="h-4 w-4" />
+        </a>
       </div>
     </section>
   );
@@ -1564,6 +1707,155 @@ function RegistrationCTA() {
     </section>
   );
 }
+
+const routeSeoDefaults = {
+  home: {
+    title: "Global Healthcare Conclave 2026",
+    description: "Global Healthcare Conclave 2026 (GHC 2026) by GAIMS in New Delhi — healthcare leadership, research, hands-on workshops, world-class speakers and delegate registration.",
+    keywords: "Global Healthcare Conclave 2026, GHC 2026, GAIMS conference, healthcare conference New Delhi, medical conference India, research abstracts, healthcare workshops",
+    path: "/",
+    event: true,
+  },
+  register: {
+    title: "Register — Global Healthcare Conclave 2026",
+    description: "Register and pay securely for the Global Healthcare Conclave 2026. Delegate passes, research track and workshops with online ticket checkout.",
+    keywords: "GHC 2026 registration, Global Healthcare Conclave register, delegate pass, conference ticket, healthcare conclave New Delhi",
+    path: "/register",
+    event: true,
+  },
+  "abstract-registration": {
+    title: "Submit an Abstract — Global Healthcare Conclave 2026",
+    description: "Submit a research abstract for presentation at the Global Healthcare Conclave 2026 and join the GHC research ecosystem.",
+    keywords: "abstract submission, research abstract, GHC 2026 research, poster presentation, healthcare research conference",
+    path: "/abstract-registration",
+    event: true,
+  },
+  "abstract-revision": {
+    title: "Revise Abstract — Global Healthcare Conclave 2026",
+    description: "Review and update your submitted abstract for the Global Healthcare Conclave 2026 research program.",
+    keywords: "abstract revision, GHC 2026 abstract, research update, poster revision",
+    path: "/abstract-revision",
+    event: true,
+  },
+  nominations: {
+    title: "GHC Awards Nominations — Global Healthcare Conclave 2026",
+    description: "Nominate outstanding healthcare professionals, educators, researchers and leaders for the GHC Awards 2026.",
+    keywords: "GHC awards, healthcare achiever award, medical leadership award, nominations, GAIMS awards",
+    path: "/nominations",
+    event: true,
+  },
+  committees: {
+    title: "Committees — Global Healthcare Conclave 2026",
+    description: "Meet the organizing committees behind the Global Healthcare Conclave 2026 by GAIMS.",
+    keywords: "GHC committees, organizing committee, GAIMS, conclave team, advisory board",
+    path: "/committees",
+    event: true,
+  },
+  venue: {
+    title: "Venue & Travel — Global Healthcare Conclave 2026",
+    description: "Venue, transport and travel guide for the Global Healthcare Conclave 2026 at AIIMS, New Delhi — including local attractions and metro directions.",
+    keywords: "GHC 2026 venue, AIIMS New Delhi, conclave location, travel guide New Delhi, metro directions",
+    path: "/venue",
+    event: true,
+  },
+  about: {
+    title: "About — Global Healthcare Conclave 2026",
+    description: "About the Global Healthcare Conclave 2026 — GAIMS' flagship global healthcare summit in New Delhi, built for clinicians, researchers, students and policy leaders.",
+    keywords: "about GHC 2026, Global Healthcare Conclave, GAIMS, healthcare summit, mission",
+    path: "/about",
+    event: true,
+  },
+  "visa-application": {
+    title: "Visa Application — Global Healthcare Conclave 2026",
+    description: "Apply for a visa invitation letter for international delegates attending the Global Healthcare Conclave 2026 in India.",
+    keywords: "GHC 2026 visa, visa invitation letter, international delegates, travel to India",
+    path: "/visa-application",
+    event: true,
+  },
+  "board-meeting-register": {
+    title: "Board Meeting Registration — Global Healthcare Conclave 2026",
+    description: "Register for the GAIMS board meeting hosted during the Global Healthcare Conclave 2026.",
+    keywords: "GAIMS board meeting, board registration, GHC 2026 board",
+    path: "/board-meeting-register",
+    event: true,
+  },
+  "annual-meeting-invite": {
+    title: "Annual Meeting Invite — Global Healthcare Conclave 2026",
+    description: "Join the GAIMS annual meeting at the Global Healthcare Conclave 2026 in New Delhi, India.",
+    keywords: "GAIMS annual meeting, GHC 2026 annual meeting, New Delhi invite",
+    path: "/annual-meeting-invite",
+    event: true,
+  },
+  partnership: {
+    title: "Partnership — Global Healthcare Conclave 2026",
+    description: "Partner with the Global Healthcare Conclave 2026 and reach a global healthcare audience of clinicians, researchers, students and institutions.",
+    keywords: "GHC 2026 partnership, sponsor healthcare conference, media partner, exhibitor, GAIMS partners",
+    path: "/partnership",
+    event: true,
+  },
+  "verify-certificate": {
+    title: "Verify Certificate — Global Healthcare Conclave 2026",
+    description: "Verify the authenticity of a Global Healthcare Conclave participant certificate using its unique code.",
+    keywords: "GHC certificate verification, verify certificate, GHC 2026 certificate",
+    path: "/verify-certificate",
+    noindex: true,
+  },
+  "workshop-detail": {
+    title: "Workshop — Global Healthcare Conclave 2026",
+    description: "Explore workshop details — faculty, capacity, outcomes and registration for the Global Healthcare Conclave 2026.",
+    keywords: "GHC 2026 workshops, medical skills workshop, clinical workshop New Delhi",
+    path: "/workshops/",
+    event: true,
+  },
+  "workshop-registration": {
+    title: "Workshop Registration — Global Healthcare Conclave 2026",
+    description: "Register for a specialized workshop at the Global Healthcare Conclave 2026.",
+    keywords: "workshop registration, GHC 2026 workshop booking, skills training",
+    path: "/register/workshop/",
+    event: true,
+  },
+  "dynamic-form": {
+    title: "GHC Form — Global Healthcare Conclave 2026",
+    description: "GHC 2026 form.",
+    path: "/forms/",
+    noindex: true,
+  },
+  "google-pay-test": {
+    title: "Test Payment — Global Healthcare Conclave 2026",
+    description: "Test payment flow for GHC 2026.",
+    path: "/google-pay-test",
+    noindex: true,
+  },
+  admin: {
+    title: "Admin — Global Healthcare Conclave 2026",
+    description: "Global Healthcare Conclave 2026 admin workspace.",
+    path: "/admin",
+    noindex: true,
+  },
+};
+
+const routeSeoPageKeys = {
+  register: ["register", "registration", "checkout"],
+  "abstract-registration": ["abstract", "abstract-registration", "submit-abstract", "research"],
+  "abstract-revision": ["abstract-revision"],
+  nominations: ["nominations", "awards", "nomination"],
+  committees: ["committees", "committee"],
+  venue: ["venue", "location", "travel"],
+  about: ["about", "about-ghc"],
+  "visa-application": ["visa", "visa-application"],
+  "board-meeting-register": ["board-meeting", "board-meeting-register"],
+  "annual-meeting-invite": ["annual-meeting", "annual-meeting-invite"],
+  partnership: ["partnership", "partner", "sponsorship"],
+  "verify-certificate": ["verify-certificate", "certificate"],
+  "workshop-detail": ["workshop", "workshop-detail", "workshops"],
+  "workshop-registration": ["workshop-registration", "workshop-register"],
+  "dynamic-form": ["form", "dynamic-form"],
+  "google-pay-test": ["google-pay-test"],
+  admin: ["admin", "cms", "dashboard"],
+};
+
+const homeSeoSynonyms = ["home", "homepage", "default", "index"];
+
 function App() {
   const appRef = useRef(null);
   const location = useLocation();
@@ -1572,6 +1864,7 @@ function App() {
   const isWorkshopRegisterRoute = location.pathname.startsWith("/register/workshop/");
   const isRegisterRoute = location.pathname.startsWith("/register");
   const isAbstractRoute = location.pathname.startsWith("/abstract-registration");
+  const isAbstractRevisionRoute = location.pathname.startsWith("/abstract-revision");
   const isPartnerRoute = location.pathname.startsWith("/partners") || location.pathname.startsWith("/partnership");
   const isWorkshopDetailRoute = location.pathname.startsWith("/workshops/");
   const isGooglePayTestRoute = location.pathname.startsWith("/google-pay-test");
@@ -1580,8 +1873,11 @@ function App() {
   const isNominationsRoute = location.pathname.startsWith("/nominations");
   const isCommitteesRoute = location.pathname.startsWith("/committees");
   const isVisaRoute = location.pathname.startsWith("/visa-application");
+  const isVenueRoute = location.pathname.startsWith("/venue");
+  const isAboutRoute = location.pathname.startsWith("/about");
   const isBoardMeetingRoute = location.pathname.startsWith("/board-meeting-register");
   const isAnnualMeetingRoute = location.pathname.startsWith("/annual-meeting-invite");
+  const isQRAttendanceRoute = location.pathname.startsWith("/qr-attendance");
   const [installPrompt, setInstallPrompt] = useState(null);
   const [homepageSync, setHomepageSync] = useState({ banners: [], homepage: [], mediaPartners: [], notifications: [], seo: [] });
   const [partners, setPartners] = useState([]);
@@ -1646,61 +1942,114 @@ function App() {
   ]);
 
   useEffect(() => {
-    if (
-      isAdminRoute ||
-      isRegisterRoute ||
-      isAbstractRoute ||
-      isPartnerRoute ||
-      isWorkshopDetailRoute ||
-      isWorkshopRegisterRoute ||
-      isGooglePayTestRoute ||
-      isVerifyCertificateRoute ||
-      isDynamicFormRoute ||
-      isNominationsRoute
-    ) {
-      setPageSeo({
-        title: isNominationsRoute ? "GHC Awards 2026 — Nominations" : isDynamicFormRoute ? "GHC Form" : isVerifyCertificateRoute ? "Verify Certificate" : isGooglePayTestRoute ? "Google Pay Test" : isWorkshopRegisterRoute ? "Workshop Registration" : isWorkshopCmsRoute ? "Workshop Manager" : isWorkshopDetailRoute ? "Workshop Details" : isPartnerRoute ? "Partner Portal" : isAbstractRoute ? "Abstract Registration" : isRegisterRoute ? "Register" : isAdminRoute ? "Admin" : "Global Healthcare Conclave 2026",
-        description: isWorkshopDetailRoute
-          ? "Workshop details for Global Healthcare Conclave 2026."
-          : isPartnerRoute
-          ? "Partner with Global Healthcare Conclave 2026."
-          : isAbstractRoute
-          ? "Submit a research abstract for Global Healthcare Conclave 2026."
-          : isRegisterRoute
-          ? "Register for Global Healthcare Conclave 2026 with secure ticket checkout."
-          : "Global Healthcare Conclave 2026 by GAIMS: speakers, workshops, research, venue, partners and registration.",
-        path: isNominationsRoute ? "/nominations" : isDynamicFormRoute ? location.pathname : isVerifyCertificateRoute ? "/verify-certificate" : isGooglePayTestRoute ? "/google-pay-test" : isWorkshopRegisterRoute ? location.pathname : isWorkshopCmsRoute ? "/admin/workshops" : isWorkshopDetailRoute ? location.pathname : isPartnerRoute ? "/partnership" : isAbstractRoute ? "/abstract-registration" : isRegisterRoute ? "/register" : isAdminRoute ? "/admin" : "/",
-        schema: {
-          "@context": "https://schema.org",
-          "@type": "Event",
-          name: "Global Healthcare Conclave 2026",
-          organizer: { "@type": "Organization", name: "GAIMS" },
-        },
-      });
-      return;
+    let key = "home";
+    let defaults = routeSeoDefaults.home;
+    let path = "/";
+
+    if (isAdminRoute || isWorkshopCmsRoute) {
+      key = "admin";
+      defaults = routeSeoDefaults.admin;
+      path = isWorkshopCmsRoute ? "/admin/workshops" : location.pathname;
+    } else if (isWorkshopRegisterRoute) {
+      key = "workshop-registration";
+      defaults = routeSeoDefaults["workshop-registration"];
+      path = location.pathname;
+    } else if (isRegisterRoute) {
+      key = "register";
+      defaults = routeSeoDefaults.register;
+      path = "/register";
+    } else if (isAbstractRevisionRoute) {
+      key = "abstract-revision";
+      defaults = routeSeoDefaults["abstract-revision"];
+      path = "/abstract-revision";
+    } else if (isAbstractRoute) {
+      key = "abstract-registration";
+      defaults = routeSeoDefaults["abstract-registration"];
+      path = "/abstract-registration";
+    } else if (isNominationsRoute) {
+      key = "nominations";
+      defaults = routeSeoDefaults.nominations;
+      path = "/nominations";
+    } else if (isBoardMeetingRoute) {
+      key = "board-meeting-register";
+      defaults = routeSeoDefaults["board-meeting-register"];
+      path = "/board-meeting-register";
+    } else if (isAnnualMeetingRoute) {
+      key = "annual-meeting-invite";
+      defaults = routeSeoDefaults["annual-meeting-invite"];
+      path = "/annual-meeting-invite";
+    } else if (isVisaRoute) {
+      key = "visa-application";
+      defaults = routeSeoDefaults["visa-application"];
+      path = "/visa-application";
+    } else if (isCommitteesRoute) {
+      key = "committees";
+      defaults = routeSeoDefaults.committees;
+      path = "/committees";
+    } else if (isVenueRoute) {
+      key = "venue";
+      defaults = routeSeoDefaults.venue;
+      path = "/venue";
+    } else if (isAboutRoute) {
+      key = "about";
+      defaults = routeSeoDefaults.about;
+      path = "/about";
+    } else if (isPartnerRoute) {
+      key = "partnership";
+      defaults = routeSeoDefaults.partnership;
+      path = "/partnership";
+    } else if (isVerifyCertificateRoute) {
+      key = "verify-certificate";
+      defaults = routeSeoDefaults["verify-certificate"];
+      path = "/verify-certificate";
+    } else if (isDynamicFormRoute) {
+      key = "dynamic-form";
+      defaults = routeSeoDefaults["dynamic-form"];
+      path = location.pathname;
+    } else if (isGooglePayTestRoute) {
+      key = "google-pay-test";
+      defaults = routeSeoDefaults["google-pay-test"];
+      path = "/google-pay-test";
+    } else if (isWorkshopDetailRoute) {
+      key = "workshop-detail";
+      defaults = routeSeoDefaults["workshop-detail"];
+      path = location.pathname;
     }
 
-    const seoPage = findSeoPage(homepageSync.seo);
+    const cmsEntry = homepageSync.seo?.length
+      ? findSeoEntry(homepageSync.seo, key, key === "home" ? homeSeoSynonyms : routeSeoPageKeys[key])
+      : null;
+
+    const merged = mergeSeoEntry(cmsEntry, defaults);
+    const schemas = defaults.event ? [buildEventSchema({ path })] : [];
     setPageSeo({
-      title: seoPage?.seo_title || "Global Healthcare Conclave 2026",
-      description: seoPage?.seo_description || "Global Healthcare Conclave 2026 by GAIMS: speakers, workshops, research, venue, partners and registration.",
-      path: "/",
-      schema: {
-        "@context": "https://schema.org",
-        "@type": "Event",
-        name: "Global Healthcare Conclave 2026",
-        organizer: { "@type": "Organization", name: "GAIMS" },
-      },
+      title: merged.title,
+      description: merged.description,
+      keywords: merged.keywords,
+      image: merged.image,
+      path,
+      canonical: merged.canonical,
+      schema: merged.schema,
+      schemas,
+      noindex: Boolean(defaults.noindex),
     });
   }, [
     homepageSync.seo,
     isAbstractRoute,
+    isAbstractRevisionRoute,
     isAdminRoute,
+    isAnnualMeetingRoute,
+    isBoardMeetingRoute,
+    isCommitteesRoute,
     isDynamicFormRoute,
     isGooglePayTestRoute,
+    isNominationsRoute,
     isPartnerRoute,
     isRegisterRoute,
+    isVenueRoute,
     isVerifyCertificateRoute,
+    isVisaRoute,
+    isAboutRoute,
     isWorkshopCmsRoute,
     isWorkshopDetailRoute,
     isWorkshopRegisterRoute,
@@ -1840,6 +2189,13 @@ function App() {
         <MobileRadialNav />
       </>
     );
+  } else if (isAbstractRevisionRoute) {
+    routeContent = (
+      <>
+        <Suspense fallback={<div className="admin-loading">Loading abstract revision...</div>}><AbstractRevision /></Suspense>
+        <MobileRadialNav />
+      </>
+    );
   } else if (isBoardMeetingRoute) {
     routeContent = (
       <>
@@ -1879,6 +2235,39 @@ function App() {
         <MobileRadialNav />
       </div>
     );
+  } else if (isVenueRoute) {
+    routeContent = (
+      <div ref={appRef} className="min-h-screen overflow-hidden bg-[#F7FBFF] text-[#081B33]">
+        <Navbar />
+        <main>
+          <Suspense fallback={<div className="admin-loading">Loading venue details...</div>}><Venue /></Suspense>
+        </main>
+        <Footer />
+        <MobileRadialNav />
+      </div>
+    );
+  } else if (isAboutRoute) {
+    routeContent = (
+      <div ref={appRef} className="min-h-screen overflow-hidden bg-[#F7FBFF] text-[#081B33]">
+        <Navbar />
+        <main>
+          <Suspense fallback={<div className="admin-loading">Loading About GHC...</div>}><AboutGHC /></Suspense>
+        </main>
+        <Footer />
+        <MobileRadialNav />
+      </div>
+    );
+  } else if (isQRAttendanceRoute) {
+    routeContent = (
+      <div ref={appRef} className="min-h-screen overflow-hidden bg-[#F7FBFF] text-[#081B33]">
+        <Navbar />
+        <main>
+          <Suspense fallback={<div className="admin-loading">Loading QR Attendance...</div>}><QRAttendance /></Suspense>
+        </main>
+        <Footer />
+        <MobileRadialNav />
+      </div>
+    );
   } else if (isPartnerRoute) {
     routeContent = (
       <>
@@ -1903,18 +2292,13 @@ function App() {
         <Hero banner={activeHeroBanner} />
         <ParticipatingCountries />
         <WatchVision />
-        <StatsStrip />
-        <About />
-        <Mosaic />
-        <Tracks />
         <WorldClassSpeakers />
         <WorkshopsExperience />
-        <AwardsSection />
-        <GHCTimeline />
         <ResearchHub />
+        <GHCTimeline />
         <PanelDiscussionSection />
-        <VenueSection />
-        <PartnerMarquee />
+        <AwardsSection />
+        <PartnerMarquee partners={partners} />
         <PastOrganisations />
         <PricingSection />
         <VisaCTA />

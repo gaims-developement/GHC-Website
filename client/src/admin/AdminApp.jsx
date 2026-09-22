@@ -13,6 +13,7 @@ import Cme from "./pages/Cme";
 import Workshops from "./pages/Workshops";
 import Events from "./pages/Events";
 import EventDirectory from "./pages/EventDirectory";
+import HospitalityCMS from "./pages/HospitalityCMS";
 import EventReports from "./pages/EventReports";
 import Research from "./pages/Research";
 import Scientific from "./pages/Scientific";
@@ -23,7 +24,6 @@ import ScientificReports from "./pages/ScientificReports";
 import Registrations from "./pages/Registrations";
 import AdminTickets from "./pages/AdminTickets";
 import AdminPartners from "./pages/AdminPartners";
-import Sponsors from "./pages/Sponsors";
 import SponsorshipDirectory from "./pages/SponsorshipDirectory";
 import SponsorshipReports from "./pages/SponsorshipReports";
 import Payments from "./pages/Payments";
@@ -34,6 +34,7 @@ import RegistrationReports from "./pages/RegistrationReports";
 import AdminMedia from "./pages/AdminMedia";
 import Marketing from "./pages/Marketing";
 import MarketingContent from "./pages/MarketingContent";
+import SeoManagement from "./pages/SeoManagement";
 import AdminTrailer from "./pages/AdminTrailer";
 import Checkin from "./pages/Checkin";
 import Certificates from "./pages/Certificates";
@@ -50,8 +51,6 @@ import VolunteerReports from "./pages/VolunteerReports";
 import Forms from "./pages/Forms";
 import FormBuilder from "./pages/FormBuilder";
 import FormSubmissions from "./pages/FormSubmissions";
-import FormTemplates from "./pages/FormTemplates";
-import FormAnalytics from "./pages/FormAnalytics";
 import MobileApp from "./pages/MobileApp";
 import MobileDirectory from "./pages/MobileDirectory";
 import CorePlatform from "./pages/CorePlatform";
@@ -99,11 +98,11 @@ api.interceptors.request.use((config) => {
 const pages = {
   dashboard: Dashboard,
   speakers: Speakers,
-  sessions: Sessions,
+  sessions: Schedule, // Redirected to Schedule
   schedule: Schedule,
   tracks: (props) => <SpeakerDirectories {...props} type="tracks" />,
-  halls: (props) => <SpeakerDirectories {...props} type="halls" />,
-  cme: Cme,
+  halls: Schedule, // Redirected to Schedule
+  cme: Schedule, // Redirected to Schedule
   resources: SpeakerResources,
   workshops: Workshops,
   events: Events,
@@ -112,7 +111,8 @@ const pages = {
   "event-feedback": (props) => <EventDirectory {...props} type="event-feedback" />,
   "event-certificates": (props) => <EventDirectory {...props} type="event-certificates" />,
   "event-resources": (props) => <EventDirectory {...props} type="event-resources" />,
-  venues: (props) => <EventDirectory {...props} type="venues" />,
+  venues: (props) => <HospitalityCMS {...props} />,
+  hospitality: (props) => <HospitalityCMS {...props} />,
   "event-reports": EventReports,
   research: Research,
   scientific: Scientific,
@@ -121,7 +121,7 @@ const pages = {
   reviews: Reviews,
   "presentation-sessions": Presentations,
   posters: Presentations,
-  judges: (props) => <ScientificDirectory {...props} type="judges" />,
+  judges: (props) => <CommitteesCMS {...props} initialTab="jury" />,
   awards: (props) => <ScientificDirectory {...props} type="awards" />,
   "scientific-reports": ScientificReports,
   registrations: Registrations,
@@ -131,8 +131,6 @@ const pages = {
   coupons: Coupons,
   reports: RegistrationReports,
   partners: AdminPartners,
-  sponsors: Sponsors,
-  "sponsor-tiers": (props) => <SponsorshipDirectory {...props} type="sponsor-tiers" />,
   exhibitors: (props) => <SponsorshipDirectory {...props} type="exhibitors" />,
   stalls: (props) => <SponsorshipDirectory {...props} type="stalls" />,
   contracts: (props) => <SponsorshipDirectory {...props} type="contracts" />,
@@ -150,7 +148,7 @@ const pages = {
   "media-partners": (props) => <MarketingContent {...props} type="media-partners" />,
   notifications: (props) => <MarketingContent {...props} type="notifications" />,
   "media-library": AdminMedia,
-  seo: (props) => <MarketingContent {...props} type="seo" />,
+  seo: (props) => <SeoManagement {...props} />,
   trailer: AdminTrailer,
   analytics: Analytics,
   checkin: Checkin,
@@ -178,8 +176,7 @@ const pages = {
   "volunteer-reports": VolunteerReports,
   forms: Forms,
   "forms-create": FormBuilder,
-  "forms-templates": FormTemplates,
-  "forms-analytics": FormAnalytics,
+  "form-submissions": FormSubmissions,
   mobile: MobileApp,
   "mobile-users": (props) => <MobileDirectory {...props} type="users" />,
   "mobile-notifications": (props) => <MobileDirectory {...props} type="notifications" />,
@@ -204,14 +201,7 @@ const pages = {
   "system-users": (props) => <SystemDirectory {...props} type="users" />,
   "system-roles": (props) => <SystemDirectory {...props} type="roles" />,
   "system-sessions": (props) => <SystemDirectory {...props} type="sessions" />,
-  "system-api-monitoring": (props) => <SystemDirectory {...props} type="api-monitoring" />,
-  "system-database": (props) => <SystemDirectory {...props} type="database" />,
-  "system-cloudinary": (props) => <SystemDirectory {...props} type="cloudinary" />,
-  "system-email": (props) => <SystemDirectory {...props} type="email" />,
-  "system-backups": (props) => <SystemDirectory {...props} type="backups" />,
-  "system-security": (props) => <SystemDirectory {...props} type="security" />,
   "system-feature-flags": (props) => <SystemDirectory {...props} type="feature-flags" />,
-  "system-settings": (props) => <SystemDirectory {...props} type="settings" />,
   launch: LaunchChecklist,
   users: Users,
   settings: AdminSettings,
@@ -231,8 +221,6 @@ const pageFromPath = () => {
   if (parts[1] === "registrations" && parts[2]) return `registration-${parts[2]}`;
   if (parts[1] === "events" && parts[2] === "create") return "events-create";
   if (parts[1] === "events" && parts[2]) return `event-${parts[2]}`;
-  if (parts[1] === "sponsors" && parts[2] === "create") return "sponsors-create";
-  if (parts[1] === "sponsors" && parts[2]) return `sponsor-${parts[2]}`;
   if (parts[1] === "scientific" && parts[2] === "reports") return "scientific-reports";
   if (parts[1] === "sponsorship" && parts[2] === "reports") return "sponsorship-reports";
   if (parts[1] === "logistics" && parts[2] === "reports") return "logistics-reports";
@@ -383,7 +371,7 @@ function AdminApp({ initialPage = "dashboard" }) {
     return <Login api={api} onLogin={handleLogin} />;
   }
 
-  const Page = pages[activePage] || (activePage.startsWith("team-") ? TeamManagement : activePage.startsWith("registration-") ? Registrations : activePage.startsWith("sponsor-") ? Sponsors : activePage.startsWith("event-") ? Events : activePage.match(/^form-\d+-submissions$/) ? FormSubmissions : activePage.match(/^form-\d+$/) ? FormBuilder : activePage.startsWith("visa-application-") ? VisaApplicationDetails : null);
+  const Page = pages[activePage] || (activePage.startsWith("team-") ? TeamManagement : activePage.startsWith("registration-") ? Registrations : activePage.startsWith("event-") ? Events : activePage.match(/^form-\d+-submissions$/) ? FormSubmissions : activePage.match(/^form-\d+$/) ? FormBuilder : activePage.startsWith("visa-application-") ? VisaApplicationDetails : null);
 
   return (
     <DashboardLayout

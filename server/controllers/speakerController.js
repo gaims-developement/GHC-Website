@@ -236,6 +236,24 @@ const deleteByTable = (table, moduleName) => asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
+const rescheduleSession = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { hallId, startTime, endTime } = req.body;
+  const clauses = ['id = ?'];
+  const params = [hallId || null, startTime || null, endTime || null, id];
+  applyEventScope(clauses, params, req, 'event_id');
+  
+  await pool.query(`UPDATE sessions SET hall_id=?, start_time=?, end_time=? WHERE ${clauses.join(' AND ')}`, params);
+  await ActivityLog.logActivity({ userId: req.user?.id, action: 'rescheduled_session', module: 'sessions', recordId: String(id) });
+  
+  // Return any new conflicts
+  const [sessionRows] = await pool.query('SELECT speaker_id FROM sessions WHERE id = ?', [id]);
+  const speakerId = sessionRows[0]?.speaker_id || null;
+  const conflicts = await conflictsForSession({ id, speakerId, hallId, startTime, endTime, req });
+  
+  res.json({ id, conflicts });
+});
+
 const saveResource = asyncHandler(async (req, res) => {
   const fileUrl = req.file ? `/uploads/speakers/${req.file.filename}` : req.body.fileUrl || req.body.file_url;
   const [result] = await pool.query('INSERT INTO session_resources (session_id, resource_name, resource_type, file_url) VALUES (?, ?, ?, ?)', [req.body.sessionId || req.body.session_id, req.body.resourceName || req.body.resource_name, req.body.resourceType || req.body.resource_type, fileUrl]);
@@ -251,17 +269,17 @@ const listResources = asyncHandler(async (_req, res) => {
 
 const saveCme = asyncHandler(async (req, res) => {
   const [result] = await pool.query(
-    `INSERT INTO cme_records (session_id, credit_hours, credit_points, approved, approved_by)
-     VALUES (?, ?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE credit_hours = VALUES(credit_hours), credit_points = VALUES(credit_points), approved = VALUES(approved), approved_by = VALUES(approved_by)`,
-    [req.body.sessionId || req.body.session_id, Number(req.body.creditHours || 0), Number(req.body.creditPoints || 0), toBoolean(req.body.approved), toBoolean(req.body.approved) ? req.user?.id : null]
+    `INSERT INTO cme_records (session_id, session_name, speaker_id, credit_hours, credit_points, approved, approved_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE session_name = VALUES(session_name), speaker_id = VALUES(speaker_id), credit_hours = VALUES(credit_hours), credit_points = VALUES(credit_points), approved = VALUES(approved), approved_by = VALUES(approved_by)`,
+    [req.body.sessionId || req.body.session_id || null, req.body.sessionName || req.body.session_name || null, req.body.speakerId || req.body.speaker_id || null, Number(req.body.creditHours || 0), Number(req.body.creditPoints || 0), toBoolean(req.body.approved), toBoolean(req.body.approved) ? req.user?.id : null]
   );
-  await ActivityLog.logActivity({ userId: req.user?.id, action: 'updated_cme_record', module: 'cme', recordId: String(result.insertId || req.body.sessionId) });
+  await ActivityLog.logActivity({ userId: req.user?.id, action: 'updated_cme_record', module: 'cme', recordId: String(result.insertId || req.body.sessionId || 'new') });
   res.json({ id: result.insertId || req.body.sessionId });
 });
 
 const listCme = asyncHandler(async (_req, res) => {
-  const [records] = await pool.query('SELECT c.*, s.title AS session_title, u.name AS approved_by_name FROM cme_records c LEFT JOIN sessions s ON s.id = c.session_id LEFT JOIN users u ON u.id = c.approved_by ORDER BY c.id DESC');
+  const [records] = await pool.query('SELECT c.*, COALESCE(s.title, c.session_name) AS session_title, u.name AS approved_by_name, sp.full_name AS speaker_name FROM cme_records c LEFT JOIN sessions s ON s.id = c.session_id LEFT JOIN users u ON u.id = c.approved_by LEFT JOIN speakers sp ON sp.id = c.speaker_id ORDER BY c.id DESC');
   res.json({ records });
 });
 
@@ -316,4 +334,5 @@ module.exports = {
   speakerAnalytics,
   speakerStats,
   updateSpeaker,
+  rescheduleSession,
 };

@@ -304,6 +304,28 @@ const exportRegistrationsExcel = asyncHandler(async (req, res) => {
   res.send(`<html><body><table><thead><tr><th>Registration ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Institution</th><th>Category</th><th>Status</th><th>Payment</th><th>Attendance</th></tr></thead><tbody>${rows}</tbody></table></body></html>`);
 });
 
+const lookupRegistration = asyncHandler(async (req, res) => {
+  const query = req.params.query;
+  if (!query) {
+    return res.status(400).json({ message: 'Query parameter (phone or registration ID) is required' });
+  }
+  
+  const registration = await Registration.findByPhoneOrRegistrationId(query, req);
+  if (!registration) {
+    return res.status(404).json({ message: 'Registration not found for the provided details' });
+  }
+  
+  // Return only necessary public info for attendance
+  res.json({
+    registrationId: registration.registrationId,
+    fullName: registration.fullName,
+    ticketName: registration.ticketName,
+    qrCode: registration.qrCode,
+    attendanceStatus: registration.attendanceStatus,
+    registrationStatus: registration.registrationStatus,
+  });
+});
+
 module.exports = {
   cancelRegistration,
   checkInRegistration,
@@ -322,6 +344,7 @@ module.exports = {
   listCoupons,
   listRegistrations,
   listTickets,
+  lookupRegistration,
   markBadgeGenerated,
   refundRegistration,
   registrationDashboard,

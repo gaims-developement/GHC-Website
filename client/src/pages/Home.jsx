@@ -318,9 +318,15 @@ export default function Home() {
               <Link to="/register" className="btn-primary">
                 Register Now <ArrowRight size={16} />
               </Link>
-              <Link to="/about" className="btn-outline">
-                Explore Program
+              <Link to="/abstracts" className="btn-outline">
+                Submit Abstract
               </Link>
+              <Link to="/partner" className="btn-outline">
+                Become a Partner
+              </Link>
+              <a href="https://portal.gaims.org" target="_blank" rel="noopener noreferrer" className="btn-outline">
+                Join GAIMS
+              </a>
             </div>
           </motion.div>
 

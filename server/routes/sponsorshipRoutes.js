@@ -18,6 +18,7 @@ const {
   listSponsors,
   listStalls,
   listTiers,
+  publicPartners,
   reports,
   saveCommunication,
   saveContract,
@@ -57,7 +58,9 @@ const upload = multer({
   limits: { fileSize: Number(process.env.MAX_UPLOAD_SIZE || 10 * 1024 * 1024) },
 });
 
-router.use(requireAuth);
+router.get('/sponsorship/public', publicPartners);
+
+router.use(['/sponsorship', '/sponsors', '/sponsor-deliverables', '/sponsor-tiers', '/deliverables', '/stalls', '/exhibitors', '/contracts', '/invoices'], requireAuth);
 
 router.get('/sponsorship/dashboard', requirePermission('manage_sponsors', 'view_sponsorship_reports'), dashboard);
 router.get('/sponsorship/reports', requirePermission('view_sponsorship_reports', 'manage_sponsors'), reports);
@@ -74,9 +77,9 @@ router.get('/sponsors/:id/communications', requirePermission('manage_sponsors'),
 router.post('/sponsors/:id/communications', requirePermission('manage_sponsors'), saveCommunication);
 
 router.get('/sponsor-tiers', requirePermission('manage_sponsor_tiers', 'manage_sponsors'), listTiers);
-router.post('/sponsor-tiers', requirePermission('manage_sponsor_tiers'), saveTier);
-router.put('/sponsor-tiers/:id', requirePermission('manage_sponsor_tiers'), saveTier);
-router.delete('/sponsor-tiers/:id', requirePermission('manage_sponsor_tiers'), deleteTier);
+router.post('/sponsor-tiers', requirePermission('manage_sponsor_tiers', 'manage_sponsors'), saveTier);
+router.put('/sponsor-tiers/:id', requirePermission('manage_sponsor_tiers', 'manage_sponsors'), saveTier);
+router.delete('/sponsor-tiers/:id', requirePermission('manage_sponsor_tiers', 'manage_sponsors'), deleteTier);
 
 router.get('/deliverables', requirePermission('manage_deliverables', 'manage_sponsors'), listDeliverables);
 router.post('/deliverables', requirePermission('manage_deliverables'), saveDeliverable);

@@ -193,8 +193,6 @@ const modules = [
   ['system-settings', 'System Settings', 'manage_settings', 'system/settings', 'Settings', 132, true],
   ['launch', 'Launch', 'operations.view', 'launch', 'Rocket', 133, true],
   ['partners', 'Public Partners', 'manage_sponsors', 'partners', 'Handshake', 140, true],
-  ['sponsors', 'Sponsors', 'manage_sponsors', 'sponsors', 'Handshake', 141, true],
-  ['sponsor-tiers', 'Sponsor Tiers', 'manage_sponsor_tiers', 'sponsor-tiers', 'Layers3', 142, true],
   ['exhibitors', 'Exhibitors', 'manage_exhibitors', 'exhibitors', 'Store', 143, true],
   ['stalls', 'Stalls', 'manage_stalls', 'stalls', 'MapPinned', 144, true],
   ['contracts', 'Contracts', 'manage_contracts', 'contracts', 'FileSignature', 145, true],
@@ -663,6 +661,34 @@ const createWorkshopTables = async () => {
       contact_number VARCHAR(80),
       capacity INT DEFAULT 0,
       notes TEXT,
+      description TEXT,
+      status ENUM('active', 'inactive') DEFAULT 'active',
+      is_active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS cafes (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      name VARCHAR(255) NOT NULL,
+      address TEXT,
+      google_maps_link TEXT,
+      description TEXT,
+      status ENUM('active', 'inactive') DEFAULT 'active',
+      is_active BOOLEAN DEFAULT TRUE,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS stays (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      name VARCHAR(255) NOT NULL,
+      address TEXT,
+      google_maps_link TEXT,
       description TEXT,
       status ENUM('active', 'inactive') DEFAULT 'active',
       is_active BOOLEAN DEFAULT TRUE,
@@ -1616,8 +1642,11 @@ const createResearchTables = async () => {
       file_url TEXT,
       pdf_url TEXT,
       declaration_url TEXT,
-      submission_status ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft',
-      status ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft',
+      submission_status ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'revised_submitted', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft',
+      status ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'revised_submitted', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft',
+      revision_token VARCHAR(255),
+      revision_token_expires DATETIME,
+      current_version INT DEFAULT 1,
       final_score DECIMAL(8,2),
       submitted_at TIMESTAMP NULL,
       review_score DECIMAL(5,2),
@@ -1634,12 +1663,28 @@ const createResearchTables = async () => {
   await addColumnIfMissing('abstracts', 'country', 'VARCHAR(100)');
   await addColumnIfMissing('abstracts', 'category_id', 'INT NULL');
   await addColumnIfMissing('abstracts', 'file_url', 'TEXT');
-  await addColumnIfMissing('abstracts', 'submission_status', "ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft'");
+  await addColumnIfMissing('abstracts', 'submission_status', "ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'revised_submitted', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft'");
   await addColumnIfMissing('abstracts', 'final_score', 'DECIMAL(8,2)');
   await addColumnIfMissing('abstracts', 'submitted_at', 'TIMESTAMP NULL');
-  await pool.query("ALTER TABLE abstracts MODIFY status ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft'");
+  await pool.query("ALTER TABLE abstracts MODIFY status ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'revised_submitted', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft'");
   await pool.query("UPDATE abstracts SET abstract_id = CONCAT('GHC-ABS-', LPAD(id, 5, '0')) WHERE abstract_id IS NULL OR abstract_id = ''");
   await pool.query('UPDATE abstracts SET corresponding_author = COALESCE(corresponding_author, presenting_author), file_url = COALESCE(file_url, pdf_url), submission_status = COALESCE(submission_status, status)');
+
+  await addColumnIfMissing('abstracts', 'revision_token', 'VARCHAR(255)');
+  await addColumnIfMissing('abstracts', 'revision_token_expires', 'DATETIME');
+  await addColumnIfMissing('abstracts', 'current_version', 'INT DEFAULT 1');
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS abstract_versions (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      abstract_id INT NOT NULL,
+      version_number INT NOT NULL,
+      pdf_url TEXT,
+      declaration_url TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT fk_abstract_versions_abstract_id FOREIGN KEY (abstract_id) REFERENCES abstracts(id) ON DELETE CASCADE
+    )
+  `);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS reviewers (
@@ -2754,6 +2799,38 @@ const seedCoupons = async () => {
   }
 };
 
+const seedSeoPages = async () => {
+  const seoPages = [
+    ['home', 'Global Healthcare Conclave 2026', 'Global Healthcare Conclave 2026 (GHC 2026) by GAIMS in New Delhi — healthcare leadership, research, hands-on workshops, world-class speakers and delegate registration. November 22–24, 2026.', 'Global Healthcare Conclave 2026, GHC 2026, GAIMS conference, healthcare conference New Delhi, medical conference India, research abstracts, healthcare workshops', 'https://ghc.gaims.org/assets/logos/ghclogo.jpeg', 'https://ghc.gaims.org/', null],
+    ['register', 'Register — Global Healthcare Conclave 2026', 'Register and pay securely for the Global Healthcare Conclave 2026. Delegate passes, research track and workshops with online ticket checkout.', 'GHC 2026 registration, Global Healthcare Conclave register, delegate pass, conference ticket, healthcare conclave New Delhi', null, 'https://ghc.gaims.org/register', null],
+    ['abstract-registration', 'Submit an Abstract — Global Healthcare Conclave 2026', 'Submit a research abstract for presentation at the Global Healthcare Conclave 2026 and join the GHC research ecosystem.', 'abstract submission, research abstract, GHC 2026 research, poster presentation, healthcare research conference', null, 'https://ghc.gaims.org/abstract-registration', null],
+    ['abstract-revision', 'Revise Abstract — Global Healthcare Conclave 2026', 'Review and update your submitted abstract for the Global Healthcare Conclave 2026 research program.', 'abstract revision, GHC 2026 abstract, research update, poster revision', null, 'https://ghc.gaims.org/abstract-revision', null],
+    ['nominations', 'GHC Awards Nominations — Global Healthcare Conclave 2026', 'Nominate outstanding healthcare professionals, educators, researchers and leaders for the GHC Awards 2026.', 'GHC awards, healthcare achiever award, medical leadership award, nominations, GAIMS awards', null, 'https://ghc.gaims.org/nominations', null],
+    ['committees', 'Committees — Global Healthcare Conclave 2026', 'Meet the organizing committees behind the Global Healthcare Conclave 2026 by GAIMS.', 'GHC committees, organizing committee, GAIMS, conclave team, advisory board', null, 'https://ghc.gaims.org/committees', null],
+    ['venue', 'Venue & Travel — Global Healthcare Conclave 2026', 'Venue, transport and travel guide for the Global Healthcare Conclave 2026 at AIIMS, New Delhi — including local attractions and metro directions.', 'GHC 2026 venue, AIIMS New Delhi, conclave location, travel guide New Delhi, metro directions', null, 'https://ghc.gaims.org/venue', null],
+    ['about', 'About — Global Healthcare Conclave 2026', 'About the Global Healthcare Conclave 2026 — GAIMS\u2019 flagship global healthcare summit in New Delhi, built for clinicians, researchers, students and policy leaders.', 'about GHC 2026, Global Healthcare Conclave, GAIMS, healthcare summit, mission', null, 'https://ghc.gaims.org/about', null],
+    ['visa-application', 'Visa Application — Global Healthcare Conclave 2026', 'Apply for a visa invitation letter for international delegates attending the Global Healthcare Conclave 2026 in India.', 'GHC 2026 visa, visa invitation letter, international delegates, travel to India', null, 'https://ghc.gaims.org/visa-application', null],
+    ['board-meeting-register', 'Board Meeting Registration — Global Healthcare Conclave 2026', 'Register for the GAIMS board meeting hosted during the Global Healthcare Conclave 2026.', 'GAIMS board meeting, board registration, GHC 2026 board', null, 'https://ghc.gaims.org/board-meeting-register', null],
+    ['annual-meeting-invite', 'Annual Meeting Invite — Global Healthcare Conclave 2026', 'Join the GAIMS annual meeting at the Global Healthcare Conclave 2026 in New Delhi, India.', 'GAIMS annual meeting, GHC 2026 annual meeting, New Delhi invite', null, 'https://ghc.gaims.org/annual-meeting-invite', null],
+    ['partnership', 'Partnership — Global Healthcare Conclave 2026', 'Partner with the Global Healthcare Conclave 2026 and reach a global healthcare audience of clinicians, researchers, students and institutions.', 'GHC 2026 partnership, sponsor healthcare conference, media partner, exhibitor, GAIMS partners', null, 'https://ghc.gaims.org/partnership', null],
+    ['verify-certificate', 'Verify Certificate — Global Healthcare Conclave 2026', 'Verify the authenticity of a Global Healthcare Conclave participant certificate using its unique code.', 'GHC certificate verification, verify certificate, GHC 2026 certificate', null, 'https://ghc.gaims.org/verify-certificate', null],
+    ['workshop-detail', 'Workshop — Global Healthcare Conclave 2026', 'Explore workshop details — faculty, capacity, outcomes and registration for the Global Healthcare Conclave 2026.', 'GHC 2026 workshops, medical skills workshop, clinical workshop New Delhi', null, 'https://ghc.gaims.org/workshops', null],
+    ['workshop-registration', 'Workshop Registration — Global Healthcare Conclave 2026', 'Register for a specialized workshop at the Global Healthcare Conclave 2026.', 'workshop registration, GHC 2026 workshop booking, skills training', null, 'https://ghc.gaims.org/register/workshop', null],
+    ['dynamic-form', 'GHC Form — Global Healthcare Conclave 2026', 'GHC 2026 form.', null, null, null, null],
+    ['google-pay-test', 'Test Payment — Global Healthcare Conclave 2026', 'Test payment flow for GHC 2026.', null, null, null, null],
+    ['admin', 'Admin — Global Healthcare Conclave 2026', 'Global Healthcare Conclave 2026 admin workspace.', null, null, null, null],
+  ];
+
+  for (const [pageKey, seoTitle, seoDescription, seoKeywords, ogImage, canonicalUrl, schemaMarkup] of seoPages) {
+    await pool.query(
+      `INSERT INTO seo_pages (page_key, seo_title, seo_description, seo_keywords, og_image, canonical_url, schema_markup)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE page_key = page_key`,
+      [pageKey, seoTitle, seoDescription, seoKeywords, ogImage, canonicalUrl, schemaMarkup]
+    );
+  }
+};
+
 const seedCoreArchitectureData = async () => {
   const sources = [
     ['users', 'users', 'name', 'email', '/admin/users'],
@@ -2837,6 +2914,9 @@ const seedAuthData = async () => {
       [label, moduleKey, null, moduleKey, label, permissionKey, routeKey, icon, displayOrder, active]
     );
   }
+
+  // Sponsors and Sponsor Tiers are managed inside the Public Partner hub; hide their standalone modules.
+  await pool.query("UPDATE modules SET active = FALSE WHERE module_key IN ('sponsors', 'sponsor-tiers')");
 
   await pool.query("UPDATE teams SET slug = LOWER(REPLACE(name, ' ', '-')) WHERE slug IS NULL OR slug = ''");
   await pool.query("UPDATE modules SET name = label WHERE name IS NULL OR name = ''");
@@ -3097,6 +3177,7 @@ const initializeDatabase = async () => {
     await seedResearch();
     await seedTickets();
     await seedCoupons();
+    await seedSeoPages();
     console.log('Auth, speaker, workshop, partner, media, settings, research, registration and payment schema ready; default data seeded');
   } catch (error) {
     console.warn(`Auth schema setup skipped: ${error.message}`);
@@ -3125,6 +3206,7 @@ module.exports = {
   seedCoreArchitectureData,
   seedAuthData,
   seedCoupons,
+  seedSeoPages,
   seedSpeakers,
   seedWorkshops,
   seedResearch,

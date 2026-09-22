@@ -14,6 +14,8 @@ const {
   listEvents,
   listRecords,
   listVenues,
+  listCafes,
+  listStays,
   publicSync,
   reports,
   saveEvent,
@@ -22,6 +24,8 @@ const {
   savePayment,
   saveResource,
   saveVenue,
+  saveCafe,
+  saveStay,
   setEventStatus,
 } = require('../controllers/eventController');
 const { optionalAuth, requireAuth, requirePermission } = require('../middleware/authMiddleware');
@@ -57,7 +61,7 @@ router.get('/public/events-sync', optionalAuth, publicSync);
 router.get('/events', optionalAuth, listEvents);
 router.get('/events/:id', optionalAuth, getEvent);
 
-router.use(requireAuth);
+router.use(['/event-dashboard', '/event-types', '/venues', '/cafes', '/stays', '/events', '/event-registrations', '/event-payments', '/event-resources', '/event-feedback', '/event-certificates', '/event-submissions', '/event-reports'], requireAuth);
 router.get('/event-dashboard', canManageEvents, dashboard);
 router.get('/event-types', canManageEvents, listEventTypes);
 router.post('/event-types', canManageEvents, saveEventType);
@@ -65,6 +69,12 @@ router.put('/event-types/:id', canManageEvents, saveEventType);
 router.get('/venues', canManageVenues, listVenues);
 router.post('/venues', canManageVenues, saveVenue);
 router.put('/venues/:id', canManageVenues, saveVenue);
+router.get('/cafes', canManageVenues, listCafes);
+router.post('/cafes', canManageVenues, saveCafe);
+router.put('/cafes/:id', canManageVenues, saveCafe);
+router.get('/stays', canManageVenues, listStays);
+router.post('/stays', canManageVenues, saveStay);
+router.put('/stays/:id', canManageVenues, saveStay);
 
 router.post('/events', canManageEvents, upload.single('banner'), saveEvent);
 router.put('/events/:id', canManageEvents, upload.single('banner'), saveEvent);

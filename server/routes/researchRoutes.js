@@ -7,7 +7,7 @@ const {
   assignPresentation,
   assignReviewer,
   createResearch,
-  deleteResearch,
+
   getSettings,
   getResearch,
   assignedReviews,
@@ -37,6 +37,12 @@ const {
   statusResearch,
   submitResearch,
   updateResearch,
+  updateIntegrity,
+  exportResearchCSV,
+  emailParticipants,
+  requestRevision,
+  validateRevisionToken,
+  submitRevision,
 } = require('../controllers/researchController');
 const { optionalAuth, requireAuth, requirePermission } = require('../middleware/authMiddleware');
 
@@ -98,16 +104,22 @@ router.post('/awards', requireAuth, canManageAwards, saveAward);
 router.put('/awards/:id', requireAuth, canManageAwards, saveAward);
 router.get('/award-results', requireAuth, canManageAwards, listAwardResults);
 router.post('/award-results', requireAuth, canManageAwards, saveAwardResult);
+router.get('/export', requireAuth, canManageResearch, exportResearchCSV);
+router.post('/email', requireAuth, canManageResearch, emailParticipants);
 router.post('/submit', upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'declaration', maxCount: 1 }]), submitResearch);
+router.post('/:id/request-revision', requireAuth, canReviewResearch, requestRevision);
+router.get('/revision/:token', validateRevisionToken);
+router.post('/revision/:token', upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'declaration', maxCount: 1 }]), submitRevision);
 router.get('/:id', optionalAuth, getResearch);
 router.post('/', requireAuth, canManageResearch, upload.single('pdf'), createResearch);
 router.put('/:id', requireAuth, canManageResearch, upload.single('pdf'), updateResearch);
-router.delete('/:id', requireAuth, canManageResearch, deleteResearch);
+
 router.post('/:id/reviewers', requireAuth, canAssignReviewers, assignReviewer);
 router.delete('/:id/reviewers/:reviewerId', requireAuth, canAssignReviewers, removeReviewerAssignment);
 router.patch('/:id/review', requireAuth, canReviewResearch, reviewResearch);
 router.post('/:id/reviews', requireAuth, canReviewResearch, submitScore);
 router.patch('/:id/status', requireAuth, canManageResearch, statusResearch);
 router.patch('/:id/award', requireAuth, canReviewResearch, awardResearch);
+router.put('/:id/integrity', requireAuth, canManageResearch, updateIntegrity);
 
 module.exports = router;

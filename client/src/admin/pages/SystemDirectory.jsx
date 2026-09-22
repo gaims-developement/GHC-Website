@@ -43,6 +43,7 @@ function SystemDirectory({ api, type }) {
   const [flagForm, setFlagForm] = useState({ featureName: "", description: "", isEnabled: false });
   const [roleForm, setRoleForm] = useState({ name: "" });
   const [maintenance, setMaintenance] = useState({ enabled: false, message: "" });
+  const [testEmailForm, setTestEmailForm] = useState({ email: "" });
 
   const [title, subtitle] = titles[type] || ["System", "System administration tools."];
 
@@ -128,6 +129,18 @@ function SystemDirectory({ api, type }) {
     event.preventDefault();
     await api.put("/api/system-admin/maintenance", maintenance);
     setMessage("Maintenance settings saved.");
+    load();
+  };
+
+  const sendTestEmail = async (event) => {
+    event.preventDefault();
+    try {
+      await api.post("/api/system-admin/email/test", { email: testEmailForm.email });
+      setMessage(`Test email sent to ${testEmailForm.email}`);
+      setTestEmailForm({ email: "" });
+    } catch (err) {
+      setError(err.response?.data?.error || err.response?.data?.message || "Failed to send test email.");
+    }
     load();
   };
 
@@ -255,10 +268,18 @@ function SystemDirectory({ api, type }) {
             <article><strong>{data.summary?.failed || 0}</strong><span>Failed</span></article>
             <article><strong>{data.summary?.queued || 0}</strong><span>Queued</span></article>
           </section>
+          
+          <form className="admin-panel settings-section" onSubmit={sendTestEmail} style={{ marginBottom: "2rem" }}>
+            <div className="admin-panel-heading"><h2>Send Test Email</h2></div>
+            <label>Test recipient email<input type="email" value={testEmailForm.email} onChange={(event) => setTestEmailForm({ email: event.target.value })} required /></label>
+            <button className="admin-primary-button" type="submit">Send Test Email</button>
+          </form>
+
           <DataTable columns={[
             { key: "recipient", label: "Recipient" },
             { key: "subject", label: "Subject" },
             { key: "status", label: "Status", render: (row) => <span className={`status-pill ${row.status === "failed" ? "cancelled" : row.status === "sent" ? "paid" : "pending"}`}>{row.status}</span> },
+            { key: "error_message", label: "Error Message" },
             { key: "sent_at", label: "Sent at", render: (row) => row.sent_at ? new Date(row.sent_at).toLocaleString() : "-" },
           ]} rows={data.logs || []} />
         </>

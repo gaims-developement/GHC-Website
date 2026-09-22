@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, ArrowRight, FileText, Upload, User, BookOpen, CheckCircle2, ChevronRight, Info } from "lucide-react";
@@ -20,8 +20,12 @@ const initialForm = {
   specialty: "",
   yearOfStudy: "",
   college: "",
-  cityState: "",
+  state: "",
+  stateId: null,
+  city: "",
+  cityId: null,
   country: "",
+  countryId: null,
   phone: "",
   email: "",
   title: "",
@@ -36,9 +40,80 @@ export default function AbstractRegister() {
   const [step, setStep] = useState(0);
   const [submissionState, setSubmissionState] = useState({ status: "idle", message: "" });
   const [errors, setErrors] = useState({});
+  const [isCallsOpen, setIsCallsOpen] = useState(null);
 
-  const updateForm = (key, value) => {
-    setForm((current) => ({ ...current, [key]: value }));
+  useEffect(() => {
+    axios.get(apiUrl("/api/settings/public"))
+      .then(res => {
+        if (res.data?.registration?.abstractSubmissionOpen !== undefined) {
+          setIsCallsOpen(res.data.registration.abstractSubmissionOpen);
+        } else {
+          setIsCallsOpen(true); // Default
+        }
+      })
+      .catch(err => {
+        console.error("Failed to load public settings:", err);
+        setIsCallsOpen(true);
+      });
+  }, []);
+
+  // Location Data States
+  const [countriesList, setCountriesList] = useState([]);
+  const [statesList, setStatesList] = useState([]);
+  const [citiesList, setCitiesList] = useState([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
+  const [citySearchTerm, setCitySearchTerm] = useState("");
+  const [showCityDropdown, setShowCityDropdown] = useState(false);
+  const cityDropdownRef = useRef(null);
+
+  useEffect(() => {
+    axios.get(apiUrl("/api/locations/countries"))
+      .then(res => setCountriesList(Array.isArray(res.data) ? res.data : []))
+      .catch(err => console.error("Failed to load countries:", err));
+  }, []);
+
+  useEffect(() => {
+    if (form.countryId) {
+      setStatesList([]);
+      setForm(curr => ({ ...curr, state: "", stateId: null, city: "", cityId: null }));
+      axios.get(apiUrl(`/api/locations/states/${form.countryId}`))
+        .then(res => setStatesList(Array.isArray(res.data) ? res.data : []))
+        .catch(err => console.error("Failed to load states:", err));
+    }
+  }, [form.countryId]);
+
+  useEffect(() => {
+    if (!form.stateId || citySearchTerm.length < 2) {
+      setCitiesList([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setLoadingLocations(true);
+      axios.get(apiUrl(`/api/locations/cities?stateId=${form.stateId}&search=${encodeURIComponent(citySearchTerm)}`))
+        .then(res => setCitiesList(Array.isArray(res.data) ? res.data : []))
+        .catch(err => console.error("Failed to search cities:", err))
+        .finally(() => setLoadingLocations(false));
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [citySearchTerm, form.stateId]);
+
+  // Click outside city dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (cityDropdownRef.current && !cityDropdownRef.current.contains(event.target)) {
+        setShowCityDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const updateForm = (key, value, extraPayload = {}) => {
+    setForm((current) => {
+      const next = { ...current, [key]: value, ...extraPayload };
+      if (key === 'category') next.yearOfStudy = "";
+      return next;
+    });
     if (errors[key]) setErrors((curr) => ({ ...curr, [key]: null }));
   };
 
@@ -62,7 +137,8 @@ export default function AbstractRegister() {
       if (!form.specialty.trim()) newErrors.specialty = "Specialty is required";
       if (!form.yearOfStudy.trim()) newErrors.yearOfStudy = "Year of Study is required";
       if (!form.college.trim()) newErrors.college = "College / Hospital is required";
-      if (!form.cityState.trim()) newErrors.cityState = "City and State is required";
+      if (!form.state.trim()) newErrors.state = "State is required";
+      if (!form.city.trim()) newErrors.city = "City is required";
       if (!form.country.trim()) newErrors.country = "Country is required";
       if (!form.phone.trim()) newErrors.phone = "Phone number is required";
       if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) newErrors.email = "Valid email is required";
@@ -102,7 +178,7 @@ export default function AbstractRegister() {
     data.append("specialty", form.specialty);
     data.append("year_of_study", form.yearOfStudy);
     data.append("college", form.college);
-    data.append("city_state", form.cityState);
+    data.append("city_state", `${form.city}, ${form.state}`);
     data.append("country", form.country);
     data.append("phone", form.phone);
     data.append("email", form.email);
@@ -135,6 +211,32 @@ export default function AbstractRegister() {
             Return to Homepage
           </Link>
         </motion.div>
+      </div>
+    );
+  }
+
+  if (isCallsOpen === false) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6 font-['Syne',sans-serif]">
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="max-w-md w-full bg-white/[0.03] border border-white/10 p-10 rounded-3xl text-center shadow-2xl">
+          <div className="w-20 h-20 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+            <Info className="w-10 h-10 text-red-500" />
+          </div>
+          <h2 className="text-3xl font-bold text-white mb-4">Calls are Closed</h2>
+          <p className="text-white/60 mb-8 leading-relaxed text-lg">Abstract submission calls are now closed for GHC 2026. You can apply next year.</p>
+          <Link to="/" className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-white/[0.05] hover:bg-white/10 text-white font-semibold transition-colors border border-white/10">
+            <ArrowLeft className="w-4 h-4" /> Return to Homepage
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (isCallsOpen === null) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center p-6 text-white font-['Syne',sans-serif]">
+        <div className="w-10 h-10 border-4 border-[#ff3d7f] border-t-transparent rounded-full animate-spin mb-4"></div>
+        <p className="text-white/60 font-semibold animate-pulse">Loading submission portal...</p>
       </div>
     );
   }
@@ -195,7 +297,7 @@ export default function AbstractRegister() {
                       <li>No AI-generated content. Plagiarism up to 10% allowed. (We will use a standardized tool to screen).</li>
                       <li>If you are the presenting author, you can submit <strong>only one poster</strong> for presentation. You cannot be the presenting author on more than one submission. You may still be a co-author on other submissions — but you can present only one.</li>
                       <li>Cash prize and Certificate of presentation will <strong>only be given to presenting author</strong>.</li>
-                      <li className="text-emerald-400 font-bold">FREE Accommodation & LUNCH to selected PRESENTORS.</li>
+
                     </ul>
                   </div>
 
@@ -230,18 +332,28 @@ export default function AbstractRegister() {
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6 mt-6">
                     <h3 className="font-bold text-blue-400 text-lg mb-2">Submission Instructions</h3>
                     <p>Kindly review the declaration form on the uploads page. If you agree with its terms, please sign the document and return a copy in PDF format using this form. <strong>Submission of your signed declaration is mandatory</strong> to confirm your participation/submission.</p>
-                    
-                    <div className="mt-6 pt-6 border-t border-blue-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div>
-                          <p className="font-bold text-white/80">For any Queries; Contact -</p>
-                          <p className="text-blue-300 font-medium">
-                            <a href="mailto:ghcscientific@gmail.com" className="hover:text-blue-200 transition-colors">ghcscientific@gmail.com</a>
-                            <br className="md:hidden" />
-                            <span className="hidden md:inline"> • </span>
-                            +91 8169011833 <br className="md:hidden" /> <span className="hidden md:inline"> • </span> +91 7022408203
-                          </p>
-                        </div>
-                      </div>
+                  </div>
+
+                  <div className="bg-[#ff3d7f]/10 border border-[#ff3d7f]/20 rounded-2xl p-6 mt-6">
+                    <h3 className="font-bold text-[#ff3d7f] text-lg mb-4">For Queries, Contact:</h3>
+                    <ul className="space-y-3">
+                      <li className="flex items-center gap-3">
+                        <span className="font-bold text-white w-32">Email:</span>
+                        <a href="mailto:ghcscientific@gmail.com" className="hover:text-[#ff3d7f] transition-colors">ghcscientific@gmail.com</a>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <span className="font-bold text-white w-32">Girik Subbudhi:</span>
+                        <a href="tel:+918169011833" className="hover:text-[#ff3d7f] transition-colors">+91 8169011833</a>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <span className="font-bold text-white w-32">Guarav Jayadev:</span>
+                        <a href="tel:+917022408203" className="hover:text-[#ff3d7f] transition-colors">+91 7022408203</a>
+                      </li>
+                      <li className="flex items-center gap-3">
+                        <span className="font-bold text-white w-32">Prakhar Bhajpai:</span>
+                        <a href="tel:+919758523839" className="hover:text-[#ff3d7f] transition-colors">+91 97585 23839</a>
+                      </li>
+                    </ul>
                   </div>
                 </div>
 
@@ -296,7 +408,13 @@ export default function AbstractRegister() {
 
                   <div>
                     <label className="block text-sm font-semibold text-white/70 mb-2">Year of Study *</label>
-                    <input type="text" value={form.yearOfStudy} onChange={(e) => updateForm("yearOfStudy", e.target.value)} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans']" placeholder="e.g. 3rd Year" />
+                    <select value={form.yearOfStudy} onChange={(e) => updateForm("yearOfStudy", e.target.value)} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans'] [&>option]:bg-[#0a0a0f]">
+                      <option value="">Select Year</option>
+                      {form.category === "Medical Student/Interns" 
+                        ? ["1st year", "2nd year", "3rd year", "4th year", "Intern"].map(y => <option key={y} value={y}>{y}</option>)
+                        : ["Post intern", "JR1", "JR2", "JR3"].map(y => <option key={y} value={y}>{y}</option>)
+                      }
+                    </select>
                     {errors.yearOfStudy && <p className="text-red-400 mt-2 text-sm">{errors.yearOfStudy}</p>}
                   </div>
 
@@ -307,15 +425,85 @@ export default function AbstractRegister() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-semibold text-white/70 mb-2">City and State *</label>
-                    <input type="text" value={form.cityState} onChange={(e) => updateForm("cityState", e.target.value)} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans']" placeholder="New Delhi, Delhi" />
-                    {errors.cityState && <p className="text-red-400 mt-2 text-sm">{errors.cityState}</p>}
+                    <label className="block text-sm font-semibold text-white/70 mb-2">Country *</label>
+                    <select 
+                      value={form.countryId || ""} 
+                      onChange={(e) => {
+                        const country = countriesList.find(c => c.id.toString() === e.target.value);
+                        updateForm("countryId", country ? country.id : null, { country: country ? country.name : "" });
+                      }} 
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans'] [&>option]:bg-[#0a0a0f]"
+                    >
+                      <option value="">Select Country</option>
+                      {countriesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    {errors.country && <p className="text-red-400 mt-2 text-sm">{errors.country}</p>}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-semibold text-white/70 mb-2">State / Province / Region *</label>
+                    <select 
+                      value={form.stateId || ""} 
+                      onChange={(e) => {
+                        const stateObj = statesList.find(s => s.id.toString() === e.target.value);
+                        updateForm("stateId", stateObj ? stateObj.id : null, { state: stateObj ? stateObj.name : "", city: "", cityId: null });
+                        setCitySearchTerm("");
+                      }}
+                      disabled={!form.countryId || statesList.length === 0}
+                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans'] [&>option]:bg-[#0a0a0f] disabled:opacity-50"
+                    >
+                      <option value="">{statesList.length === 0 && form.countryId ? "No states available" : "Select State"}</option>
+                      {statesList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    </select>
+                    {errors.state && <p className="text-red-400 mt-2 text-sm">{errors.state}</p>}
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-white/70 mb-2">Country *</label>
-                    <input type="text" value={form.country} onChange={(e) => updateForm("country", e.target.value)} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans']" placeholder="India" />
-                    {errors.country && <p className="text-red-400 mt-2 text-sm">{errors.country}</p>}
+                  <div className="relative" ref={cityDropdownRef}>
+                    <label className="block text-sm font-semibold text-white/70 mb-2">City *</label>
+                    <div className="relative">
+                      <input 
+                        type="text" 
+                        value={form.cityId ? form.city : citySearchTerm} 
+                        onChange={(e) => {
+                          setCitySearchTerm(e.target.value);
+                          updateForm("city", "", { cityId: null }); // Clear selection on type
+                          setShowCityDropdown(true);
+                        }}
+                        onFocus={() => {
+                          if (!form.cityId) setShowCityDropdown(true);
+                        }}
+                        disabled={!form.stateId}
+                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans'] disabled:opacity-50" 
+                        placeholder={!form.stateId ? "Select a state first" : "Search city..."} 
+                      />
+                      {loadingLocations && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                          <div className="w-4 h-4 border-2 border-[#ff3d7f] border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      )}
+                    </div>
+                    {showCityDropdown && citySearchTerm.length >= 2 && !form.cityId && (
+                      <div className="absolute z-50 w-full mt-2 bg-[#0a0a0f] border border-white/10 rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
+                        {citiesList.length > 0 ? (
+                          citiesList.map(city => (
+                            <div 
+                              key={city.id} 
+                              onClick={() => {
+                                updateForm("cityId", city.id, { city: city.name });
+                                setCitySearchTerm("");
+                                setShowCityDropdown(false);
+                              }}
+                              className="px-5 py-3 hover:bg-white/5 cursor-pointer text-white/90 transition-colors"
+                            >
+                              {city.name}
+                            </div>
+                          ))
+                        ) : (
+                          !loadingLocations && <div className="px-5 py-4 text-white/50 text-sm text-center">No cities found</div>
+                        )}
+                      </div>
+                    )}
+                    {errors.city && <p className="text-red-400 mt-2 text-sm">{errors.city}</p>}
                   </div>
 
                   <div>

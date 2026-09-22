@@ -1,12 +1,12 @@
 export const navLinks = [
   ["Home", "home"],
   ["About", "about"],
-  ["Tracks", "tracks"],
   ["Speakers", "world-class-speakers"],
   ["Workshops", "workshops-experience"],
   ["Timeline", "ghc-timeline"],
-  ["Research", "research-hub"],
-  ["Nomination", "nominations"],
+  ["Abstract Submission", "research-hub"],
+  ["Awards", "awards"],
+  ["Venue", "venue"],
   ["Committees", "committees"],
   ["Contact", "contact"],
 ];

@@ -28,7 +28,7 @@ const upload = multer({
 
 router.get('/public/volunteers-sync', optionalAuth, publicSync);
 
-router.use(requireAuth);
+router.use(['/volunteer-dashboard', '/volunteer-reports', '/volunteers', '/volunteer-departments', '/volunteer-assignments', '/shifts', '/shift-assignments', '/volunteer-attendance', '/performance-reviews', '/volunteer-certificates', '/volunteer-announcements', '/volunteer-interviews', '/volunteer-tasks'], requireAuth);
 router.get('/volunteer-dashboard', requirePermission('manage_volunteers', 'view_volunteer_reports'), dashboard);
 router.get('/volunteer-reports', requirePermission('view_volunteer_reports', 'manage_volunteers'), reports);
 

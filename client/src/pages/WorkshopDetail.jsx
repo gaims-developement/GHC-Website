@@ -93,9 +93,9 @@ export default function WorkshopDetail() {
 
           <section className="workshop-detail-header">
             <div className="workshop-detail-pills">
-              <span style={{ background: colors.bg, color: colors.color }}>{workshop.category}</span>
+              <span style={{ background: colors.bg, color: colors.color }}>{workshop.category || workshop.workshopType || "Workshop"}</span>
               <span>{workshop.duration || "Duration TBA"}</span>
-              <span><WalletCards className="h-3 w-3" />{Number(workshop.price || 0) ? `₹${Number(workshop.price).toLocaleString("en-IN")}` : "Price TBA"}</span>
+              {workshop.workshopCode && <span>ID: {workshop.workshopCode}</span>}
             </div>
             <h1>{workshop.title}</h1>
             <div className="workshop-detail-facilitator">
@@ -137,28 +137,7 @@ export default function WorkshopDetail() {
               </div>
             </DetailSection>
 
-            <DetailSection title="Schedule">
-              {workshop.agenda.length ? (
-                <div className="workshop-agenda-list">
-                  {workshop.agenda.map((item, index) => (
-                    <article key={`${item.time}-${item.title}-${index}`}>
-                      <time>{item.time || "TBA"}</time>
-                      <div>
-                        <strong>{item.title}</strong>
-                        {item.desc && <p>{item.desc}</p>}
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              ) : <p className="placeholder">Schedule will be published soon.</p>}
-            </DetailSection>
 
-            <DetailSection title="Requirements / prerequisites">
-              <div className="workshop-requirements">
-                {[...(workshop.requirements || []), ...(workshop.prerequisites ? [workshop.prerequisites] : [])].map((item) => <span key={item}>{item}</span>)}
-              </div>
-              {!workshop.requirements?.length && !workshop.prerequisites && <p className="placeholder">No special prerequisites announced.</p>}
-            </DetailSection>
 
             <DetailSection title="Who should attend">
               <ListOrPlaceholder items={workshop.whoShouldAttend} placeholder="Audience guidance will be published soon." />
@@ -180,7 +159,6 @@ export default function WorkshopDetail() {
 
         <aside className="workshop-register-panel">
           <span>{isFull ? "Sold out" : `${remaining} seats remaining`}</span>
-          <strong>{Number(workshop.price || 0) ? `₹${Number(workshop.price).toLocaleString("en-IN")}` : "Price TBA"}</strong>
           <p>{workshop.duration || "Duration TBA"} · {workshop.venue || "Venue TBA"}</p>
           <a href={registerHref}>{isFull ? "Join Waitlist" : "Register for Workshop"} <ArrowRight className="h-4 w-4" /></a>
         </aside>
