@@ -2497,11 +2497,13 @@ textarea {
   background: #0B1120;
 }
 
+.admin-trailer-preview iframe,
 .admin-trailer-preview video {
   display: block;
   width: 100%;
   aspect-ratio: 16 / 9;
   background: #020817;
+  border: 0;
 }
 
 .trailer-form-panel label {

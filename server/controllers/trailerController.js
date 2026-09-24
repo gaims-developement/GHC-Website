@@ -4,13 +4,24 @@ const asyncHandler = require('../utils/asyncHandler');
 
 const validateUrl = (value) => !value || /^https?:\/\//i.test(value);
 
-const sanitize = (body = {}) => ({
-  title: body.title?.trim() || Trailer.defaultTrailer.title,
-  description: body.description?.trim() || Trailer.defaultTrailer.description,
-  videoUrl: body.videoUrl?.trim() || body.video_url?.trim() || '',
-  cloudinaryPublicId: body.cloudinaryPublicId?.trim() || body.cloudinary_public_id?.trim() || '',
-  thumbnailUrl: body.thumbnailUrl?.trim() || body.thumbnail_url?.trim() || '',
-});
+const normalizeUrl = (value) => {
+  if (!value) return '';
+  const trimmed = value.trim();
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+};
+
+const sanitize = (body = {}) => {
+  const rawVideoUrl = body.videoUrl?.trim() || body.video_url?.trim() || '';
+  const rawThumbUrl = body.thumbnailUrl?.trim() || body.thumbnail_url?.trim() || '';
+  return {
+    title: body.title?.trim() || Trailer.defaultTrailer.title,
+    description: body.description?.trim() || Trailer.defaultTrailer.description,
+    videoUrl: rawVideoUrl ? normalizeUrl(rawVideoUrl) : '',
+    cloudinaryPublicId: body.cloudinaryPublicId?.trim() || body.cloudinary_public_id?.trim() || '',
+    thumbnailUrl: rawThumbUrl ? normalizeUrl(rawThumbUrl) : '',
+  };
+};
 
 const getTrailer = asyncHandler(async (_req, res) => {
   const result = await Trailer.get();

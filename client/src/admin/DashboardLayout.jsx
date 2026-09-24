@@ -6,6 +6,7 @@ import {
   BadgeCheck,
   BadgePercent,
   BriefcaseBusiness,
+  Building2,
   Bus,
   BarChart3,
   CalendarClock,
@@ -84,6 +85,7 @@ const icons = {
   BadgeCheck,
   BadgePercent,
   BriefcaseBusiness,
+  Building2,
   Bus,
   Bell,
   BellRing,
@@ -199,7 +201,7 @@ const NAV_SECTIONS = [
     id: "partners-committees",
     title: "PARTNERS & COMMITTEES",
     items: [
-      { id: "partners", label: "Public Partners", icon: Handshake, permissions: ["manage_sponsors", "partners.manage"] },
+      { id: "partners", label: "Event Sponsors", icon: Building2, permissions: ["manage_sponsors", "partners.manage"] },
       { id: "sponsorships", label: "Sponsorships", icon: Store, permissions: ["manage_sponsors", "sponsorship.manage", "manage_exhibitors"], aliases: ["exhibitors"] },
       { id: "committees", label: "Committees", icon: Users, permissions: ["manage_homepage", "committees.manage", "manage_committees"] },
     ],
@@ -222,6 +224,7 @@ const NAV_SECTIONS = [
       { id: "trailer", label: "Trailers", icon: Film, permissions: ["cms.manage", "manage_trailer"] },
       { id: "seo", label: "SEO", icon: SearchCheck, permissions: ["manage_seo", "seo.manage"] },
       { id: "settings", label: "Website Settings", icon: Settings, permissions: ["settings.manage", "manage_settings"] },
+      { id: "collaboration", label: "Collaboration", icon: Handshake, permissions: ["settings.manage", "manage_settings", "cms.manage"] },
     ],
   },
   {
@@ -232,6 +235,8 @@ const NAV_SECTIONS = [
       { id: "system-audit-logs", label: "Audit Logs", icon: ShieldCheck, permissions: ["view_audit_logs", "manage_system"] },
       { id: "visa-applications", label: "Visa Applications", icon: PlaneTakeoff, permissions: ["manage_system", "visa.manage"] },
       { id: "api-monitoring", label: "API Monitoring", icon: Activity, permissions: ["view_system_reports", "manage_system", "api.monitor"] },
+      { id: "system-email-templates", label: "Email Templates", icon: Mail, permissions: ["manage_system", "view_system_reports", "manage_settings"] },
+      { id: "collaboration", label: "Collaboration", icon: Handshake, permissions: ["manage_system", "manage_settings", "settings.manage"] },
     ],
   },
 ];

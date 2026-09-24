@@ -56,6 +56,7 @@ function SystemDirectory({ api, type }) {
     database: "/api/system-admin/database",
     cloudinary: "/api/system-admin/cloudinary",
     email: "/api/system-admin/email",
+    "email-templates": "/api/system-admin/email-templates",
     backups: "/api/system-admin/backups",
     security: "/api/system-admin/security",
     "feature-flags": "/api/system-admin/feature-flags",

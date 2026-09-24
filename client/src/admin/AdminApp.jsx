@@ -61,6 +61,7 @@ import SystemDirectory from "./pages/SystemDirectory";
 import LaunchChecklist from "./pages/LaunchChecklist";
 import Users from "./pages/Users";
 import AdminSettings from "./pages/AdminSettings";
+import AdminCollaboration from "./pages/AdminCollaboration";
 import CmsControls from "./pages/CmsControls";
 import TeamManagement from "./pages/TeamManagement";
 import TeamMonitoring from "./pages/TeamMonitoring";
@@ -199,6 +200,8 @@ const pages = {
   system: SystemAdmin,
   "api-monitoring": (props) => <SystemAdmin {...props} initialTab="api-monitoring" />,
   "system-api-monitoring": (props) => <SystemAdmin {...props} initialTab="api-monitoring" />,
+  "system-email-templates": (props) => <SystemAdmin {...props} initialTab="email-templates" />,
+  "email-templates": (props) => <SystemAdmin {...props} initialTab="email-templates" />,
 
   // Visa Applications
   "visa-applications": (props) => <VisaApplications {...props} />,
@@ -212,6 +215,8 @@ const pages = {
   launch: LaunchChecklist,
   users: (props) => <Users {...props} initialTab="users" />,
   settings: AdminSettings,
+  collaboration: AdminCollaboration,
+  "hero-collaboration": AdminCollaboration,
   "cms-controls": CmsControls,
   teams: TeamManagement,
   "team-monitoring": TeamMonitoring,
@@ -292,7 +297,12 @@ function AdminApp({ initialPage = "dashboard" }) {
   }, [eventContext]);
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
 
     api
       .get("/api/auth/me")
@@ -318,7 +328,7 @@ function AdminApp({ initialPage = "dashboard" }) {
         setUser(null);
       })
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, activePage]);
 
   const handleLogin = ({ token: nextToken, user: nextUser }) => {
     localStorage.setItem("ghc_admin_token", nextToken);

@@ -3,7 +3,11 @@ const { uploadToCloudinary } = require('../services/cloudinaryService');
 const asyncHandler = require('../utils/asyncHandler');
 
 const cloudinaryConfigured = () =>
-  Boolean(process.env.CLOUDINARY_NAME && process.env.CLOUDINARY_KEY && process.env.CLOUDINARY_SECRET);
+  Boolean(
+    (process.env.CLOUDINARY_NAME || process.env.CLOUDINARY_CLOUD_NAME) &&
+    (process.env.CLOUDINARY_KEY || process.env.CLOUDINARY_API_KEY) &&
+    (process.env.CLOUDINARY_SECRET || process.env.CLOUDINARY_API_SECRET)
+  );
 
 const toBoolean = (value) => value === true || value === 'true' || value === '1' || value === 1;
 
@@ -11,8 +15,13 @@ const logoFromFile = async (file) => {
   if (!file) return null;
   if (!cloudinaryConfigured()) return `/uploads/partners/${file.filename}`;
 
-  const result = await uploadToCloudinary(file.path, 'partners');
-  return result.secure_url;
+  try {
+    const result = await uploadToCloudinary(file.path, 'partners');
+    return result.secure_url;
+  } catch (error) {
+    console.warn(`Cloudinary upload failed for partner logo (${file.filename}), falling back to local storage:`, error.message);
+    return `/uploads/partners/${file.filename}`;
+  }
 };
 
 const sanitizePayload = async (body, file) => ({

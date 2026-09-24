@@ -9,6 +9,7 @@ const defaultSettings = {
     venue: 'GAIMS Convention Centre',
     startDate: '',
     endDate: '',
+    collaboratingOrg: '',
   },
   registration: {
     registrationOpen: true,

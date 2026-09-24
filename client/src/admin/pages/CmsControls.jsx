@@ -1,9 +1,9 @@
-import { Save } from "lucide-react";
+import { Handshake, Save } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const defaults = {
   homepage: { title: "", intro: "" },
-  hero: { headline: "", subheadline: "", imageUrl: "" },
+  hero: { headline: "", subheadline: "", imageUrl: "", collaboratingOrg: "" },
   trailer: { title: "", videoUrl: "" },
   announcements: [],
   contact: { email: "", phone: "" },
@@ -35,9 +35,21 @@ function CmsControls({ api }) {
   return (
     <div className="admin-settings-page">
       <section className="admin-panel">
-        <p className="admin-eyebrow">Global CMS</p>
-        <h1>CMS Controls</h1>
-        <p className="admin-muted">Manage homepage, hero, trailer, announcements, contact, venue and FAQ content globally.</p>
+        <div className="speaker-page-top">
+          <div>
+            <p className="admin-eyebrow">Global CMS</p>
+            <h1>CMS Controls</h1>
+            <p className="admin-muted">Manage homepage, hero, trailer, announcements, contact, venue and FAQ content globally.</p>
+          </div>
+          <button
+            type="button"
+            className="admin-secondary-button"
+            onClick={() => window.location.href = "/admin/collaboration"}
+            style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
+          >
+            <Handshake size={18} /> Collaboration
+          </button>
+        </div>
         {saved && <div className="admin-success">CMS controls saved.</div>}
       </section>
 
@@ -52,6 +64,7 @@ function CmsControls({ api }) {
           <label>Headline<input value={controls.hero?.headline || ""} onChange={(event) => updateSection("hero", "headline", event.target.value)} /></label>
           <label>Subheadline<input value={controls.hero?.subheadline || ""} onChange={(event) => updateSection("hero", "subheadline", event.target.value)} /></label>
           <label>Image URL<input value={controls.hero?.imageUrl || ""} onChange={(event) => updateSection("hero", "imageUrl", event.target.value)} /></label>
+          <label>Collaborating Organisation<input value={controls.hero?.collaboratingOrg || ""} onChange={(event) => updateSection("hero", "collaboratingOrg", event.target.value)} placeholder="e.g. AIIMS Student Association (leave empty to hide)" /></label>
         </section>
         <section className="admin-panel settings-section">
           <p className="admin-eyebrow">Trailer</p>

@@ -10,6 +10,7 @@ const sanitize = (body) => ({
     venue: body.conference?.venue?.trim(),
     startDate: body.conference?.startDate || '',
     endDate: body.conference?.endDate || '',
+    collaboratingOrg: body.conference?.collaboratingOrg !== undefined ? body.conference.collaboratingOrg.trim() : '',
   },
   registration: {
     registrationOpen: toBoolean(body.registration?.registrationOpen),
@@ -57,6 +58,14 @@ const getPublicSettings = asyncHandler(async (_req, res) => {
   return res.json({
     registration: {
       abstractSubmissionOpen: result.settings.registration?.abstractSubmissionOpen ?? true
+    },
+    conference: {
+      name: result.settings.conference?.name,
+      theme: result.settings.conference?.theme,
+      venue: result.settings.conference?.venue,
+      startDate: result.settings.conference?.startDate,
+      endDate: result.settings.conference?.endDate,
+      collaboratingOrg: result.settings.conference?.collaboratingOrg || '',
     }
   });
 });

@@ -82,6 +82,7 @@ const QRAttendance = lazy(() => import("./pages/QRAttendance"));
 const Schedule = lazy(() => import("./pages/Schedule"));
 
 import { navLinks } from "./config/nav";
+import { getVideoEmbedInfo } from "./utils/videoEmbed";
 
 const impactCards = [
   { title: "Global Reach", text: "Policy • Research • Innovation", icon: Globe2 },
@@ -402,6 +403,7 @@ function Hero({ banner }) {
   const heroLink = banner?.button_link || defaultHeroLink;
   const [introActive, setIntroActive] = useState(false);
   const [abstractOpen, setAbstractOpen] = useState(true);
+  const [collaboratingOrg, setCollaboratingOrg] = useState("");
 
   useEffect(() => {
     axios.get(apiUrl("/api/settings/public"))
@@ -409,9 +411,31 @@ function Hero({ banner }) {
         if (res.data?.registration?.abstractSubmissionOpen !== undefined) {
           setAbstractOpen(res.data.registration.abstractSubmissionOpen);
         }
+        if (res.data?.conference?.collaboratingOrg !== undefined) {
+          setCollaboratingOrg(res.data.conference.collaboratingOrg || "");
+        }
       })
       .catch(err => console.error("Failed to load public settings:", err));
   }, []);
+
+  const activeCollaboratingOrg = banner?.collaborating_org || collaboratingOrg;
+  const orgList = (activeCollaboratingOrg || "")
+    .split(/[,;\n]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const getOrgLogo = (name) => {
+    const lower = name.toLowerCase();
+    if (lower.includes("aiims")) return "/assets/logos/aiimsstudentassociation.jpg";
+    if (lower.includes("gaims")) return "/assets/logos/gaims.png";
+    if (lower.includes("faima")) return "/assets/logos/faima.jpg";
+    if (lower.includes("afpi")) return "/assets/logos/afpi.png";
+    if (lower.includes("ircf")) return "/assets/logos/ircf.jpg";
+    if (lower.includes("aeme")) return "/assets/logos/aeme.jpg";
+    if (lower.includes("gjms")) return "/assets/logos/GJMS logo.png";
+    if (lower.includes("smr")) return "/assets/logos/SMR.jpeg";
+    return null;
+  };
 
   useEffect(() => {
     if (!introActive) return undefined;
@@ -502,24 +526,38 @@ function Hero({ banner }) {
               );
             })}
           </motion.h1>
-          <motion.div
-            className="mt-5 flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs sm:text-sm font-bold uppercase tracking-wide text-[#101828]"
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: finalDelay + 0.25, duration: 0.75 }}
-          >
-            <span className="text-[#101828] whitespace-nowrap">In collaboration with</span>
-            <div className="inline-flex items-center gap-2 sm:gap-2.5 flex-nowrap">
-              <div className="inline-flex items-center gap-2 bg-white/95 backdrop-blur-md border border-gray-200 px-3 sm:px-3.5 py-1.5 rounded-full shadow-sm whitespace-nowrap shrink-0">
-                <img src="/assets/logos/aiimsstudentassociation.jpg" alt="AIIMS Student Association" className="h-5 sm:h-6 w-5 sm:w-6 rounded-full object-cover shrink-0" />
-                <span className="text-[#D946EF] font-bold text-xs sm:text-sm">AIIMS Student Association</span>
+          {orgList.length > 0 && (
+            <motion.div
+              className="mt-5 flex flex-wrap items-center gap-2.5 sm:gap-3 text-xs sm:text-sm font-bold uppercase tracking-wide text-[#101828]"
+              initial={{ opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: finalDelay + 0.25, duration: 0.75 }}
+            >
+              <span className="text-[#101828] whitespace-nowrap">In collaboration with</span>
+              <div className="inline-flex flex-wrap items-center gap-2 sm:gap-2.5">
+                {orgList.map((org, index) => {
+                  const logo = getOrgLogo(org);
+                  return (
+                    <div
+                      key={`${org}-${index}`}
+                      className="inline-flex items-center gap-2 bg-white/95 backdrop-blur-md border border-gray-200 px-3 sm:px-3.5 py-1.5 rounded-full shadow-sm whitespace-nowrap shrink-0"
+                    >
+                      {logo && (
+                        <img
+                          src={logo}
+                          alt={org}
+                          className="h-5 sm:h-6 w-5 sm:w-6 rounded-full object-cover shrink-0"
+                        />
+                      )}
+                      <span className="text-[#101828] font-bold text-xs sm:text-sm">
+                        {org}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-              <div className="inline-flex items-center gap-2 bg-white/95 backdrop-blur-md border border-gray-200 px-3 sm:px-3.5 py-1.5 rounded-full shadow-sm whitespace-nowrap shrink-0">
-                <img src="/assets/logos/gaims.png" alt="GAIMS" className="h-4 sm:h-5 w-auto object-contain shrink-0" />
-                <span className="text-[#101828] font-bold text-xs sm:text-sm">GAIMS</span>
-              </div>
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
           <motion.p className="mt-6 max-w-2xl text-lg sm:text-xl leading-8 text-[#334155] font-semibold" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: finalDelay + 0.42, duration: 0.75 }}>
             {heroDescription}
           </motion.p>
@@ -654,6 +692,7 @@ function WatchVision() {
   const title = trailer?.title || "Watch the Vision";
   const description = trailer?.description || "Discover the vision behind Global Health Conclave and our mission to advance healthcare beyond boundaries.";
   const hasVideo = Boolean(trailer?.videoUrl);
+  const videoInfo = hasVideo ? getVideoEmbedInfo(trailer.videoUrl) : null;
 
   return (
     <section id="watch-vision" className="w-full bg-white border-t border-gray-100">
@@ -669,9 +708,25 @@ function WatchVision() {
         >
           {loading ? (
             <div className="vision-video-frame vision-video-fallback">Loading trailer...</div>
-          ) : hasVideo ? (
+          ) : hasVideo && videoInfo ? (
             <div className="vision-video-frame rounded-[2rem] overflow-hidden shadow-[0_12px_40px_rgba(16,24,40,0.1)] border border-gray-100 relative bg-[#101828]">
-              <video src={trailer.videoUrl} poster={trailer.thumbnailUrl || undefined} controls preload="metadata" className="w-full h-full object-cover" />
+              {videoInfo.type === "direct" ? (
+                <video
+                  src={videoInfo.embedUrl}
+                  poster={trailer.thumbnailUrl || undefined}
+                  controls
+                  preload="metadata"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <iframe
+                  src={videoInfo.embedUrl}
+                  title={title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                  className="w-full h-full border-0"
+                />
+              )}
             </div>
           ) : (
             <div className="vision-video-frame vision-video-fallback">
@@ -815,11 +870,21 @@ function Tracks() {
 
 function SpeakerPhoto({ speaker, featured = false }) {
   if (!speaker) return null;
+  const [imgError, setImgError] = useState(false);
   const photoUrl = speaker?.photoUrl?.startsWith("/uploads") ? apiUrl(speaker.photoUrl) : speaker?.photoUrl;
 
   return (
     <div className={featured ? "speaker-photo speaker-photo-featured" : "speaker-photo"} data-photo={speaker.photo}>
-      {photoUrl ? <img loading="lazy" src={photoUrl} alt="" /> : <span>{speaker.initials || speaker.name?.slice(0, 2).toUpperCase()}</span>}
+      {photoUrl && !imgError ? (
+        <img
+          loading="lazy"
+          src={photoUrl}
+          alt={speaker.name || "Speaker"}
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <span>{speaker.initials || speaker.name?.slice(0, 2).toUpperCase()}</span>
+      )}
     </div>
   );
 }
@@ -894,37 +959,44 @@ function WorldClassSpeakers() {
             {
               name: "Dr Mukesh Bhatia",
               designation: "Founder, DBMCI",
-              achievements: "Pioneer in PG Medical Entrance education. Mentored millions of medical students."
+              achievements: "Pioneer in PG Medical Entrance education. Mentored millions of medical students.",
+              photoUrl: "/assets/Speakers/mukeshBhatia.jpeg",
             },
             {
               name: "Dr Randeep Guleria",
               designation: "Former Director, AIIMS New Delhi",
-              achievements: "Padma Shri Awardee. Lead architect of India's COVID-19 pandemic response."
+              achievements: "Padma Shri Awardee. Lead architect of India's COVID-19 pandemic response.",
+              photoUrl: "/assets/Speakers/RandeepGuleria.jpeg",
             },
             {
               name: "Dr Minu Bajpai",
               designation: "Executive Director, NBE",
-              achievements: "Renowned Paediatric Surgeon and academician. Former Head of Department at AIIMS."
+              achievements: "Renowned Paediatric Surgeon and academician. Former Head of Department at AIIMS.",
+              photoUrl: "/assets/Speakers/MinuBhajpai.jpeg",
             },
             {
               name: "Dr Rakesh Garg",
               designation: "Additional Professor, AIIMS New Delhi",
-              achievements: "Expert in Anesthesiology, Pain Medicine and Critical Care. Over 200+ publications."
+              achievements: "Expert in Anesthesiology, Pain Medicine and Critical Care. Over 200+ publications.",
+              photoUrl: "/assets/Speakers/RakeshGarg.jpeg",
             },
             {
               name: "Dr Tanmay Motiwala",
               designation: "Paediatric Surgeon & Influencer",
-              achievements: "Inspiring voice in the medical community with focus on surgical education."
+              achievements: "Inspiring voice in the medical community with focus on surgical education.",
+              photoUrl: "/assets/Speakers/TanmayMotiwala.jpeg",
             },
             {
               name: "Lt Gen Dr DP Vats",
               designation: "Former Director, AFMC Pune",
-              achievements: "Rajya Sabha MP. Param Vishisht Seva Medal (PVSM) awardee. Eminent Ophthalmologist."
+              achievements: "Rajya Sabha MP. Param Vishisht Seva Medal (PVSM) awardee. Eminent Ophthalmologist.",
+              photoUrl: "/assets/Speakers/LtGenDrDPVats.jpeg",
             },
             {
               name: "Dr Yogendra Malik",
               designation: "Former Advisor to CM, Haryana",
-              achievements: "Eminent medical educationist and health policy maker."
+              achievements: "Eminent medical educationist and health policy maker.",
+              photoUrl: "/assets/Speakers/YogendraMalik.jpeg",
             }
           ].map(speaker => (
             <SpotlightCard key={speaker.name} className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgba(16,24,40,0.04)] p-8 flex flex-col items-center text-center opacity-90">
@@ -1877,8 +1949,8 @@ function PartnerMarquee({ partners = [] }) {
             const logoUrl = item.logo?.startsWith("/uploads") ? apiUrl(item.logo) : item.logo;
             const partnerKey = item.id ? `partner-${item.id}-${index}` : `${item.category}-${item.name}-${index}`;
             
-            return (
-              <div key={partnerKey} className="flex flex-col items-center justify-center transition-transform hover:scale-105 gap-6">
+            const content = (
+              <>
                 {logoUrl ? (
                   <img 
                     src={logoUrl} 
@@ -1891,6 +1963,22 @@ function PartnerMarquee({ partners = [] }) {
                   </div>
                 )}
                 <span className="text-sm md:text-base font-bold text-[#475467] uppercase tracking-widest">{item.category}</span>
+              </>
+            );
+
+            return item.website ? (
+              <a
+                key={partnerKey}
+                href={item.website}
+                target="_blank"
+                rel="noreferrer"
+                className="flex flex-col items-center justify-center transition-transform hover:scale-105 gap-6 group cursor-pointer"
+              >
+                {content}
+              </a>
+            ) : (
+              <div key={partnerKey} className="flex flex-col items-center justify-center transition-transform hover:scale-105 gap-6">
+                {content}
               </div>
             );
           })}
@@ -1901,34 +1989,64 @@ function PartnerMarquee({ partners = [] }) {
 }
 
 function PastOrganisations() {
+  const orgs = [
+    { name: "FAIMA", logo: "/assets/logos/faima.jpg" },
+    { name: "AFPI", logo: "/assets/logos/afpi.png" },
+    { name: "IRCF", logo: "/assets/logos/ircf.jpg" },
+    { name: "AEME", logo: "/assets/logos/aeme.jpg" },
+    { name: "GJMS", logo: "/assets/logos/GJMS logo.png" },
+    { name: "SMR", logo: "/assets/logos/SMR.jpeg" }
+  ];
+
+  // Repeat items for a smooth, gapless infinite loop
+  const repeatedOrgs = [...orgs, ...orgs, ...orgs, ...orgs];
+
   return (
-    <section id="past-organisations" className="section-shell reveal-section bg-white py-24 border-t border-gray-100">
-      <div className="mx-auto max-w-7xl px-5 md:px-8">
-        <SectionHeading eyebrow="Partnerships" title="Our Past Collaborating Organisations" dark={false} />
-        <div className="mt-8 flex flex-nowrap justify-center gap-6 overflow-x-auto pb-8 pt-4 px-4">
-          {[
-            { name: "FAIMA", logo: "/assets/logos/faima.jpg" },
-            { name: "AFPI", logo: "/assets/logos/afpi.png" },
-            { name: "IRCF", logo: "/assets/logos/ircf.jpg" },
-            { name: "AEME", logo: "/assets/logos/aeme.jpg" },
-            { name: "GJMS", logo: "/assets/logos/GJMS logo.png" },
-            { name: "SMR", logo: "/assets/logos/SMR.jpeg" }
-          ].map(org => (
-            <motion.article 
-              key={org.name} 
-              whileHover={{ y: -10, scale: 1.02 }}
-              className="bg-[#F8F9FC] border border-gray-200 shadow-sm p-6 flex flex-col items-center justify-center text-center w-[150px] min-h-[160px] h-auto shrink-0 rounded-2xl"
-            >
-              <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-4 overflow-hidden border border-gray-100 shadow-sm shrink-0">
-                {org.logo ? (
-                  <img src={org.logo} alt={org.name} className="w-full h-full object-contain p-1" />
-                ) : (
-                  <Globe2 className="h-8 w-8 text-[#00A6A6]" />
-                )}
+    <section id="past-organisations" className="w-full bg-[#F8F9FC] py-24 border-t border-gray-100 overflow-hidden">
+      <div className="section-shell reveal-section relative">
+        <SectionHeading
+          eyebrow="Partnerships"
+          title="Our Past Collaborating Organisations"
+          text="Esteemed national and international bodies that have joined hands with GHC."
+          dark={false}
+        />
+        
+        <div className="partner-marquee mt-14 relative z-10">
+          <div className="partner-marquee-track" style={{ animationDuration: '60s', gap: '2rem' }}>
+            {repeatedOrgs.map((org, index) => (
+              <div
+                key={`${org.name}-${index}`}
+                className="group relative flex flex-col items-center justify-center p-8 sm:p-10 rounded-[2.5rem] bg-white border border-gray-100 shadow-[0_8px_24px_rgba(16,24,40,0.04)] hover:shadow-[0_16px_36px_rgba(16,24,40,0.1)] transition-all duration-500 overflow-hidden hover:border-[#173B8F]/20 hover:-translate-y-2 w-[280px] sm:w-[320px] min-h-[300px] shrink-0"
+              >
+                {/* Subtle gradient background on hover */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#173B8F]/5 to-[#00A6A6]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                
+                <div className="relative z-10 w-32 h-32 sm:w-36 sm:h-36 rounded-2xl bg-white shadow-sm border border-gray-100 flex items-center justify-center p-4 mb-6 group-hover:shadow-md transition-all duration-500 group-hover:scale-105 overflow-hidden">
+                  {org.logo ? (
+                    <img 
+                      src={org.logo} 
+                      alt={org.name} 
+                      className="w-full h-full object-contain transition-transform duration-700 ease-out group-hover:scale-105" 
+                      loading="lazy"
+                    />
+                  ) : (
+                    <Globe2 className="h-14 w-14 text-[#00A6A6]" />
+                  )}
+                </div>
+                
+                <h3 className="font-['Outfit'] font-extrabold text-[#081B33] text-center text-xl sm:text-2xl relative z-10 group-hover:text-[#173B8F] transition-colors duration-300 tracking-tight">
+                  {org.name}
+                </h3>
+                
+                <span className="text-[11px] uppercase font-bold tracking-widest text-[#64748B] mt-1 relative z-10">
+                  Collaborating Partner
+                </span>
+                
+                {/* Animated underline */}
+                <div className="absolute bottom-5 left-1/2 -translate-x-1/2 h-1.5 w-0 bg-gradient-to-r from-[#173B8F] to-[#00A6A6] rounded-full group-hover:w-16 transition-all duration-500 ease-out opacity-0 group-hover:opacity-100" />
               </div>
-              <h3 className="font-['Sora'] text-sm font-semibold text-[#101828] leading-tight">{org.name}</h3>
-            </motion.article>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </section>

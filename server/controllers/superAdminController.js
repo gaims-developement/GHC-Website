@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const { pool } = require('../config/db');
 const ActivityLog = require('../models/activityLogModel');
 const Settings = require('../models/settingsModel');
+const Trailer = require('../models/trailerModel');
 const User = require('../models/userModel');
 const asyncHandler = require('../utils/asyncHandler');
 
@@ -483,16 +484,28 @@ const getCmsControls = asyncHandler(async (_req, res) => {
   const settings = await Settings.get();
   const [[cmsControls]] = await pool.query('SELECT setting_value, updated_at FROM app_settings WHERE setting_key = "cms_controls" LIMIT 1');
 
+  const parsed = parseJson(cmsControls?.setting_value, {
+    homepage: {},
+    hero: {},
+    trailer: {},
+    announcements: [],
+    contact: settings.settings.contact,
+    venue: { name: settings.settings.conference.venue },
+    faq: [],
+  });
+
+  if (!parsed.hero) parsed.hero = {};
+  if (!parsed.hero.collaboratingOrg && settings.settings.conference?.collaboratingOrg) {
+    parsed.hero.collaboratingOrg = settings.settings.conference.collaboratingOrg;
+  }
+
+  const trailerData = await Trailer.get();
+  if (!parsed.trailer) parsed.trailer = {};
+  if (!parsed.trailer.title) parsed.trailer.title = trailerData.trailer?.title || 'Watch the Vision';
+  if (!parsed.trailer.videoUrl) parsed.trailer.videoUrl = trailerData.trailer?.videoUrl || '';
+
   res.json({
-    controls: parseJson(cmsControls?.setting_value, {
-      homepage: {},
-      hero: {},
-      trailer: {},
-      announcements: [],
-      contact: settings.settings.contact,
-      venue: { name: settings.settings.conference.venue },
-      faq: [],
-    }),
+    controls: parsed,
     settings: settings.settings,
     updatedAt: cmsControls?.updated_at || settings.updatedAt,
   });
@@ -506,6 +519,27 @@ const updateCmsControls = asyncHandler(async (req, res) => {
      ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
     [JSON.stringify(controls)]
   );
+
+  if (controls.hero?.collaboratingOrg !== undefined) {
+    const current = await Settings.get();
+    await Settings.update({
+      ...current.settings,
+      conference: {
+        ...current.settings.conference,
+        collaboratingOrg: controls.hero.collaboratingOrg,
+      }
+    });
+  }
+
+  if (controls.trailer?.videoUrl !== undefined) {
+    const currentTrailer = await Trailer.get();
+    await Trailer.update({
+      ...currentTrailer.trailer,
+      title: controls.trailer?.title || currentTrailer.trailer.title,
+      videoUrl: controls.trailer?.videoUrl || '',
+    });
+  }
+
   res.json({ controls });
 });
 

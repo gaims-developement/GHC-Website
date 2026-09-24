@@ -8,6 +8,7 @@ const emptySettings = {
     venue: "",
     startDate: "",
     endDate: "",
+    collaboratingOrg: "",
   },
   registration: {
     registrationOpen: false,
@@ -170,6 +171,17 @@ function AdminSettings({ api }) {
           <label>Conference name<input value={settings.conference.name} onChange={(event) => setNestedValue("conference", "name", event.target.value)} required /></label>
           <label>Theme<input value={settings.conference.theme} onChange={(event) => setNestedValue("conference", "theme", event.target.value)} /></label>
           <label>Venue<input value={settings.conference.venue} onChange={(event) => setNestedValue("conference", "venue", event.target.value)} required /></label>
+          <label>
+            Collaborating Organisation
+            <input
+              value={settings.conference.collaboratingOrg || ""}
+              onChange={(event) => setNestedValue("conference", "collaboratingOrg", event.target.value)}
+              placeholder="e.g. AIIMS Student Association (leave empty to hide)"
+            />
+          </label>
+          <span style={{ fontSize: '0.75rem', color: '#64748B', display: 'block', marginTop: '-0.35rem', marginBottom: '0.75rem' }}>
+            Shown in the Hero section as &quot;In collaboration with&quot;. If left blank, this will not be displayed.
+          </span>
           <div className="speaker-form-grid">
             <label>Start date<input type="date" value={settings.conference.startDate || ""} onChange={(event) => setNestedValue("conference", "startDate", event.target.value)} /></label>
             <label>End date<input type="date" value={settings.conference.endDate || ""} onChange={(event) => setNestedValue("conference", "endDate", event.target.value)} /></label>

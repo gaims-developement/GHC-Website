@@ -15,6 +15,12 @@ router.get('/system-admin/database', requirePermission('view_system_reports'), c
 router.get('/system-admin/cloudinary', requirePermission('view_system_reports'), controller.cloudinaryMonitoring);
 router.get('/system-admin/email', requirePermission('view_system_reports'), controller.emailMonitoring);
 router.post('/system-admin/email/test', requirePermission('manage_system'), controller.testEmail);
+router.get('/system-admin/email/verify', requirePermission('manage_system'), controller.verifySmtp);
+router.post('/system-admin/email/verify', requirePermission('manage_system'), controller.verifySmtp);
+router.get('/system-admin/email-templates', requirePermission('view_system_reports'), controller.emailTemplates);
+router.get('/system-admin/email-templates/:id', requirePermission('view_system_reports'), controller.getEmailTemplate);
+router.put('/system-admin/email-templates/:id', requirePermission('manage_settings'), controller.updateEmailTemplate);
+router.post('/system-admin/email-templates/:id/test', requirePermission('manage_system'), controller.testEmailTemplate);
 
 router.get('/system-admin/notifications', requirePermission('manage_system'), controller.notifications);
 router.post('/system-admin/notifications', requirePermission('manage_system'), controller.notifications);

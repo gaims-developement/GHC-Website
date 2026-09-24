@@ -1,6 +1,6 @@
 const { pool } = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
-const { sendTemplateEmail } = require('../services/mailService');
+const { sendTemplateEmail, verifyConnection } = require('../services/mailService');
 
 const limit = (value, fallback = 50) => Math.min(Math.max(Number(value) || fallback, 1), 200);
 
@@ -17,7 +17,7 @@ const writeAudit = async (req, action, module, recordType = null, recordId = nul
       oldValues ? JSON.stringify(oldValues) : null,
       newValues ? JSON.stringify(newValues) : null,
       req.ip || req.socket?.remoteAddress || null,
-      req.headers['user-agent'] || null,
+      req.headers?.['user-agent'] || null,
     ]
   );
 };
@@ -171,6 +171,87 @@ const testEmail = asyncHandler(async (req, res) => {
   }
 });
 
+const verifySmtp = asyncHandler(async (_req, res) => {
+  try {
+    const result = await verifyConnection();
+    res.json({ success: true, message: 'SMTP connection verified successfully.', details: result });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'SMTP connection verification failed.',
+      error: error.message || String(error),
+      code: error.code || null,
+    });
+  }
+});
+
+const emailTemplates = asyncHandler(async (_req, res) => {
+  const [rows] = await pool.query('SELECT * FROM email_templates ORDER BY template_key ASC');
+  res.json({ templates: rows });
+});
+
+const getEmailTemplate = asyncHandler(async (req, res) => {
+  const [[template]] = await pool.query('SELECT * FROM email_templates WHERE id = ?', [req.params.id]);
+  if (!template) {
+    return res.status(404).json({ message: 'Email template not found.' });
+  }
+  res.json({ template });
+});
+
+const updateEmailTemplate = asyncHandler(async (req, res) => {
+  const { subject, body, isActive } = req.body;
+  const [[existing]] = await pool.query('SELECT * FROM email_templates WHERE id = ?', [req.params.id]);
+  if (!existing) {
+    return res.status(404).json({ message: 'Email template not found.' });
+  }
+
+  await pool.query(
+    'UPDATE email_templates SET subject = ?, body = ?, is_active = ?, updated_at = NOW() WHERE id = ?',
+    [
+      subject !== undefined ? subject : existing.subject,
+      body !== undefined ? body : existing.body,
+      isActive !== undefined ? (isActive ? 1 : 0) : existing.is_active,
+      req.params.id,
+    ]
+  );
+
+  const [[updated]] = await pool.query('SELECT * FROM email_templates WHERE id = ?', [req.params.id]);
+  await writeAudit(req, 'updated_email_template', 'system', 'email_template', req.params.id, existing, updated);
+
+  res.json({ success: true, message: 'Email template updated successfully.', template: updated });
+});
+
+const testEmailTemplate = asyncHandler(async (req, res) => {
+  const { email, sampleVariables = {} } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: 'Recipient email is required.' });
+  }
+
+  const [[template]] = await pool.query('SELECT * FROM email_templates WHERE id = ?', [req.params.id]);
+  if (!template) {
+    return res.status(404).json({ message: 'Email template not found.' });
+  }
+
+  try {
+    const defaults = {
+      name: 'Dr. Test User',
+      fullName: 'Dr. Test User',
+      title: 'Advancing Global Healthcare in 2026',
+      link: 'https://globalhealthconclave.netlify.app/abstracts/revision',
+      registrationId: 'GHC-2026-DEMO',
+      applicationId: 'VISA-GHC-8891',
+      amount: 'INR 5,000',
+      ticketName: 'Delegate Pass - Full Conference',
+    };
+    const variables = { ...defaults, ...sampleVariables };
+
+    await sendTemplateEmail(template.template_key, email, variables);
+    res.json({ success: true, message: `Test email sent to ${email} using '${template.template_key}' template.` });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to send test email', error: error.message || String(error) });
+  }
+});
+
 const notifications = asyncHandler(async (req, res) => {
   if (req.method === 'GET') {
     const [rows] = await pool.query('SELECT * FROM system_notifications ORDER BY created_at DESC LIMIT 100');
@@ -304,6 +385,11 @@ module.exports = {
   databaseMonitoring,
   emailMonitoring,
   testEmail,
+  verifySmtp,
+  emailTemplates,
+  getEmailTemplate,
+  updateEmailTemplate,
+  testEmailTemplate,
   featureFlags,
   loginLogs,
   maintenance,

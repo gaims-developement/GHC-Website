@@ -36,8 +36,8 @@ const pipeline = [
 ];
 
 const TABS = [
-  { id: "partners", label: "Partners", icon: Handshake },
-  { id: "sponsors", label: "Sponsors", icon: Building2 },
+  { id: "partners", label: "Event Sponsors (Homepage)", icon: Building2 },
+  { id: "sponsors", label: "Sponsorship Pipeline", icon: Handshake },
   { id: "tiers", label: "Sponsor Tiers", icon: Layers3 },
   { id: "reports", label: "Reports", icon: BarChart3 },
 ];
@@ -56,9 +56,9 @@ function AdminPartners({ api, initialTab = "partners" }) {
       <section className="admin-panel partner-hub-head">
         <div className="speaker-page-top">
           <div>
-            <p className="admin-eyebrow">Partner CMS</p>
-            <h1>Public Partner</h1>
-            <p className="admin-muted">Manage the partners shown on the homepage, the sponsorship pipeline, website-visible sponsor tiers and performance reports — all in one place.</p>
+            <p className="admin-eyebrow">Sponsors & Partners CMS</p>
+            <h1>Event Sponsors & Partners</h1>
+            <p className="admin-muted">Manage the event sponsors and partners displayed on the homepage, upload logos to Cloudinary, track the sponsorship pipeline, configure tiers and view reports.</p>
           </div>
         </div>
         <nav className="partner-hub-tabs" role="tablist" aria-label="Public Partner sections">
@@ -167,7 +167,7 @@ function PartnersTab({ api }) {
   const submitPartner = async (event) => {
     event.preventDefault();
     if (!form.name.trim()) {
-      setFormError("Partner name is required.");
+      setFormError("Sponsor / Partner name is required.");
       return;
     }
     if (form.website && !/^https?:\/\//i.test(form.website)) {
@@ -236,15 +236,15 @@ function PartnersTab({ api }) {
       <section className="admin-panel">
         <div className="speaker-page-top">
           <div>
-            <p className="admin-eyebrow">Homepage partners</p>
-            <h2 className="partner-tab-title">Partners</h2>
-            <p className="admin-muted">These logos appear in the “Our Sponsors” section of the homepage, in display order.</p>
+            <p className="admin-eyebrow">Homepage Event Sponsors</p>
+            <h2 className="partner-tab-title">Event Sponsors</h2>
+            <p className="admin-muted">These logos appear in the “Event Sponsors” section of the homepage, in display order. Upload a logo file (stored in Cloudinary) or enter a logo URL.</p>
           </div>
-          <button className="admin-primary-button" onClick={() => openForm()}><Plus size={18} /> Add Partner</button>
+          <button className="admin-primary-button" onClick={() => openForm()}><Plus size={18} /> Add Sponsor</button>
         </div>
 
         <div className="speaker-toolbar">
-          <label className="speaker-search"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search partners" /></label>
+          <label className="speaker-search"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search sponsors" /></label>
           <div className="speaker-filter-row">
             {tiers.map((tier) => <button key={tier} className={tierFilter === tier ? "active" : ""} onClick={() => setTierFilter(tier)}>{tier}</button>)}
           </div>
@@ -257,21 +257,21 @@ function PartnersTab({ api }) {
         <section className="admin-panel">
           <form className="speaker-form partner-form" onSubmit={submitPartner}>
             <div className="speaker-form-fields">
-              <p className="admin-eyebrow">{editingPartner ? "Edit Partner" : "New Partner"}</p>
+              <p className="admin-eyebrow">{editingPartner ? "Edit Sponsor" : "New Sponsor"}</p>
               {formError && <div className="admin-error">{formError}</div>}
               <div className="speaker-form-grid">
-                <label>Name<input value={form.name} onChange={(event) => updateField("name", event.target.value)} required /></label>
-                <label>Tier<input value={form.tier} onChange={(event) => updateField("tier", event.target.value)} /></label>
+                <label>Sponsor / Partner Name<input value={form.name} onChange={(event) => updateField("name", event.target.value)} required /></label>
+                <label>Tier / Category (e.g. Sponsors, Digital Partner, Medical Education)<input value={form.tier} onChange={(event) => updateField("tier", event.target.value)} /></label>
                 <label>Website<input value={form.website} onChange={(event) => updateField("website", event.target.value)} placeholder="https://example.com" /></label>
                 <label>Display order<input type="number" value={form.displayOrder} onChange={(event) => updateField("displayOrder", event.target.value)} /></label>
               </div>
-              <label>Logo URL<input value={form.logo} onChange={(event) => updateField("logo", event.target.value)} placeholder="https://..." /></label>
-              <label>Upload logo<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={(event) => setLogoFile(event.target.files?.[0] || null)} /></label>
+              <label>Logo URL (Direct or Cloudinary link)<input value={form.logo} onChange={(event) => updateField("logo", event.target.value)} placeholder="https://res.cloudinary.com/... or /assets/sponsors/..." /></label>
+              <label>Upload Logo (stored in Cloudinary)<input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={(event) => setLogoFile(event.target.files?.[0] || null)} /></label>
               <div className="speaker-toggle-row">
-                <label><input type="checkbox" checked={form.active} onChange={(event) => updateField("active", event.target.checked)} /> Active</label>
+                <label><input type="checkbox" checked={form.active} onChange={(event) => updateField("active", event.target.checked)} /> Active (Visible on homepage)</label>
               </div>
               <div className="speaker-form-actions">
-                <button type="submit" disabled={saving}>{saving ? "Saving..." : "Save Partner"}</button>
+                <button type="submit" disabled={saving}>{saving ? "Saving..." : (editingPartner ? "Update Sponsor" : "Save Sponsor")}</button>
                 <button type="button" onClick={closeForm}>Cancel</button>
               </div>
             </div>
@@ -309,7 +309,7 @@ function PartnersTab({ api }) {
             </div>
           </article>
         ))}
-        {!loading && filteredPartners.length === 0 && <div className="admin-empty-state">No partners found.</div>}
+        {!loading && filteredPartners.length === 0 && <div className="admin-empty-state">No sponsors found.</div>}
       </section>
     </div>
   );

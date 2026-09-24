@@ -1,5 +1,6 @@
-import { Activity, AlertTriangle, Archive, Database, Mail, RefreshCw, Server, ShieldAlert, ShieldCheck, Users, Save } from "lucide-react";
+import { Activity, AlertTriangle, Archive, CheckCircle2, ChevronLeft, Database, Edit3, Eye, FileText, Handshake, Mail, RefreshCw, Server, ShieldAlert, ShieldCheck, Users, Save, Send } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import AdminCollaboration from "./AdminCollaboration";
 
 const statusClass = (value) => ["healthy", "configured"].includes(String(value).toLowerCase()) ? "paid" : "pending";
 const boolValue = (value) => value === true || value === 1;
@@ -30,10 +31,17 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
   
   const [testEmailForm, setTestEmailForm] = useState({ email: "" });
   const [maintenance, setMaintenance] = useState({ enabled: false, message: "" });
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [templateForm, setTemplateForm] = useState({ subject: "", body: "", is_active: 1 });
+  const [templateTestEmail, setTemplateTestEmail] = useState("");
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [testingTemplate, setTestingTemplate] = useState(false);
+  const [templateTestResult, setTemplateTestResult] = useState(null);
 
   const load = useCallback(() => {
     setError("");
     setMessage("");
+    if (activeTab === "collaboration") return;
     
     const endpoint = activeTab === "dashboard" 
       ? "/api/system-admin/dashboard" 
@@ -79,6 +87,54 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
     await api.put("/api/system-admin/maintenance", maintenance);
     setMessage("Maintenance settings saved.");
     load();
+  };
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setSelectedTemplate(null);
+    setTemplateTestResult(null);
+  };
+
+  const saveTemplate = async (e) => {
+    e?.preventDefault();
+    if (!selectedTemplate) return;
+    setSavingTemplate(true);
+    setError("");
+    setMessage("");
+    try {
+      const res = await api.put(`/api/system-admin/email-templates/${selectedTemplate.id}`, {
+        subject: templateForm.subject,
+        body: templateForm.body,
+        isActive: boolValue(templateForm.is_active),
+      });
+      setMessage(`Template '${selectedTemplate.template_key}' saved successfully.`);
+      setSelectedTemplate(res.data.template || { ...selectedTemplate, ...templateForm });
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to save email template.");
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const sendTemplateTest = async (e) => {
+    e?.preventDefault();
+    if (!selectedTemplate || !templateTestEmail) return;
+    setTestingTemplate(true);
+    setTemplateTestResult(null);
+    try {
+      const res = await api.post(`/api/system-admin/email-templates/${selectedTemplate.id}/test`, {
+        email: templateTestEmail,
+      });
+      setTemplateTestResult({ success: true, message: res.data.message || "Test email sent successfully!" });
+    } catch (err) {
+      setTemplateTestResult({
+        success: false,
+        message: err.response?.data?.error || err.response?.data?.message || "Failed to send test email.",
+      });
+    } finally {
+      setTestingTemplate(false);
+    }
   };
 
   const renderDashboard = () => {
@@ -186,6 +242,10 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
   };
 
   const renderContent = () => {
+    if (activeTab === "collaboration") {
+      return <AdminCollaboration api={api} />;
+    }
+
     if (!data) return null;
 
     if (activeTab === "dashboard") return renderDashboard();
@@ -267,6 +327,358 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
       );
     }
 
+    if (activeTab === "email-templates") {
+      const templates = data?.templates || [];
+
+      const sampleMap = {
+        name: "Dr. Ayesha Sharma",
+        fullName: "Dr. Ayesha Sharma",
+        title: "Artificial Intelligence in Global Primary Care",
+        link: "https://globalhealthconclave.netlify.app/abstracts/revision?id=DEMO",
+        registrationId: "GHC-2026-REG-8492",
+        applicationId: "VISA-GHC-2026-041",
+        amount: "INR 6,500",
+        ticketName: "Full Conference Delegate Pass",
+        workshop: "Robotic Surgery Hands-on Workshop",
+        venue: "GAIMS Main Auditorium",
+        date: "October 14-16, 2026",
+      };
+
+      const renderPreview = (text) => {
+        if (!text) return "";
+        let rendered = text;
+        Object.entries(sampleMap).forEach(([k, v]) => {
+          rendered = rendered.replace(new RegExp(`{{${k}}}`, "g"), v);
+        });
+        return rendered;
+      };
+
+      if (selectedTemplate) {
+        const previewSubject = renderPreview(templateForm.subject);
+        const previewBody = renderPreview(templateForm.body);
+
+        const insertVariable = (varName) => {
+          setTemplateForm((prev) => ({
+            ...prev,
+            body: (prev.body || "") + `{{${varName}}}`,
+          }));
+        };
+
+        return (
+          <div className="email-template-editor-view">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <button
+                  type="button"
+                  className="admin-secondary-button"
+                  onClick={() => {
+                    setSelectedTemplate(null);
+                    setTemplateTestResult(null);
+                  }}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+                >
+                  <ChevronLeft size={16} /> All Templates
+                </button>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: "700" }}>
+                    Edit Template: <code style={{ color: "#3b82f6", background: "#eff6ff", padding: "0.15rem 0.4rem", borderRadius: "4px" }}>{selectedTemplate.template_key}</code>
+                  </h2>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+                <label style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontWeight: "600", fontSize: "0.9rem" }}>
+                  <input
+                    type="checkbox"
+                    checked={boolValue(templateForm.is_active)}
+                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, is_active: e.target.checked ? 1 : 0 }))}
+                    style={{ width: "16px", height: "16px", cursor: "pointer" }}
+                  />
+                  <span>Active</span>
+                </label>
+                <button
+                  type="button"
+                  className="admin-primary-button"
+                  onClick={saveTemplate}
+                  disabled={savingTemplate}
+                  style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem" }}
+                >
+                  <Save size={16} /> {savingTemplate ? "Saving..." : "Save Template"}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.5rem" }}>
+              <div className="admin-panel" style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                <div className="admin-panel-heading">
+                  <div>
+                    <p className="admin-eyebrow">Content Editor</p>
+                    <h3 style={{ margin: 0, fontSize: "1.1rem" }}>Template Details</h3>
+                  </div>
+                  <Edit3 size={18} style={{ color: "#64748b" }} />
+                </div>
+
+                <div>
+                  <label style={{ display: "block", marginBottom: "0.4rem", fontWeight: "600", fontSize: "0.9rem" }}>
+                    Subject Line
+                  </label>
+                  <input
+                    type="text"
+                    value={templateForm.subject}
+                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, subject: e.target.value }))}
+                    placeholder="Enter email subject line (e.g. Confirmation for {{name}})"
+                    style={{ width: "100%", padding: "0.65rem 0.85rem", border: "1px solid #cbd5e1", borderRadius: "8px", fontSize: "0.95rem" }}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+                    <label style={{ fontWeight: "600", fontSize: "0.9rem" }}>
+                      Email Body (Plain Text or HTML)
+                    </label>
+                    <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Click chip to insert</span>
+                  </div>
+
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem", marginBottom: "0.65rem" }}>
+                    {Object.keys(sampleMap).map((k) => (
+                      <button
+                        key={k}
+                        type="button"
+                        onClick={() => insertVariable(k)}
+                        style={{
+                          background: "#f1f5f9",
+                          border: "1px solid #cbd5e1",
+                          borderRadius: "14px",
+                          padding: "0.2rem 0.55rem",
+                          fontSize: "0.75rem",
+                          color: "#334155",
+                          cursor: "pointer",
+                          fontFamily: "monospace",
+                          transition: "all 0.15s ease",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#e2e8f0")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "#f1f5f9")}
+                        title={`Insert {{${k}}}`}
+                      >
+                        + &#123;&#123;{k}&#125;&#125;
+                      </button>
+                    ))}
+                  </div>
+
+                  <textarea
+                    rows={12}
+                    value={templateForm.body}
+                    onChange={(e) => setTemplateForm((prev) => ({ ...prev, body: e.target.value }))}
+                    placeholder="Type template body with {{placeholders}}..."
+                    style={{
+                      width: "100%",
+                      fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                      fontSize: "0.9rem",
+                      lineHeight: "1.5",
+                      padding: "0.75rem",
+                      border: "1px solid #cbd5e1",
+                      borderRadius: "8px",
+                      resize: "vertical",
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                <div className="admin-panel" style={{ border: "1px solid #bfdbfe", background: "#f8fafc" }}>
+                  <div className="admin-panel-heading" style={{ borderBottom: "1px solid #e2e8f0", paddingBottom: "0.75rem" }}>
+                    <div>
+                      <p className="admin-eyebrow" style={{ color: "#2563eb" }}>Preview</p>
+                      <h3 style={{ margin: 0, fontSize: "1.05rem" }}>Recipient Inbox View</h3>
+                    </div>
+                    <Eye size={18} style={{ color: "#2563eb" }} />
+                  </div>
+
+                  <div style={{ marginTop: "1rem", background: "#ffffff", borderRadius: "8px", border: "1px solid #e2e8f0", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                    <div style={{ background: "#f1f5f9", padding: "0.75rem 1rem", borderBottom: "1px solid #e2e8f0", fontSize: "0.85rem" }}>
+                      <div style={{ marginBottom: "0.25rem", color: "#64748b" }}>
+                        <strong>From: </strong>Global Healthcare Conclave &lt;itcellgaims@gmail.com&gt;
+                      </div>
+                      <div style={{ color: "#0f172a" }}>
+                        <strong style={{ color: "#64748b" }}>Subject: </strong>
+                        <span style={{ fontWeight: "600" }}>{previewSubject || "(No subject set)"}</span>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        padding: "1.25rem",
+                        color: "#1e293b",
+                        fontSize: "0.95rem",
+                        lineHeight: "1.6",
+                        whiteSpace: "pre-wrap",
+                        minHeight: "180px",
+                        maxHeight: "360px",
+                        overflowY: "auto",
+                      }}
+                    >
+                      {previewBody || <span style={{ color: "#94a3b8", fontStyle: "italic" }}>No body content yet.</span>}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="admin-panel" style={{ background: "#ffffff" }}>
+                  <div className="admin-panel-heading">
+                    <div>
+                      <p className="admin-eyebrow">Delivery Verification</p>
+                      <h3 style={{ margin: 0, fontSize: "1.05rem" }}>Send Live Test Email</h3>
+                    </div>
+                    <Send size={18} style={{ color: "#10b981" }} />
+                  </div>
+
+                  <p style={{ fontSize: "0.85rem", color: "#64748b", margin: "0.5rem 0 1rem" }}>
+                    Send this template with sample data to your inbox to verify formatting and SMTP delivery.
+                  </p>
+
+                  <form onSubmit={sendTemplateTest} style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+                    <input
+                      type="email"
+                      value={templateTestEmail}
+                      onChange={(e) => setTemplateTestEmail(e.target.value)}
+                      placeholder="Your recipient email (e.g. you@example.com)"
+                      required
+                      style={{ flex: "1", minWidth: "200px", padding: "0.55rem 0.75rem", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "0.9rem" }}
+                    />
+                    <button
+                      type="submit"
+                      className="admin-primary-button"
+                      disabled={testingTemplate || !templateTestEmail}
+                      style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", whiteSpace: "nowrap" }}
+                    >
+                      <Send size={15} /> {testingTemplate ? "Sending..." : "Send Test"}
+                    </button>
+                  </form>
+
+                  {templateTestResult && (
+                    <div
+                      style={{
+                        marginTop: "0.75rem",
+                        padding: "0.6rem 0.85rem",
+                        borderRadius: "6px",
+                        fontSize: "0.85rem",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        background: templateTestResult.success ? "#ecfdf5" : "#fef2f2",
+                        color: templateTestResult.success ? "#065f46" : "#991b1b",
+                        border: `1px solid ${templateTestResult.success ? "#a7f3d0" : "#fecaca"}`,
+                      }}
+                    >
+                      {templateTestResult.success ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                      <span>{templateTestResult.message}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <>
+          <section className="ops-kpi-grid">
+            <article>
+              <FileText size={20} />
+              <strong>{templates.length}</strong>
+              <span>Templates Configured</span>
+            </article>
+            <article>
+              <CheckCircle2 size={20} />
+              <strong>{templates.filter((t) => boolValue(t.is_active)).length}</strong>
+              <span>Active Templates</span>
+            </article>
+          </section>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "1.25rem", marginTop: "1rem" }}>
+            {templates.map((tmpl) => (
+              <div
+                key={tmpl.id}
+                className="admin-panel"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  borderRadius: "12px",
+                  border: "1px solid #e2e8f0",
+                  padding: "1.25rem",
+                  transition: "all 0.2s ease",
+                }}
+              >
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.65rem" }}>
+                    <span
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: "0.8rem",
+                        background: "#eff6ff",
+                        color: "#2563eb",
+                        padding: "0.2rem 0.5rem",
+                        borderRadius: "6px",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {tmpl.template_key}
+                    </span>
+                    <span className={`status-pill ${boolValue(tmpl.is_active) ? "paid" : "pending"}`}>
+                      {boolValue(tmpl.is_active) ? "Active" : "Inactive"}
+                    </span>
+                  </div>
+
+                  <h3 style={{ margin: "0 0 0.5rem", fontSize: "1.05rem", fontWeight: "600", color: "#0f172a" }}>
+                    {tmpl.subject}
+                  </h3>
+
+                  <p
+                    style={{
+                      color: "#64748b",
+                      fontSize: "0.85rem",
+                      lineHeight: "1.45",
+                      margin: "0 0 1rem",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {tmpl.body}
+                  </p>
+                </div>
+
+                <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
+                    Updated {tmpl.updated_at ? new Date(tmpl.updated_at).toLocaleDateString() : "recently"}
+                  </span>
+                  <button
+                    type="button"
+                    className="admin-primary-button"
+                    onClick={() => {
+                      setSelectedTemplate(tmpl);
+                      setTemplateForm({
+                        subject: tmpl.subject || "",
+                        body: tmpl.body || "",
+                        is_active: boolValue(tmpl.is_active) ? 1 : 0,
+                      });
+                      setTemplateTestResult(null);
+                    }}
+                    style={{ padding: "0.4rem 0.85rem", fontSize: "0.85rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
+                  >
+                    <Edit3 size={14} /> Edit & Preview
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      );
+    }
+
     if (activeTab === "backups") {
       return (
         <>
@@ -323,10 +735,12 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
 
   const tabs = [
     { id: 'dashboard', label: 'Dashboard' },
+    { id: 'collaboration', label: 'Collaboration' },
     { id: 'api-monitoring', label: 'API Monitoring' },
     { id: 'database', label: 'Database' },
     { id: 'cloudinary', label: 'Cloudinary' },
     { id: 'email', label: 'Email Delivery' },
+    { id: 'email-templates', label: 'Email Templates' },
     { id: 'backups', label: 'Backups' },
     { id: 'security', label: 'Security Center' },
     { id: 'settings', label: 'Settings' }
@@ -341,7 +755,17 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
             <h1>Monitoring & Audit Center</h1>
             <p className="admin-muted">Super Admin command center for configuration, API health, backups, delivery logs and security alerts.</p>
           </div>
-          <button className="admin-primary-button" onClick={load}><RefreshCw size={18} /> Refresh</button>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <button
+              className="admin-secondary-button"
+              type="button"
+              onClick={() => handleTabChange('collaboration')}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}
+            >
+              <Handshake size={18} /> Collaboration
+            </button>
+            <button className="admin-primary-button" onClick={load}><RefreshCw size={18} /> Refresh</button>
+          </div>
         </div>
         
         <div className="admin-tabs" style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem', overflowX: 'auto' }}>
@@ -350,7 +774,7 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
               key={tab.id}
               type="button" 
               className={`admin-tab ${activeTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               style={{ padding: '0.5rem 1rem', background: 'none', border: 'none', borderBottom: activeTab === tab.id ? '2px solid #3b82f6' : '2px solid transparent', color: activeTab === tab.id ? '#3b82f6' : '#64748b', fontWeight: activeTab === tab.id ? '600' : '400', cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               {tab.label}

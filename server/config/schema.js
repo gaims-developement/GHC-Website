@@ -871,6 +871,21 @@ const createPartnerTables = async () => {
     )
   `);
 
+  const [existingPartners] = await pool.query('SELECT COUNT(*) AS count FROM partners');
+  if (!existingPartners[0]?.count) {
+    const defaultPartners = [
+      ['AAPI', '/assets/sponsors/aapi.png', '', 'Sponsors', 1, true],
+      ['Clirnet', '/assets/sponsors/clirnet.png', '', 'Digital Partner', 2, true],
+      ['Uworld', '/assets/sponsors/uworld.png', '', 'Medical Education', 3, true],
+    ];
+    for (const [name, logo, website, tier, order, active] of defaultPartners) {
+      await pool.query(
+        'INSERT INTO partners (name, logo, website, tier, display_order, active) VALUES (?, ?, ?, ?, ?, ?)',
+        [name, logo, website, tier, order, active]
+      );
+    }
+  }
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS sponsor_tiers (
       id INT PRIMARY KEY AUTO_INCREMENT,
