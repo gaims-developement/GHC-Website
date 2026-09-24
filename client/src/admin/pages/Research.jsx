@@ -4,14 +4,14 @@ import { apiUrl } from "../../config/api";
 import ResearchForm from "../components/research/ResearchForm";
 import ResearchTable from "../components/research/ResearchTable";
 
-const tabs = ["Pending / Review", "Revisions", "Approved", "Rejected"];
+const tabs = ["All Abstracts", "Pending / Review", "Revisions", "Approved", "Rejected"];
 
 function Research({ api }) {
   const [submissions, setSubmissions] = useState([]);
   const [editingSubmission, setEditingSubmission] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState("Pending / Review");
+  const [activeTab, setActiveTab] = useState("All Abstracts");
   
   // New States
   const [registeredEmails, setRegisteredEmails] = useState(null);
@@ -42,22 +42,25 @@ function Research({ api }) {
 
   const filteredSubmissions = useMemo(() => {
     return submissions.filter((submission) => {
-      const matchesSearch = [submission.title, submission.presentingAuthor, submission.institution, submission.track, submission.keywords].join(" ").toLowerCase().includes(search.toLowerCase());
+      const matchesSearch = [submission.title, submission.presentingAuthor, submission.institution, submission.track, submission.keywords, submission.category, submission.status].filter(Boolean).join(" ").toLowerCase().includes(search.toLowerCase());
       if (!matchesSearch) return false;
 
       const isFinal = submission.status === 'accepted' || submission.status === 'rejected';
-      const hasRevisions = submission.currentVersion > 1;
+      const hasRevisions = (submission.currentVersion || submission.current_version || 1) > 1 || submission.status === 'revision_requested';
 
       switch (activeTab) {
+        case "All Abstracts":
+          return true;
         case "Approved":
           return submission.status === "accepted";
         case "Rejected":
           return submission.status === "rejected";
         case "Revisions":
-          return !isFinal && hasRevisions;
+          return submission.status === "revision_requested" || (!isFinal && hasRevisions);
         case "Pending / Review":
+          return !isFinal && submission.status !== "revision_requested";
         default:
-          return !isFinal && !hasRevisions;
+          return true;
       }
     });
   }, [activeTab, search, submissions]);
@@ -169,16 +172,41 @@ function Research({ api }) {
         </div>
 
         <div className="workshop-kpi-row">
-          <span><strong>{stats.total}</strong>Total submissions</span>
-          <span><strong>{stats.underReview}</strong>Under review</span>
-          <span><strong>{stats.accepted}</strong>Approved</span>
-          <span><strong>{stats.rejected}</strong>Rejected</span>
+          <span style={{ cursor: "pointer" }} onClick={() => setActiveTab("All Abstracts")}>
+            <strong>{stats.total}</strong>Total submissions
+          </span>
+          <span style={{ cursor: "pointer" }} onClick={() => setActiveTab("Pending / Review")}>
+            <strong>{stats.underReview}</strong>Under review
+          </span>
+          <span style={{ cursor: "pointer" }} onClick={() => setActiveTab("Approved")}>
+            <strong>{stats.accepted}</strong>Approved
+          </span>
+          <span style={{ cursor: "pointer" }} onClick={() => setActiveTab("Rejected")}>
+            <strong>{stats.rejected}</strong>Rejected
+          </span>
         </div>
 
         <div className="speaker-toolbar">
           <label className="speaker-search"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search research" /></label>
           <div className="speaker-filter-row">
-            {tabs.map((item) => <button key={item} className={activeTab === item ? "active" : ""} onClick={() => setActiveTab(item)}>{item}</button>)}
+            {tabs.map((item) => {
+              let count = 0;
+              if (item === "All Abstracts") count = submissions.length;
+              else if (item === "Approved") count = submissions.filter((s) => s.status === "accepted").length;
+              else if (item === "Rejected") count = submissions.filter((s) => s.status === "rejected").length;
+              else if (item === "Revisions") count = submissions.filter((s) => s.status === "revision_requested" || (s.status !== "accepted" && s.status !== "rejected" && ((s.currentVersion || 1) > 1))).length;
+              else if (item === "Pending / Review") count = submissions.filter((s) => s.status !== "accepted" && s.status !== "rejected" && s.status !== "revision_requested").length;
+
+              return (
+                <button
+                  key={item}
+                  className={activeTab === item ? "active" : ""}
+                  onClick={() => setActiveTab(item)}
+                >
+                  {item} ({count})
+                </button>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -206,14 +234,27 @@ function Research({ api }) {
         <div className="admin-modal-overlay" style={{ zIndex: 1000 }}>
           <div className="admin-modal" style={{ width: '90%', height: '90%', maxWidth: '1200px', display: 'flex', flexDirection: 'column' }}>
             <header>
-              <h2>Preview Abstract: {previewModal.title}</h2>
+              <h2>View Abstract: {previewModal.title}</h2>
               <button onClick={() => setPreviewModal(null)}><X size={20} /></button>
             </header>
             <div style={{ flex: 1, backgroundColor: '#f0f0f0', position: 'relative' }}>
-              <iframe src={apiUrl(previewModal.pdfUrl || previewModal.pdf_url)} style={{ width: '100%', height: '100%', border: 'none' }} title="Document Preview" />
+              {(previewModal.pdfUrl || previewModal.pdf_url || previewModal.fileUrl) ? (
+                <iframe src={apiUrl(previewModal.pdfUrl || previewModal.pdf_url || previewModal.fileUrl)} style={{ width: '100%', height: '100%', border: 'none' }} title="Document Preview" />
+              ) : (
+                <div style={{ padding: '2rem', background: '#fff', height: '100%', overflowY: 'auto' }}>
+                  <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>{previewModal.title}</h3>
+                  <p style={{ color: '#666', fontSize: '0.9rem' }}>
+                    <strong>Author:</strong> {previewModal.presentingAuthor || previewModal.authors || "Not specified"} • <strong>Institution:</strong> {previewModal.institution || "Not specified"}
+                  </p>
+                  <hr style={{ margin: '1rem 0', borderColor: '#eee' }} />
+                  <div style={{ whiteSpace: 'pre-line', lineHeight: 1.6, color: '#333' }}>
+                    {previewModal.abstractText || "No document file or text content provided for this abstract."}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="admin-form-actions" style={{ padding: '1rem', borderTop: '1px solid #ddd' }}>
-              <button type="button" onClick={() => setPreviewModal(null)}>Close Preview</button>
+              <button type="button" onClick={() => setPreviewModal(null)}>Close Viewer</button>
             </div>
           </div>
         </div>

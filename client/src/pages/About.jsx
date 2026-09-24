@@ -1,246 +1,212 @@
+import React, { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Globe2, Lightbulb, Target } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import '../home-redesign.css'
 
 const highlights = [
   {
+    icon: <Globe2 size={32} />,
     title: 'Global Collaboration',
     desc: 'Connecting healthcare professionals, researchers, institutions and innovators under one platform for meaningful exchange.',
   },
   {
+    icon: <Lightbulb size={32} />,
     title: 'Knowledge Exchange',
     desc: 'Workshops, abstract sessions, keynote speakers, and interdisciplinary discussions that push boundaries.',
   },
   {
+    icon: <Target size={32} />,
     title: 'Impact Driven',
     desc: 'Focused on public health innovation, research outcomes, and measurable progress in global healthcare.',
   },
 ]
 
-function About() {
+export default function About() {
+  useEffect(() => {
+    document.body.classList.add('redesign-active')
+    return () => document.body.classList.remove('redesign-active')
+  }, [])
+
   return (
-    <div style={{ background: '#0a0a0f', minHeight: '100vh', fontFamily: "'Syne', sans-serif", color: '#fff', overflowX: 'hidden' }}>
-
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-
-        .about-nav {
-          display: flex; align-items: center; justify-content: space-between;
-          padding: 20px 48px;
-          border-bottom: 1px solid rgba(255,255,255,0.06);
-          background: rgba(10,10,15,0.8); backdrop-filter: blur(20px);
-        }
-        .about-nav-logo {
-          display: flex; align-items: center; gap: 10px;
-          font-size: 17px; font-weight: 700; text-decoration: none; color: #fff;
-        }
-        .about-nav-logo-dot {
-          width: 32px; height: 32px; border-radius: 10px;
-          background: linear-gradient(135deg, #ff6b9d, #ff3d7f);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 13px; font-weight: 800;
-        }
-        .about-nav-cta {
-          padding: 10px 22px; border-radius: 100px;
-          background: linear-gradient(135deg, #ff6b9d, #ff3d7f);
-          color: #fff; font-size: 13px; font-weight: 600;
-          text-decoration: none; font-family: 'DM Sans', sans-serif;
-        }
-
-        .about-hero {
-          position: relative; padding: 100px 48px 80px;
-          overflow: hidden;
-        }
-        .about-hero-glow {
-          position: absolute; top: -100px; right: -100px;
-          width: 600px; height: 600px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(255,61,127,0.2) 0%, rgba(192,38,211,0.1) 40%, transparent 70%);
-          pointer-events: none;
-        }
-        .about-hero-inner {
-          max-width: 1200px; margin: 0 auto;
-          display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center;
-        }
-        .about-kicker {
-          font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
-          color: #ff6b9d; font-family: 'DM Sans', sans-serif;
-          font-weight: 600; margin-bottom: 20px;
-        }
-        .about-h1 {
-          font-size: clamp(2.4rem, 4vw, 3.5rem);
-          font-weight: 800; line-height: 1.1; letter-spacing: -2px;
-        }
-        .about-h1 .accent {
-          background: linear-gradient(135deg, #ff6b9d 0%, #ff3d7f 50%, #c026d3 100%);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-        .about-body {
-          margin-top: 24px; font-size: 16px; line-height: 1.75;
-          color: rgba(255,255,255,0.5); font-family: 'DM Sans', sans-serif;
-          max-width: 480px;
-        }
-        .about-actions { margin-top: 36px; display: flex; gap: 14px; flex-wrap: wrap; }
-        .btn-primary {
-          display: inline-flex; align-items: center; gap: 8px;
-          padding: 13px 26px; border-radius: 100px;
-          background: linear-gradient(135deg, #ff6b9d, #ff3d7f);
-          color: #fff; font-size: 14px; font-weight: 600;
-          text-decoration: none; font-family: 'DM Sans', sans-serif;
-          box-shadow: 0 8px 30px rgba(255,61,127,0.4);
-          transition: transform 0.2s;
-        }
-        .btn-primary:hover { transform: translateY(-2px); }
-        .btn-outline {
-          display: inline-flex; align-items: center; gap: 8px;
-          padding: 13px 26px; border-radius: 100px;
-          border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.04);
-          color: rgba(255,255,255,0.7); font-size: 14px; font-weight: 500;
-          text-decoration: none; font-family: 'DM Sans', sans-serif;
-          backdrop-filter: blur(10px); transition: border-color 0.2s;
-        }
-        .btn-outline:hover { border-color: rgba(255,61,127,0.4); }
-
-        .highlight-cards { display: flex; flex-direction: column; gap: 16px; }
-        .highlight-card {
-          border-radius: 20px; padding: 28px 30px;
-          border: 1px solid rgba(255,255,255,0.07);
-          background: rgba(255,255,255,0.03);
-          display: flex; gap: 20px; align-items: flex-start;
-          transition: border-color 0.3s, transform 0.3s, background 0.3s;
-          cursor: default;
-        }
-        .highlight-card:hover {
-          border-color: rgba(255,61,127,0.3); transform: translateX(6px);
-          background: rgba(255,61,127,0.05);
-        }
-        .highlight-icon {
-          width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
-          background: linear-gradient(135deg, rgba(255,61,127,0.25), rgba(192,38,211,0.25));
-          display: flex; align-items: center; justify-content: center;
-          font-size: 18px;
-        }
-        .highlight-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
-        .highlight-desc {
-          font-size: 14px; color: rgba(255,255,255,0.5);
-          font-family: 'DM Sans', sans-serif; line-height: 1.65;
-        }
-
-        .about-mission {
-          padding: 80px 48px;
-          border-top: 1px solid rgba(255,255,255,0.06);
-        }
-        .about-mission-inner {
-          max-width: 1200px; margin: 0 auto;
-          display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
-        }
-        .mission-stat {
-          border-radius: 24px; padding: 36px 32px;
-          border: 1px solid rgba(255,255,255,0.07);
-          background: rgba(255,255,255,0.02);
-          position: relative; overflow: hidden;
-          transition: border-color 0.3s, transform 0.3s;
-        }
-        .mission-stat:hover {
-          border-color: rgba(255,61,127,0.3); transform: translateY(-4px);
-        }
-        .mission-stat-bg {
-          position: absolute; top: -40px; right: -40px;
-          width: 150px; height: 150px; border-radius: 50%;
-          background: radial-gradient(circle, rgba(255,61,127,0.1), transparent 70%);
-          pointer-events: none;
-        }
-        .mission-stat-num {
-          font-size: 3rem; font-weight: 800; letter-spacing: -2px;
-          background: linear-gradient(135deg, #ff6b9d, #ff3d7f);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-          background-clip: text;
-        }
-        .mission-stat-label {
-          margin-top: 8px; font-size: 16px; font-weight: 600;
-        }
-        .mission-stat-desc {
-          margin-top: 10px; font-size: 14px; color: rgba(255,255,255,0.45);
-          font-family: 'DM Sans', sans-serif; line-height: 1.6;
-        }
-
-        @media (max-width: 900px) {
-          .about-hero { padding: 80px 24px 60px; }
-          .about-hero-inner { grid-template-columns: 1fr; gap: 40px; }
-          .about-mission { padding: 60px 24px; }
-          .about-mission-inner { grid-template-columns: 1fr; }
-          .about-nav { padding: 16px 24px; }
-        }
-      `}</style>
-
-      <nav className="about-nav">
-        <a href="/" className="about-nav-logo">
-          <div className="about-nav-logo-dot">G</div>
+    <div className="bg-white" style={{ minHeight: '100vh', overflowX: 'hidden' }}>
+      
+      {/* --- NAVIGATION (Matching Home) --- */}
+      <nav style={{
+        position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)',
+        width: 'calc(100% - 48px)', maxWidth: '1200px', zIndex: 100,
+        background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(16px)',
+        borderRadius: '999px', padding: '12px 24px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        border: '1px solid var(--c-border)',
+        boxShadow: '0 4px 24px rgba(16,24,40,0.06)'
+      }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 700, fontSize: '1.125rem', color: 'var(--c-deep-navy)', textDecoration: 'none' }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--c-gaims-blue)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 800 }}>
+            G
+          </div>
           GHC 2026
-        </a>
-        <a href="/register" className="about-nav-cta">Register Now</a>
-      </nav>
-
-      <section className="about-hero">
-        <div className="about-hero-glow" />
-        <div className="about-hero-inner">
-          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <p className="about-kicker">About Global Health Conclave</p>
-            <h1 className="about-h1">
-              Building the future of<br />
-              <span className="accent">healthcare collaboration</span>
-            </h1>
-            <p className="about-body">
-              Global Health Conclave serves as a platform bringing together healthcare leaders, researchers, students, innovators and institutions to exchange ideas, present research and create meaningful impact in healthcare.
-            </p>
-            <div className="about-actions">
-              <a href="#" className="btn-primary">Explore Events <ArrowRight size={15} /></a>
-              <a href="#" className="btn-outline">View Speakers</a>
-            </div>
-          </motion.div>
-
-          <motion.div className="highlight-cards" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.15 }}>
-            {highlights.map((item, i) => (
-              <div key={i} className="highlight-card">
-                <div className="highlight-icon">
-                  {['🌐', '💡', '🎯'][i]}
-                </div>
-                <div>
-                  <div className="highlight-title">{item.title}</div>
-                  <div className="highlight-desc">{item.desc}</div>
-                </div>
-              </div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      <section className="about-mission">
-        <div className="about-mission-inner">
-          {[
-            { num: '60+', label: 'Healthcare Leaders', desc: 'Renowned practitioners and policy experts from across the globe.' },
-            { num: '18+', label: 'Focused Sessions', desc: 'Workshops, panels, and keynotes across critical health domains.' },
-            { num: '12+', label: 'Partner Institutions', desc: 'Leading universities, hospitals, and research organizations.' },
-          ].map((s, i) => (
-            <motion.div
-              key={s.label}
-              className="mission-stat"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              viewport={{ once: true }}
-            >
-              <div className="mission-stat-bg" />
-              <div className="mission-stat-num">{s.num}</div>
-              <div className="mission-stat-label">{s.label}</div>
-              <div className="mission-stat-desc">{s.desc}</div>
-            </motion.div>
+        </Link>
+        <div className="nav-links" style={{ display: 'flex', gap: '32px' }}>
+          {['About', 'Program', 'Speakers', 'Sponsors'].map(item => (
+            <Link key={item} to={`/#${item.toLowerCase()}`} style={{ color: 'var(--c-text-secondary)', fontWeight: 500, fontSize: '0.95rem', transition: 'color 0.2s', textDecoration: 'none' }} 
+               onMouseOver={(e) => e.target.style.color = 'var(--c-gaims-blue)'}
+               onMouseOut={(e) => e.target.style.color = 'var(--c-text-secondary)'}>
+              {item}
+            </Link>
           ))}
         </div>
+        <div style={{ display: 'flex', gap: '16px' }}>
+          <Link to="/register" className="btn-premium" style={{ padding: '10px 24px', fontSize: '0.9rem' }}>
+            Register Now
+          </Link>
+        </div>
+      </nav>
+
+      {/* --- HERO SECTION --- */}
+      <section className="bg-white section-padding" style={{ paddingTop: '160px', paddingBottom: '80px' }}>
+        <div className="container">
+          <div className="grid-2" style={{ alignItems: 'center', gap: '64px' }}>
+            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
+              <div className="text-eyebrow" style={{ marginBottom: '16px' }}>About Global Health Conclave</div>
+              <h1 className="heading-xl" style={{ marginBottom: '24px', fontSize: '3.5rem' }}>
+                Building the future of<br />
+                <span>healthcare collaboration</span>
+              </h1>
+              <p className="text-body-lg" style={{ marginBottom: '40px' }}>
+                Global Health Conclave serves as a platform bringing together healthcare leaders, researchers, students, innovators and institutions to exchange ideas, present research and create meaningful impact in healthcare.
+              </p>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                <Link to="/program" className="btn-premium">
+                  Explore Events <ArrowRight size={18} style={{ marginLeft: '8px' }}/>
+                </Link>
+                <Link to="/speakers" className="btn-outline-premium">
+                  View Speakers
+                </Link>
+              </div>
+            </motion.div>
+
+            <motion.div className="grid-1" style={{ gap: '24px' }} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.15 }}>
+              {highlights.map((item, i) => (
+                <div key={i} className="card-rounded-sm bg-white" style={{ display: 'flex', gap: '20px', padding: '32px' }}>
+                  <div style={{ color: 'var(--c-ghc-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '16px', background: 'var(--c-bg-lavender)', flexShrink: 0 }}>
+                    {item.icon}
+                  </div>
+                  <div>
+                    <h3 className="heading-md" style={{ fontSize: '1.25rem', marginBottom: '8px' }}>{item.title}</h3>
+                    <p className="text-body" style={{ color: 'var(--c-text-muted)' }}>{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+          </div>
+        </div>
       </section>
+
+      {/* --- MISSION STATS --- */}
+      <section className="bg-white section-padding">
+        <div className="container">
+          <div className="grid-3">
+            {[
+              { num: '60+', label: 'Healthcare Leaders', desc: 'Renowned practitioners and policy experts from across the globe.' },
+              { num: '18+', label: 'Focused Sessions', desc: 'Workshops, panels, and keynotes across critical health domains.' },
+              { num: '12+', label: 'Partner Institutions', desc: 'Leading universities, hospitals, and research organizations.' },
+            ].map((s, i) => (
+              <motion.div
+                key={s.label}
+                className="card-rounded-md bg-soft"
+                style={{ padding: '48px 40px', textAlign: 'center' }}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                viewport={{ once: true }}
+              >
+                <div style={{ fontSize: '3.5rem', fontWeight: 800, marginBottom: '16px' }} className="grad-text-premium">
+                  {s.num}
+                </div>
+                <h3 className="heading-md" style={{ fontSize: '1.5rem', marginBottom: '12px' }}>{s.label}</h3>
+                <p className="text-body">{s.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* --- BOTTOM CTA --- */}
+      <section className="section-padding" style={{ paddingBottom: '0' }}>
+        <div className="container">
+          <div className="card-rounded-lg bg-gradient-premium" style={{ padding: '80px 48px', textAlign: 'center' }}>
+            <h2 className="heading-lg" style={{ color: 'white', marginBottom: '24px' }}>Be Part of the Global Health Conversation</h2>
+            <p className="text-body-lg" style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px' }}>
+              Secure your spot at GHC 2026. Limited seats available across all delegate tiers.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <Link to="/register" className="btn-premium" style={{ background: 'white', color: 'var(--c-deep-navy)' }}>
+                Register Now
+              </Link>
+              <Link to="/partner" className="btn-outline-premium" style={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}>
+                Become a Partner
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- FOOTER --- */}
+      <footer className="bg-navy" style={{ marginTop: '120px', paddingTop: '80px', paddingBottom: '40px', borderTop: '4px solid var(--c-ghc-purple)' }}>
+        <div className="container">
+          <div className="grid-4" style={{ marginBottom: '80px' }}>
+            <div>
+              <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', fontWeight: 700, fontSize: '1.25rem', color: 'white', marginBottom: '24px', textDecoration: 'none' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'white', color: 'var(--c-deep-navy)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 800 }}>
+                  G
+                </div>
+                GHC 2026
+              </Link>
+              <p className="text-body" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                Global Healthcare Conclave<br/>
+                New Delhi, India<br/>
+                22-24 November 2026
+              </p>
+            </div>
+            <div>
+              <h4 style={{ color: 'white', fontWeight: 600, marginBottom: '24px' }}>Conference</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <li><Link to="/about" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>About GHC</Link></li>
+                <li><Link to="/program" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Scientific Programme</Link></li>
+                <li><Link to="/speakers" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Speakers</Link></li>
+                <li><Link to="/workshops" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Workshops</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 style={{ color: 'white', fontWeight: 600, marginBottom: '24px' }}>Important Links</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <li><Link to="/register" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Register Now</Link></li>
+                <li><Link to="/abstracts" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Submit Abstract</Link></li>
+                <li><Link to="/nominations" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Nominate for Awards</Link></li>
+                <li><Link to="/partner" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Become a Partner</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 style={{ color: 'white', fontWeight: 600, marginBottom: '24px' }}>Contact</h4>
+              <p className="text-body" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                Email: secretariat@ghc.gaims.org<br/>
+                Support: +91 11 2345 6789
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '32px' }}>
+            <p className="text-body" style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.4)' }}>
+              © 2026 Global Healthcare Conclave. All rights reserved.
+            </p>
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <a href="#" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>Privacy Policy</a>
+              <a href="#" style={{ color: 'rgba(255,255,255,0.4)', textDecoration: 'none' }}>Terms of Service</a>
+            </div>
+          </div>
+        </div>
+      </footer>
 
     </div>
   )
 }
-
-export default About

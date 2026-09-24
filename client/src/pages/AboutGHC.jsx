@@ -1,174 +1,174 @@
-import React, { useState } from "react";
-import { motion } from "framer-motion";
-import { Check, Users, Trophy, Globe2, Sparkles, Book, Wrench } from "lucide-react";
+import React, { useEffect } from 'react'
+import { motion } from 'framer-motion'
+import { ArrowRight, Globe2, Lightbulb, Target } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import '../home-redesign.css'
 
-const tracks = [
-  { title: "Panel Discussions", icon: Users, text: "Engage with thought leaders on critical healthcare topics and future directions." },
-  { title: "Awards", icon: Trophy, text: "Honoring excellence and outstanding contributions in global healthcare." },
-  { title: "Networking", icon: Globe2, text: "Connect with professionals, researchers, and students from around the world." },
-  { title: "Keynote Sessions", icon: Sparkles, text: "Inspiring talks from renowned experts shaping the future of medicine." },
-  { title: "CMEs", icon: Book, text: "Continuing Medical Education sessions to upgrade clinical knowledge." },
-  { title: "Workshops", icon: Wrench, text: "Hands-on training and skill-building in specialized medical fields." },
-];
-
-function SectionHeading({ eyebrow, title, text }) {
-  return (
-    <div className="section-heading">
-      <p className="section-kicker">{eyebrow}</p>
-      <h2 className="section-title">{title}</h2>
-      {text && <p className="section-copy">{text}</p>}
-    </div>
-  );
-}
-
-function About() {
-  return (
-    <section id="about" className="section-shell relative overflow-hidden reveal-section">
-      <div className="absolute top-1/2 -right-32 -z-10 h-[500px] w-[500px] -translate-y-1/2 rounded-full bg-gradient-to-br from-[#E91E63]/20 to-[#4FC3F7]/20 blur-[120px]" aria-hidden="true" />
-      
-      <div className="asym-grid items-center gap-12 md:gap-16">
-        <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
-          <SectionHeading eyebrow="About GHC" title="A healthcare forum designed for global coordination." />
-        </motion.div>
-        
-        <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.2 }} className="group relative">
-          <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-[#E91E63] to-[#4FC3F7] opacity-20 blur transition duration-1000 group-hover:opacity-40" />
-          <div className="glass-card relative p-8 md:p-10 shadow-2xl backdrop-blur-xl bg-[#081b33]/80 border border-white/10 rounded-2xl">
-            <p className="font-['Inter'] text-lg leading-relaxed text-slate-200">
-              Global Healthcare Conclave is the flagship global health initiative of GAIMS, bringing together healthcare professionals, researchers, students and innovators to build practical answers for tomorrow's health systems.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-              {["Clinical excellence", "Research exchange", "Policy leadership"]?.map((item) => (
-                <div key={item} className="flex items-center gap-2 rounded-full border border-[#4FC3F7]/30 bg-[#4FC3F7]/10 px-4 py-2 font-['Sora'] text-sm font-semibold text-[#4FC3F7] transition hover:bg-[#4FC3F7]/20 hover:scale-105">
-                  <Check className="h-4 w-4" />
-                  {item}
-                </div>
-              ))}
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    </section>
-  );
-}
-
-function Mosaic() {
-  return (
-    <section className="section-shell reveal-section">
-      <div className="mosaic-grid">
-        <div className="mosaic-tile tile-large">
-          <SectionHeading eyebrow="Conference Mosaic" title="One summit. Many connected rooms of healthcare leadership." text="The GHC experience moves from keynote strategy to workshops, research corridors, simulation labs and partner dialogue." />
-        </div>
-        {["Global policy forum", "Clinical innovation lab", "Research poster walk", "Student leadership circle"]?.map((item, index) => (
-          <motion.div key={item} className="mosaic-tile" whileHover={{ y: -8, scale: 1.01 }}>
-            <span>0{index + 1}</span>
-            <h3>{item}</h3>
-          </motion.div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function AnimatedTrackHeading({ onComplete }) {
-  const title = "Key highlights of the conclave.";
-  const words = title.split(" ");
-
-  return (
-    <motion.div
-      className="section-heading track-animated-heading"
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.55 }}
-      variants={{
-        hidden: {},
-        visible: { transition: { staggerChildren: 0.08 } },
-      }}
-      onAnimationComplete={() => onComplete?.()}
-    >
-      <motion.p
-        className="section-kicker"
-        variants={{
-          hidden: { opacity: 0, y: 14 },
-          visible: { opacity: 1, y: 0, transition: { duration: 0.55, ease: "easeOut" } },
-        }}
-      >
-        Highlights
-      </motion.p>
-      <h2 className="section-title" aria-label={title}>
-        {words.map((word, index) => (
-          <span className="track-heading-word-mask" key={`${word}-${index}`} aria-hidden="true">
-            <motion.span
-              variants={{
-                hidden: { opacity: 0, y: 42, rotateX: 18 },
-                visible: { opacity: 1, y: 0, rotateX: 0, transition: { duration: 0.72, ease: [0.22, 1, 0.36, 1] } },
-              }}
-            >
-              {word}
-            </motion.span>
-          </span>
-        ))}
-      </h2>
-      <motion.p
-        className="section-copy"
-        variants={{
-          hidden: { opacity: 0, y: 18 },
-          visible: { opacity: 1, y: 0, transition: { duration: 0.65, ease: "easeOut", delay: 0.16 } },
-        }}
-      >
-        Built for clinicians, researchers, students, policy thinkers and health technology leaders.
-      </motion.p>
-    </motion.div>
-  );
-}
-
-function Tracks() {
-  const [headingComplete, setHeadingComplete] = useState(false);
-
-  return (
-    <section id="tracks" className="relative pb-24">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-        <AnimatedTrackHeading onComplete={() => setHeadingComplete(true)} />
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-16"
-          initial="hidden"
-          animate={headingComplete ? "visible" : "hidden"}
-          variants={{
-            hidden: {},
-            visible: { transition: { staggerChildren: 0.12, delayChildren: 0.14 } },
-          }}
-        >
-          {tracks?.map((track, index) => {
-            const Icon = track.icon;
-            return (
-              <motion.article
-                key={track.title}
-                className="track-card relative flex flex-col p-8 rounded-3xl bg-white/70 backdrop-blur-xl border border-white/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] transition-all duration-300"
-                variants={{
-                  hidden: { opacity: 0, y: 44, filter: "blur(10px)" },
-                  visible: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 0.76, ease: [0.22, 1, 0.36, 1] } },
-                }}
-                whileHover={{ y: -6, scale: 1.02, boxShadow: "0 12px 30px -4px rgba(13,71,161,0.12)" }}
-              >
-                <div className="absolute top-6 right-6 text-white font-bold text-5xl font-['Sora'] tracking-tighter drop-shadow-md">0{index + 1}</div>
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0D47A1]/10 to-[#00BCD4]/10 flex items-center justify-center text-[#0D47A1] mb-6 relative z-10"><Icon className="h-7 w-7" /></div>
-                <h3 className="font-['Sora'] font-bold text-xl text-[#081B33] mb-3 relative z-10">{track.title}</h3>
-                <p className="text-[#12385f]/70 leading-relaxed font-['DM_Sans'] relative z-10">{track.text}</p>
-              </motion.article>
-            );
-          })}
-        </motion.div>
-      </div>
-    </section>
-  );
-}
+const highlights = [
+  {
+    icon: <Globe2 size={32} />,
+    title: 'Global Collaboration',
+    desc: 'Connecting healthcare professionals, researchers, institutions and innovators under one platform for meaningful exchange.',
+  },
+  {
+    icon: <Lightbulb size={32} />,
+    title: 'Knowledge Exchange',
+    desc: 'Workshops, abstract sessions, keynote speakers, and interdisciplinary discussions that push boundaries.',
+  },
+  {
+    icon: <Target size={32} />,
+    title: 'Impact Driven',
+    desc: 'Focused on public health innovation, research outcomes, and measurable progress in global healthcare.',
+  },
+]
 
 export default function AboutGHC() {
+  useEffect(() => {
+    document.body.classList.add('redesign-active')
+    return () => document.body.classList.remove('redesign-active')
+  }, [])
+
   return (
     <>
-      <About />
-      <Mosaic />
-      <Tracks />
+      {/* --- HERO SECTION --- */}
+      <section className="bg-white section-padding" style={{ paddingTop: '160px', paddingBottom: '80px' }}>
+        <div className="container">
+          <div className="grid-2" style={{ alignItems: 'center', gap: '64px' }}>
+            <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
+              <div className="text-eyebrow" style={{ marginBottom: '16px', color: '#081B33' }}>About Global Health Conclave</div>
+              <h1 className="heading-xl" style={{ marginBottom: '24px', fontSize: '3.5rem', color: '#081B33' }}>
+                Building the future of<br />
+                <span className="grad-text-premium">healthcare collaboration</span>
+              </h1>
+              <p className="text-body-lg" style={{ marginBottom: '40px', color: '#081B33' }}>
+                Global Health Conclave serves as a platform bringing together healthcare leaders, researchers, students, innovators and institutions to exchange ideas, present research and create meaningful impact in healthcare.
+              </p>
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                <Link to="/program" className="btn-premium">
+                  Explore Events <ArrowRight size={18} style={{ marginLeft: '8px' }}/>
+                </Link>
+                <a href="/#speakers" className="btn-outline-premium">
+                  View Speakers
+                </a>
+              </div>
+            </motion.div>
+
+            <motion.div className="grid-1" style={{ gap: '24px' }} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, delay: 0.15 }}>
+              {highlights.map((item, i) => (
+                <div key={i} className="card-rounded-sm bg-white" style={{ display: 'flex', gap: '20px', padding: '32px' }}>
+                  <div style={{ color: 'var(--c-ghc-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '16px', background: 'var(--c-bg-lavender)', flexShrink: 0 }}>
+                    {item.icon}
+                  </div>
+                  <div>
+                    <h3 className="heading-md" style={{ fontSize: '1.25rem', marginBottom: '8px' }}>{item.title}</h3>
+                    <p className="text-body" style={{ color: 'var(--c-text-muted)' }}>{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- VISION SECTION --- */}
+      <section className="bg-white section-padding">
+        <div className="container grid-2" style={{ alignItems: 'center', gap: '64px' }}>
+          <div>
+            <div className="text-eyebrow" style={{ marginBottom: '16px' }}>About GHC — The Vision</div>
+            <h2 className="heading-lg" style={{ marginBottom: '24px' }}>Where Healthcare Leaders, Innovators & Changemakers Connect</h2>
+            <p className="text-body-lg" style={{ marginBottom: '24px' }}>
+              The Global Health Conclave (GHC) is a multidisciplinary platform bringing together medical professionals, students, researchers, innovators, healthcare organisations, and changemakers from across the world.
+            </p>
+            <p className="text-body" style={{ marginBottom: '24px', color: 'var(--c-text-muted)' }}>
+              GHC is built around one idea: healthcare advances when people, ideas, and opportunities come together. Through thought-provoking sessions, scientific exchange, workshops, networking, awards, and collaborative initiatives, the conclave creates an environment where knowledge moves beyond the conference hall and translates into meaningful action.
+            </p>
+            <p className="text-body" style={{ color: 'var(--c-text-muted)' }}>
+              From emerging medical research to healthcare innovation and community impact, GHC celebrates the people shaping the future of health.
+            </p>
+          </div>
+          <div style={{ position: 'relative', height: '100%', minHeight: '400px', background: 'var(--c-bg-soft)', borderRadius: '24px', overflow: 'hidden' }}>
+            <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=2070&auto=format&fit=crop" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Vision" />
+          </div>
+        </div>
+      </section>
+
+      {/* --- EXPERIENCE SECTION --- */}
+      <section className="bg-soft section-padding" style={{ background: '#F7FBFF' }}>
+        <div className="container">
+          <div style={{ textAlign: 'center', marginBottom: '64px', maxWidth: '800px', margin: '0 auto 64px' }}>
+            <div className="text-eyebrow" style={{ marginBottom: '16px' }}>Why GHC — The Experience</div>
+            <h2 className="heading-lg" style={{ marginBottom: '24px' }}>More Than a Conference. A Global Healthcare Experience.</h2>
+            <p className="text-body-lg" style={{ color: 'var(--c-text-secondary)' }}>
+              GHC brings together multiple dimensions of healthcare under one roof. Attendees can engage with leading voices, discover emerging research, develop practical skills, and connect with peers and organisations working to create meaningful change.
+            </p>
+          </div>
+          <div className="grid-2" style={{ gap: '32px' }}>
+            {[
+              'Learn through scientific sessions, expert discussions, and hands-on workshops.',
+              'Connect with healthcare professionals, researchers, students, innovators, and organisations.',
+              'Showcase research, ideas, initiatives, and innovations to a diverse global audience.',
+              'Collaborate across disciplines and build relationships that extend beyond the conclave.',
+              'Celebrate excellence through recognition of outstanding contributions to healthcare.'
+            ].map((point, i) => (
+              <motion.div key={i} className="card-rounded-sm bg-white" style={{ padding: '24px', display: 'flex', gap: '16px', alignItems: 'flex-start', border: '1px solid var(--c-border)' }}
+                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
+                <div style={{ color: 'var(--c-ghc-purple)' }}><Target size={24} /></div>
+                <p className="text-body" style={{ fontWeight: 500 }}>{point}</p>
+              </motion.div>
+            ))}
+          </div>
+          <motion.p className="text-body-lg" style={{ marginTop: '48px', textAlign: 'center', maxWidth: '800px', margin: '48px auto 0', color: 'var(--c-text-secondary)' }}
+            initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
+            Whether you are a student taking your first steps in medicine, an established professional, a researcher, an entrepreneur, or a healthcare organisation, GHC offers a space to learn, contribute, and connect.
+          </motion.p>
+        </div>
+      </section>
+
+      {/* --- IMPACT SECTION --- */}
+      <section className="bg-white section-padding">
+        <div className="container grid-2" style={{ alignItems: 'center', gap: '64px' }}>
+          <div style={{ position: 'relative', height: '100%', minHeight: '400px', background: 'var(--c-bg-lavender)', borderRadius: '24px', overflow: 'hidden' }}>
+            <img src="https://images.unsplash.com/photo-1551076805-e1869033e561?q=80&w=2070&auto=format&fit=crop" style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="Impact" />
+          </div>
+          <div>
+            <div className="text-eyebrow" style={{ marginBottom: '16px' }}>The Future of Healthcare</div>
+            <h2 className="heading-lg" style={{ marginBottom: '24px' }}>Shaping the Healthcare of Tomorrow</h2>
+            <p className="text-body-lg" style={{ marginBottom: '24px' }}>
+              The future of healthcare will not be defined by one discipline, one profession, or one breakthrough. It will be shaped by collaboration.
+            </p>
+            <p className="text-body" style={{ marginBottom: '24px', color: 'var(--c-text-muted)' }}>
+              GHC aims to create a global ecosystem where medical knowledge meets innovation, research meets implementation, and young healthcare leaders meet the experience needed to turn ideas into impact.
+            </p>
+            <p className="text-body" style={{ marginBottom: '24px', color: 'var(--c-text-muted)' }}>
+              Through scientific exchange, innovation, leadership, community initiatives, and cross-border collaboration, GHC seeks to foster conversations that matter and partnerships that last.
+            </p>
+            <p className="text-body" style={{ fontWeight: 600, color: 'var(--c-deep-navy)' }}>
+              The goal is simple: connect the people shaping healthcare today with the ideas that will shape it tomorrow.
+            </p>
+          </div>
+        </div>
+      </section>
+
+
+      {/* --- BOTTOM CTA --- */}
+      <section className="section-padding">
+        <div className="container">
+          <div className="card-rounded-lg bg-gradient-premium" style={{ padding: '80px 48px', textAlign: 'center' }}>
+            <h2 className="heading-lg" style={{ color: 'white', marginBottom: '24px' }}>Be Part of the Global Health Conversation</h2>
+            <p className="text-body-lg" style={{ color: 'rgba(255,255,255,0.8)', marginBottom: '40px', maxWidth: '600px', margin: '0 auto 40px' }}>
+              Secure your spot at GHC 2026. Limited seats available across all delegate tiers.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <Link to="/register" className="btn-premium" style={{ background: 'white', color: 'var(--c-deep-navy)' }}>
+                Register Now
+              </Link>
+              <Link to="/partner" className="btn-outline-premium" style={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}>
+                Become a Partner
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
     </>
-  );
+  )
 }

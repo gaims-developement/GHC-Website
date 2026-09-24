@@ -912,9 +912,14 @@ button {
 
 .section-shell {
   position: relative;
-  max-width: 80rem;
-  margin-inline: auto;
-  padding: 6.5rem 1.25rem;
+  width: 100%;
+  padding: 6.5rem 2.25rem;
+}
+
+@media (min-width: 80rem) {
+  .section-shell {
+    padding-inline: calc((100% - 80rem) / 2 + 3.5rem);
+  }
 }
 
 .section-heading {
@@ -1352,7 +1357,7 @@ button {
 }
 
 .schedule-section {
-  background: #130825;
+  background: transparent;
   border-radius: 0;
 }
 
@@ -1414,17 +1419,18 @@ button {
 
 .schedule-phase-card {
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(16, 24, 40, 0.1);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.05);
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
   padding: 18px 20px;
   transition: border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
 }
 
 .schedule-phase-card.open {
-  border-color: rgba(255, 59, 139, 0.22);
-  background: rgba(255, 255, 255, 0.065);
-  box-shadow: 0 18px 54px rgba(0, 0, 0, 0.22), 0 0 34px rgba(255, 59, 139, 0.08);
+  border-color: rgba(226, 68, 183, 0.35);
+  background: #ffffff;
+  box-shadow: 0 18px 54px rgba(16, 24, 40, 0.08);
 }
 
 .schedule-phase-header {
@@ -1438,6 +1444,8 @@ button {
   color: inherit;
   padding: 0;
   text-align: left;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 .schedule-phase-title-wrap {
@@ -1477,10 +1485,32 @@ button {
   white-space: normal;
 }
 
+.schedule-phase-title {
+  min-width: 0;
+}
+
+.schedule-phase-title .schedule-status {
+  margin-top: 0.55rem;
+}
+
 .schedule-phase-meta {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+}
+
+.schedule-phase-detail-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid rgba(226, 68, 183, 0.3);
+  border-radius: 999px;
+  background: rgba(226, 68, 183, 0.08);
+  color: #e244b7;
+  padding: 0.34rem 0.68rem;
+  font-size: clamp(0.55rem, 2.25vw, 0.64rem);
+  font-weight: 850;
+  white-space: nowrap;
 }
 
 .schedule-status {
@@ -1494,20 +1524,20 @@ button {
 }
 
 .schedule-status.soon {
-  border: 1px solid rgba(250, 199, 117, 0.3);
-  background: rgba(250, 199, 117, 0.15);
-  color: #fac775;
+  border: 1px solid rgba(217, 119, 6, 0.28);
+  background: rgba(245, 158, 11, 0.12);
+  color: #b45309;
 }
 
 .schedule-status.confirmed {
-  border: 1px solid rgba(29, 158, 117, 0.3);
-  background: rgba(29, 158, 117, 0.15);
-  color: #5dcaa5;
+  border: 1px solid rgba(5, 150, 105, 0.28);
+  background: rgba(16, 185, 129, 0.12);
+  color: #047857;
 }
 
 .schedule-chevron {
   flex: 0 0 auto;
-  color: rgba(255, 255, 255, 0.48);
+  color: rgba(16, 24, 40, 0.45);
   transition: transform 0.25s ease;
 }
 
@@ -2127,7 +2157,7 @@ button {
 
 @media (min-width: 768px) {
   .section-shell {
-    padding-inline: 2rem;
+    padding-inline: 3.5rem;
   }
 
   .mosaic-grid {
@@ -2381,10 +2411,10 @@ button {
 
   .hero-mobile-shell .hero-button-secondary {
     min-height: clamp(44px, 6.4svh, 48px);
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    background: rgba(255, 255, 255, 0.06) !important;
-    color: rgba(255, 255, 255, 0.85) !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 12px 34px rgba(0, 0, 0, 0.18) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    background: #ffffff !important;
+    color: #101828 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
     font-size: 0.9rem;
     font-weight: 850;
     backdrop-filter: blur(18px);
@@ -3184,10 +3214,10 @@ body {
 .venue-info-card,
 .registration-cta,
 .cta-float-card {
-  border: 1px solid rgba(13, 71, 161, 0.12);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(235, 248, 255, 0.76));
-  box-shadow: 0 24px 80px rgba(13, 71, 161, 0.12);
-  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.045));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.26);
+  backdrop-filter: blur(22px);
 }
 
 .featured-speaker-card {
@@ -4801,10 +4831,10 @@ body {
 
   .hero-mobile-shell .hero-button-secondary {
     min-height: 48px;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    background: rgba(255, 255, 255, 0.06) !important;
-    color: rgba(255, 255, 255, 0.85) !important;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 12px 34px rgba(0, 0, 0, 0.18) !important;
+    border: 1px solid rgba(0, 0, 0, 0.05) !important;
+    background: #ffffff !important;
+    color: #101828 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
     font-size: 0.9rem;
     font-weight: 850;
     backdrop-filter: blur(18px);
@@ -6362,5 +6392,59 @@ body {
   .workshop-register-grid {
     grid-template-columns: minmax(0, 1fr) 330px;
     align-items: start;
+  }
+}
+
+#ghc-timeline .schedule-heading h2,
+#ghc-timeline .schedule-phase-title-wrap strong,
+#ghc-timeline .schedule-flow-row h4,
+#ghc-timeline .conference-activity h4 {
+  color: #101828;
+}
+
+#ghc-timeline .schedule-heading p,
+#ghc-timeline .schedule-phase-title-wrap small,
+#ghc-timeline .schedule-flow-row p,
+#ghc-timeline .conference-activity p,
+#ghc-timeline .workshop-register-flow p,
+#ghc-timeline .schedule-message p,
+#ghc-timeline .schedule-empty,
+#ghc-timeline .workshop-flow-intro {
+  color: #475467;
+}
+
+#registration-cta .registration-cta h2 {
+  color: #101828 !important;
+}
+
+#registration-cta .registration-cta p {
+  color: #475467 !important;
+}
+
+#registration-cta .hero-button-secondary {
+  color: #101828 !important;
+}
+
+#home .hero-button-secondary,
+#home .partner-cta-button,
+#home .partner-cta-button__content {
+  color: #000000 !important;
+}
+
+/* Responsive Hero Background */
+.hero-bg-responsive {
+  background-image: url('/assets/bg/herosectionbgphone.png');
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-color: #081B33;
+}
+
+@media (min-width: 768px) {
+  .hero-bg-responsive {
+    background-image: url('/assets/bg/herosectionbg.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
   }
 }

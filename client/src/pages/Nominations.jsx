@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Award, ChevronRight, User, Briefcase, FileText, Share2, Check, ArrowRight, ArrowLeft, Upload, BadgeCheck, X } from "lucide-react";
 import { setPageSeo, trackEvent } from "../utils/seo";
@@ -43,14 +43,29 @@ export default function Nominations() {
   });
 
   const [errors, setErrors] = useState({});
+  const formTopRef = useRef(null);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     setPageSeo({
       title: "GHC Awards 2026 — Nominations",
       description: "Nominate outstanding healthcare professionals, educators, and leaders for the GHC Awards.",
       path: "/nominations",
     });
   }, []);
+
+  const scrollToFormTop = () => {
+    setTimeout(() => {
+      if (formTopRef.current) {
+        const yOffset = -90;
+        const element = formTopRef.current;
+        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+      } else {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }, 60);
+  };
 
   const calculateAge = (dobString) => {
     if (!dobString) return "";
@@ -126,7 +141,6 @@ export default function Nominations() {
       }
     }
     if (step === 3) {
-      // Professional details (optional depending on strictness, but let's make designation/org required)
       if (!formData.orgAffiliation.trim()) newErrors.orgAffiliation = "Organization Affiliation is required.";
       if (!formData.designation.trim()) newErrors.designation = "Designation is required.";
     }
@@ -135,7 +149,6 @@ export default function Nominations() {
       if (!formData.mobile.trim()) newErrors.mobile = "Mobile Number is required.";
     }
     if (step === 5) {
-      // Social links (at least check if URLs are valid if provided)
       formData.socialLinks.forEach((link, idx) => {
         if (link.url && !/^https?:\/\/.+/.test(link.url)) {
           newErrors[`social_${idx}`] = "Please enter a valid URL (starting with http:// or https://).";
@@ -144,7 +157,6 @@ export default function Nominations() {
     }
     if (step === 6) {
       if (!formData.cvFile) newErrors.cvFile = "CV is required.";
-      // Photo is not strictly mentioned as required, but usually is. Let's make it required.
       if (!formData.photoFile) newErrors.photoFile = "Photo is required.";
     }
 
@@ -155,21 +167,19 @@ export default function Nominations() {
   const handleNext = () => {
     if (validateStep()) {
       setStep(prev => Math.min(prev + 1, 7));
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      scrollToFormTop();
     }
   };
 
   const handlePrev = () => {
     setStep(prev => Math.max(prev - 1, 1));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToFormTop();
   };
 
-  // Mock file upload handler
   const handleFileUpload = (e, type) => {
     const file = e.target.files[0];
     if (!file) return;
     
-    // Check sizes/types here in a real scenario
     if (type === "cv" && file.type !== "application/pdf") {
       setErrors(prev => ({ ...prev, cvFile: "CV must be a PDF file." }));
       return;
@@ -179,39 +189,39 @@ export default function Nominations() {
   };
 
   return (
-    <div className="bg-[#0a0a0f] min-h-screen font-['Syne',sans-serif] text-white">
-      {/* Navbar space filler */}
-      <div className="h-20 md:h-24" />
+    <div className="bg-white min-h-screen font-['Outfit'] text-[#101828]">
+      {/* Top spacing */}
+      <div className="h-28 md:h-32" />
 
-      <div className="max-w-5xl mx-auto px-6 pt-6">
-        <a href="/" className="inline-flex items-center gap-2 text-white/60 hover:text-white transition-colors font-['DM_Sans'] text-sm font-semibold">
-          <ArrowLeft className="w-4 h-4" /> Back to Home
+      <div className="max-w-5xl mx-auto px-6 pt-2">
+        <a href="/" className="inline-flex items-center gap-2 text-[#475467] hover:text-[#101828] font-medium text-sm transition-colors">
+          <ArrowLeft className="w-4 h-4 text-[#6C4AB6]" /> Back to Home
         </a>
       </div>
 
       {/* Hero Section */}
       {step === 1 && (
-        <section className="relative px-6 py-20 overflow-hidden text-center max-w-5xl mx-auto">
+        <section className="relative px-6 py-10 md:py-14 overflow-hidden text-center max-w-5xl mx-auto bg-white">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-2 px-4 py-2 mb-8 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-semibold tracking-widest uppercase"
+            className="inline-flex items-center gap-2 px-4 py-1.5 mb-6 rounded-full bg-[#e244b7]/10 border border-[#e244b7]/25 text-[#e244b7] text-xs font-bold tracking-widest uppercase"
           >
-            <BadgeCheck className="w-4 h-4" /> GHC Awards 2026
+            <BadgeCheck className="w-4 h-4 text-[#e244b7]" /> GHC Awards 2026
           </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-6"
+            className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-[#101828] mb-6 leading-tight"
           >
-            Recognising the <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">People</span> Shaping Healthcare
+            Recognising the <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6C4AB6] to-[#e244b7]">People</span> Shaping Healthcare
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-lg md:text-xl text-white/60 max-w-2xl mx-auto mb-10 leading-relaxed font-['DM_Sans',sans-serif]"
+            className="text-base sm:text-lg text-[#475467] max-w-2xl mx-auto mb-6 leading-relaxed"
           >
             Celebrate visionaries, innovators, educators, researchers and changemakers who are creating meaningful impact across healthcare.
           </motion.p>
@@ -219,33 +229,38 @@ export default function Nominations() {
       )}
 
       {/* Main Form Container */}
-      <div className="max-w-4xl mx-auto px-4 pb-24">
+      <div ref={formTopRef} className="max-w-4xl mx-auto px-4 pb-24 scroll-mt-24">
         {/* Progress Indicator */}
-        <div className="mb-12 sticky top-24 z-40 bg-[#0a0a0f]/90 backdrop-blur-md py-4 border-b border-white/5">
-          <div className="flex justify-between items-center text-xs font-['DM_Sans'] uppercase tracking-widest text-white/40 mb-3">
-            <span>Step {step} of 6</span>
-            <span>{Math.round((step / 6) * 100)}% Completed</span>
+        <div className="mb-10 sticky top-24 z-40 bg-white/95 backdrop-blur-md py-4 border-b border-gray-100">
+          <div className="flex justify-between items-center text-xs font-semibold uppercase tracking-wider text-[#475467] mb-2.5">
+            <span className="text-[#6C4AB6]">Step {step} of 7</span>
+            <span>{Math.min(100, Math.round((step / 7) * 100))}% Completed</span>
           </div>
-          <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+          <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
             <motion.div
-              className="h-full bg-gradient-to-r from-blue-500 to-emerald-400"
+              className="h-full bg-gradient-to-r from-[#6C4AB6] to-[#e244b7]"
               initial={{ width: 0 }}
-              animate={{ width: `${(step / 6) * 100}%` }}
+              animate={{ width: `${Math.min(100, (step / 7) * 100)}%` }}
+              transition={{ duration: 0.3 }}
             />
           </div>
         </div>
 
-        <div className="bg-white/[0.02] border border-white/5 rounded-3xl p-6 md:p-10 backdrop-blur-sm">
+        <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-10 shadow-[0_8px_30px_rgba(0,0,0,0.03)]">
           
           {/* STEP 1: Award Selection */}
           {step === 1 && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
               <div className="mb-8">
-                <h2 className="text-3xl font-bold mb-3">The GHC Awards</h2>
-                <p className="text-white/60 font-['DM_Sans'] text-lg">Honouring excellence across healthcare, research, education, leadership and social impact.</p>
+                <p className="text-[#e244b7] text-xs font-bold tracking-widest uppercase mb-1.5 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 bg-[#e244b7] rounded-full"></span>
+                  CATEGORY SELECTION
+                </p>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#101828] mb-2">The GHC Awards</h2>
+                <p className="text-[#475467] text-base">Honouring excellence across healthcare, research, education, leadership and social impact.</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {awardsList.map(award => {
                   const isSelected = formData.awardId === award.id;
                   return (
@@ -257,23 +272,23 @@ export default function Nominations() {
                       }}
                       className={`cursor-pointer relative overflow-hidden group p-6 rounded-2xl border transition-all duration-300 ${
                         isSelected 
-                          ? "bg-blue-500/10 border-blue-500/50 shadow-[0_0_30px_rgba(59,130,246,0.15)]" 
-                          : "bg-white/[0.03] border-white/10 hover:bg-white/[0.06] hover:border-white/20"
+                          ? "bg-gradient-to-br from-[#6C4AB6]/5 to-[#e244b7]/5 border-2 border-[#6C4AB6] shadow-[0_8px_25px_rgba(108,74,182,0.12)] -translate-y-0.5" 
+                          : "bg-white border-gray-200/90 hover:border-[#6C4AB6]/50 hover:shadow-md hover:-translate-y-0.5"
                       }`}
                     >
                       {isSelected && (
-                        <div className="absolute top-4 right-4 text-blue-400">
-                          <Check className="w-5 h-5" />
+                        <div className="absolute top-4 right-4 w-7 h-7 rounded-full bg-[#6C4AB6] text-white flex items-center justify-center shadow-sm">
+                          <Check className="w-4 h-4" />
                         </div>
                       )}
-                      <Award className={`w-8 h-8 mb-4 ${isSelected ? "text-blue-400" : "text-white/40 group-hover:text-white/70"}`} />
-                      <h3 className="text-lg font-bold mb-2">{award.name}</h3>
-                      <p className="text-sm text-white/50 font-['DM_Sans']">{award.desc}</p>
+                      <Award className={`w-8 h-8 mb-4 transition-colors ${isSelected ? "text-[#6C4AB6]" : "text-gray-400 group-hover:text-[#e244b7]"}`} />
+                      <h3 className={`text-lg font-bold mb-2 transition-colors ${isSelected ? "text-[#6C4AB6]" : "text-[#101828] group-hover:text-[#6C4AB6]"}`}>{award.name}</h3>
+                      <p className="text-sm text-[#475467] leading-relaxed">{award.desc}</p>
                     </div>
                   );
                 })}
               </div>
-              {errors.awardId && <p className="text-red-400 mt-4 text-sm">{errors.awardId}</p>}
+              {errors.awardId && <p className="text-red-500 mt-4 text-sm font-medium">{errors.awardId}</p>}
 
               <AnimatePresence>
                 {formData.awardId === "medical_leadership" && (
@@ -281,45 +296,46 @@ export default function Nominations() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="mt-8 overflow-hidden"
+                    className="mt-8 overflow-hidden bg-white p-6 rounded-2xl border border-gray-200 shadow-sm"
                   >
-                    <h3 className="text-xl font-bold mb-4">Select Age Category</h3>
-                    <div className="flex flex-wrap gap-4">
+                    <h3 className="text-lg font-bold text-[#101828] mb-3">Select Age Category</h3>
+                    <div className="flex flex-wrap gap-3">
                       {ageCategories.map(cat => (
                         <button
                           key={cat.id}
+                          type="button"
                           onClick={() => updateForm("ageCategory", cat.id)}
-                          className={`px-6 py-3 rounded-full border text-sm font-semibold transition-all ${
+                          className={`px-6 py-2.5 rounded-full border text-sm font-semibold transition-all ${
                             formData.ageCategory === cat.id
-                              ? "bg-blue-500 text-white border-blue-500"
-                              : "bg-transparent text-white/70 border-white/20 hover:border-white/40"
+                              ? "bg-[#6C4AB6] text-white border-[#6C4AB6] shadow-sm"
+                              : "bg-white text-[#475467] border-gray-300 hover:bg-gray-50"
                           }`}
                         >
                           {cat.label}
                         </button>
                       ))}
                     </div>
-                    {errors.ageCategory && <p className="text-red-400 mt-2 text-sm">{errors.ageCategory}</p>}
+                    {errors.ageCategory && <p className="text-red-500 mt-2 text-sm font-medium">{errors.ageCategory}</p>}
                   </motion.div>
                 )}
               </AnimatePresence>
 
               {/* Benefit Section inside step 1 */}
-              <div className="mt-16 p-8 rounded-2xl bg-gradient-to-br from-white/[0.05] to-transparent border border-white/10 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-8 opacity-10">
-                  <Award className="w-32 h-32" />
+              <div className="mt-14 p-8 rounded-3xl bg-white border-2 border-[#6C4AB6]/20 relative overflow-hidden shadow-sm">
+                <div className="absolute top-0 right-0 p-8 opacity-10 text-[#6C4AB6] pointer-events-none">
+                  <Award className="w-36 h-36" />
                 </div>
-                <h3 className="text-2xl font-bold mb-6">Your Nomination Includes More Than Recognition</h3>
-                <div className="flex items-end gap-3 mb-6">
-                  <span className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-blue-400">₹5,000</span>
-                  <span className="text-white/50 text-sm font-semibold uppercase tracking-wider mb-2">Nomination Fee</span>
+                <h3 className="text-2xl font-bold text-[#101828] mb-4">Your Nomination Includes More Than Recognition</h3>
+                <div className="flex items-end gap-3 mb-4">
+                  <span className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#6C4AB6] to-[#e244b7]">₹5,000</span>
+                  <span className="text-[#475467] text-sm font-semibold uppercase tracking-wider mb-2">Nomination Fee</span>
                 </div>
-                <p className="text-white/80 font-['DM_Sans'] mb-6 text-lg">Self-nomination includes complimentary registration to the Global Health Conclave.</p>
-                <ul className="space-y-3 font-['DM_Sans'] text-white/70">
-                  <li className="flex items-center gap-3"><Check className="w-5 h-5 text-emerald-400" /> Award nomination consideration</li>
-                  <li className="flex items-center gap-3"><Check className="w-5 h-5 text-emerald-400" /> Complimentary GHC event registration</li>
-                  <li className="flex items-center gap-3"><Check className="w-5 h-5 text-emerald-400" /> Opportunity to showcase your work and impact</li>
-                  <li className="flex items-center gap-3"><Check className="w-5 h-5 text-emerald-400" /> Official nomination acknowledgement</li>
+                <p className="text-[#475467] text-base mb-6 max-w-xl">Self-nomination includes complimentary registration to the Global Health Conclave.</p>
+                <ul className="space-y-3 text-sm sm:text-base text-[#344054]">
+                  <li className="flex items-center gap-3"><Check className="w-5 h-5 text-[#e244b7] shrink-0" /> Award nomination consideration by expert jury</li>
+                  <li className="flex items-center gap-3"><Check className="w-5 h-5 text-[#e244b7] shrink-0" /> Complimentary GHC event registration</li>
+                  <li className="flex items-center gap-3"><Check className="w-5 h-5 text-[#e244b7] shrink-0" /> Opportunity to showcase your work and impact</li>
+                  <li className="flex items-center gap-3"><Check className="w-5 h-5 text-[#e244b7] shrink-0" /> Official nomination acknowledgement & certificate</li>
                 </ul>
               </div>
             </motion.div>
@@ -329,81 +345,86 @@ export default function Nominations() {
           {step === 2 && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
               <div className="mb-8 flex items-center gap-3">
-                <User className="w-6 h-6 text-blue-400" />
-                <h2 className="text-3xl font-bold">Personal Details</h2>
+                <div className="w-10 h-10 rounded-xl bg-[#6C4AB6]/10 text-[#6C4AB6] flex items-center justify-center">
+                  <User className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-[#101828]">Personal Details</h2>
+                  <p className="text-sm text-[#475467]">Provide the candidate's core identity details.</p>
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-white/70 mb-2">Full Name</label>
+                  <label className="block text-sm font-semibold text-[#344054] mb-2">Full Name</label>
                   <input
                     type="text"
                     value={formData.fullName}
                     onChange={(e) => updateForm("fullName", e.target.value)}
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
+                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-[#101828] placeholder-gray-400 focus:outline-none focus:border-[#6C4AB6] focus:ring-2 focus:ring-[#6C4AB6]/20 transition-all shadow-sm"
                     placeholder="Dr. Jane Doe"
                   />
-                  {errors.fullName && <p className="text-red-400 mt-1 text-sm">{errors.fullName}</p>}
+                  {errors.fullName && <p className="text-red-500 mt-1 text-sm font-medium">{errors.fullName}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-white/70 mb-2">Date of Birth</label>
+                  <label className="block text-sm font-semibold text-[#344054] mb-2">Date of Birth</label>
                   <div className="grid grid-cols-3 gap-3">
                     <select
                       value={formData.dobYear}
                       onChange={(e) => updateForm("dobYear", e.target.value)}
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner appearance-none"
+                      className="w-full bg-white border border-gray-300 rounded-xl px-3 py-3 text-[#101828] focus:outline-none focus:border-[#6C4AB6] focus:ring-2 focus:ring-[#6C4AB6]/20 shadow-sm"
                     >
-                      <option value="" className="bg-[#0a0a0f]">Year</option>
+                      <option value="" className="text-gray-500">Year</option>
                       {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map(y => (
-                        <option key={y} value={y} className="bg-[#0a0a0f]">{y}</option>
+                        <option key={y} value={y} className="text-[#101828]">{y}</option>
                       ))}
                     </select>
                     <select
                       value={formData.dobMonth}
                       onChange={(e) => updateForm("dobMonth", e.target.value)}
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner appearance-none"
+                      className="w-full bg-white border border-gray-300 rounded-xl px-3 py-3 text-[#101828] focus:outline-none focus:border-[#6C4AB6] focus:ring-2 focus:ring-[#6C4AB6]/20 shadow-sm"
                     >
-                      <option value="" className="bg-[#0a0a0f]">Month</option>
+                      <option value="" className="text-gray-500">Month</option>
                       {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map((m, i) => (
-                        <option key={m} value={i + 1} className="bg-[#0a0a0f]">{m}</option>
+                        <option key={m} value={i + 1} className="text-[#101828]">{m}</option>
                       ))}
                     </select>
                     <select
                       value={formData.dobDay}
                       onChange={(e) => updateForm("dobDay", e.target.value)}
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner appearance-none"
+                      className="w-full bg-white border border-gray-300 rounded-xl px-3 py-3 text-[#101828] focus:outline-none focus:border-[#6C4AB6] focus:ring-2 focus:ring-[#6C4AB6]/20 shadow-sm"
                     >
-                      <option value="" className="bg-[#0a0a0f]">Date</option>
+                      <option value="" className="text-gray-500">Day</option>
                       {Array.from({ length: 31 }, (_, i) => i + 1).map(d => (
-                        <option key={d} value={d} className="bg-[#0a0a0f]">{d}</option>
+                        <option key={d} value={d} className="text-[#101828]">{d}</option>
                       ))}
                     </select>
                   </div>
-                  {errors.dob && <p className="text-red-400 mt-1 text-sm">{errors.dob}</p>}
+                  {errors.dob && <p className="text-red-500 mt-1 text-sm font-medium">{errors.dob}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-white/70 mb-2">Age (Auto-calculated)</label>
+                  <label className="block text-sm font-semibold text-[#344054] mb-2">Age (Auto-calculated)</label>
                   <input
                     type="text"
                     value={calculatedAge !== "" ? `${calculatedAge} years` : ""}
                     readOnly
-                    className="w-full bg-white/[0.01] border border-white/5 rounded-xl px-4 py-3 text-white/50 cursor-not-allowed shadow-inner"
+                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-700 cursor-not-allowed font-medium shadow-sm"
                     placeholder="--"
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-semibold text-white/70 mb-3">Sex</label>
-                  <div className="flex flex-wrap gap-4">
+                  <label className="block text-sm font-semibold text-[#344054] mb-3">Sex</label>
+                  <div className="flex flex-wrap gap-5">
                     {["Male", "Female", "Other", "Prefer not to say"].map(opt => (
-                      <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                      <label key={opt} className="flex items-center gap-2 cursor-pointer text-sm font-medium text-[#344054]">
                         <input
                           type="radio"
                           name="sex"
                           value={opt}
                           checked={formData.sex === opt}
                           onChange={(e) => updateForm("sex", e.target.value)}
-                          className="w-4 h-4 text-blue-500 bg-white/10 border-white/20 focus:ring-blue-500 focus:ring-offset-[#0a0a0f]"
+                          className="w-4 h-4 text-[#6C4AB6] accent-[#6C4AB6] focus:ring-[#6C4AB6]"
                         />
-                        <span className="text-white/80">{opt}</span>
+                        <span>{opt}</span>
                       </label>
                     ))}
                   </div>
@@ -416,42 +437,47 @@ export default function Nominations() {
           {step === 3 && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
               <div className="mb-8 flex items-center gap-3">
-                <Briefcase className="w-6 h-6 text-blue-400" />
-                <h2 className="text-3xl font-bold">Professional Details</h2>
+                <div className="w-10 h-10 rounded-xl bg-[#6C4AB6]/10 text-[#6C4AB6] flex items-center justify-center">
+                  <Briefcase className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-[#101828]">Professional Details</h2>
+                  <p className="text-sm text-[#475467]">Provide institutional affiliation and position.</p>
+                </div>
               </div>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold text-white/70 mb-2">Organisation Affiliation</label>
+                  <label className="block text-sm font-semibold text-[#344054] mb-2">Organisation Affiliation</label>
                   <input
                     type="text"
                     value={formData.orgAffiliation}
                     onChange={(e) => updateForm("orgAffiliation", e.target.value)}
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
+                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-[#101828] placeholder-gray-400 focus:outline-none focus:border-[#6C4AB6] focus:ring-2 focus:ring-[#6C4AB6]/20 transition-all shadow-sm"
                     placeholder="e.g. HealthTech Innovators, NGO Care, Global Hospital"
                   />
-                  <p className="text-xs text-white/40 mt-1 font-['DM_Sans']">Includes NGOs, startups, colleges, or hospitals.</p>
-                  {errors.orgAffiliation && <p className="text-red-400 mt-1 text-sm">{errors.orgAffiliation}</p>}
+                  <p className="text-xs text-gray-500 mt-1.5">Includes NGOs, startups, colleges, or hospitals.</p>
+                  {errors.orgAffiliation && <p className="text-red-500 mt-1 text-sm font-medium">{errors.orgAffiliation}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-white/70 mb-2">Medical College / Hospital (Optional)</label>
+                  <label className="block text-sm font-semibold text-[#344054] mb-2">Medical College / Hospital (Optional)</label>
                   <input
                     type="text"
                     value={formData.medicalCollege}
                     onChange={(e) => updateForm("medicalCollege", e.target.value)}
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
+                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-[#101828] placeholder-gray-400 focus:outline-none focus:border-[#6C4AB6] focus:ring-2 focus:ring-[#6C4AB6]/20 transition-all shadow-sm"
                     placeholder="If applicable"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-white/70 mb-2">Designation</label>
+                  <label className="block text-sm font-semibold text-[#344054] mb-2">Designation</label>
                   <input
                     type="text"
                     value={formData.designation}
                     onChange={(e) => updateForm("designation", e.target.value)}
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
+                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-[#101828] placeholder-gray-400 focus:outline-none focus:border-[#6C4AB6] focus:ring-2 focus:ring-[#6C4AB6]/20 transition-all shadow-sm"
                     placeholder="e.g. Chief Medical Officer, Founder, Professor"
                   />
-                  {errors.designation && <p className="text-red-400 mt-1 text-sm">{errors.designation}</p>}
+                  {errors.designation && <p className="text-red-500 mt-1 text-sm font-medium">{errors.designation}</p>}
                 </div>
               </div>
             </motion.div>
@@ -461,32 +487,37 @@ export default function Nominations() {
           {step === 4 && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
               <div className="mb-8 flex items-center gap-3">
-                <FileText className="w-6 h-6 text-blue-400" />
-                <h2 className="text-3xl font-bold">Contact Details</h2>
+                <div className="w-10 h-10 rounded-xl bg-[#6C4AB6]/10 text-[#6C4AB6] flex items-center justify-center">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-[#101828]">Contact Details</h2>
+                  <p className="text-sm text-[#475467]">Provide verified contact information for communication.</p>
+                </div>
               </div>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold text-white/70 mb-2">Email Address</label>
+                  <label className="block text-sm font-semibold text-[#344054] mb-2">Email Address</label>
                   <input
                     type="email"
                     value={formData.email}
                     onChange={(e) => updateForm("email", e.target.value)}
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
+                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-[#101828] placeholder-gray-400 focus:outline-none focus:border-[#6C4AB6] focus:ring-2 focus:ring-[#6C4AB6]/20 transition-all shadow-sm"
                     placeholder="name@example.com"
                   />
-                  {errors.email && <p className="text-red-400 mt-1 text-sm">{errors.email}</p>}
+                  {errors.email && <p className="text-red-500 mt-1 text-sm font-medium">{errors.email}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-white/70 mb-2">Mobile Number / WhatsApp</label>
+                  <label className="block text-sm font-semibold text-[#344054] mb-2">Mobile Number / WhatsApp</label>
                   <input
                     type="tel"
                     value={formData.mobile}
                     onChange={(e) => updateForm("mobile", e.target.value)}
-                    className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
+                    className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-[#101828] placeholder-gray-400 focus:outline-none focus:border-[#6C4AB6] focus:ring-2 focus:ring-[#6C4AB6]/20 transition-all shadow-sm"
                     placeholder="+91 98765 43210"
                   />
-                  <p className="text-xs text-white/40 mt-1 font-['DM_Sans']">Please include country code if outside India.</p>
-                  {errors.mobile && <p className="text-red-400 mt-1 text-sm">{errors.mobile}</p>}
+                  <p className="text-xs text-gray-500 mt-1.5">Please include country code if outside India.</p>
+                  {errors.mobile && <p className="text-red-500 mt-1 text-sm font-medium">{errors.mobile}</p>}
                 </div>
               </div>
             </motion.div>
@@ -496,10 +527,12 @@ export default function Nominations() {
           {step === 5 && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
               <div className="mb-8 flex items-center gap-3">
-                <Share2 className="w-6 h-6 text-blue-400" />
+                <div className="w-10 h-10 rounded-xl bg-[#6C4AB6]/10 text-[#6C4AB6] flex items-center justify-center">
+                  <Share2 className="w-5 h-5" />
+                </div>
                 <div>
-                  <h2 className="text-3xl font-bold mb-1">Social & Professional Links</h2>
-                  <p className="text-white/50 text-sm font-['DM_Sans']">Help us learn more about your work.</p>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-[#101828]">Social & Professional Links</h2>
+                  <p className="text-sm text-[#475467]">Help the jury learn more about your contributions.</p>
                 </div>
               </div>
               
@@ -509,10 +542,10 @@ export default function Nominations() {
                     <select
                       value={link.platform}
                       onChange={(e) => updateSocialLink(index, "platform", e.target.value)}
-                      className="bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 shadow-inner w-full sm:w-48 shrink-0 appearance-none transition-all"
+                      className="bg-white border border-gray-300 rounded-xl px-4 py-3 text-[#101828] focus:outline-none focus:border-[#6C4AB6] focus:ring-2 focus:ring-[#6C4AB6]/20 shadow-sm w-full sm:w-48 shrink-0"
                     >
                       {["LinkedIn", "Instagram", "X / Twitter", "Facebook", "Personal Website", "Other"].map(opt => (
-                        <option key={opt} value={opt} className="bg-[#0a0a0f] text-white">{opt}</option>
+                        <option key={opt} value={opt}>{opt}</option>
                       ))}
                     </select>
                     <div className="relative w-full">
@@ -521,44 +554,51 @@ export default function Nominations() {
                         value={link.url}
                         onChange={(e) => updateSocialLink(index, "url", e.target.value)}
                         placeholder="https://"
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all shadow-inner"
+                        className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-[#101828] placeholder-gray-400 focus:outline-none focus:border-[#6C4AB6] focus:ring-2 focus:ring-[#6C4AB6]/20 transition-all shadow-sm"
                       />
                     </div>
                     {formData.socialLinks.length > 1 && (
                       <button
+                        type="button"
                         onClick={() => removeSocialLink(index)}
-                        className="p-3 text-white/40 hover:text-red-400 hover:bg-white/[0.03] rounded-xl transition-colors shrink-0"
+                        className="p-3 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors shrink-0"
                       >
                         <X className="w-5 h-5" />
                       </button>
                     )}
-                    {errors[`social_${index}`] && <p className="text-red-400 mt-1 text-sm sm:hidden">{errors[`social_${index}`]}</p>}
+                    {errors[`social_${index}`] && <p className="text-red-500 mt-1 text-sm sm:hidden font-medium">{errors[`social_${index}`]}</p>}
                   </div>
                 ))}
               </div>
               
               <button
+                type="button"
                 onClick={addSocialLink}
-                className="mt-6 text-sm font-bold text-blue-400 hover:text-blue-300 flex items-center gap-2 transition-colors"
+                className="mt-6 text-sm font-bold text-[#6C4AB6] hover:text-[#e244b7] flex items-center gap-2 transition-colors"
               >
                 + Add another link
               </button>
             </motion.div>
           )}
 
-          {/* STEP 6: Document Uploads & Review */}
+          {/* STEP 6: Document Uploads */}
           {step === 6 && (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
               <div className="mb-8 flex items-center gap-3">
-                <Upload className="w-6 h-6 text-blue-400" />
-                <h2 className="text-3xl font-bold">Document Uploads</h2>
+                <div className="w-10 h-10 rounded-xl bg-[#6C4AB6]/10 text-[#6C4AB6] flex items-center justify-center">
+                  <Upload className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-[#101828]">Document Uploads</h2>
+                  <p className="text-sm text-[#475467]">Attach your curriculum vitae and candidate portrait.</p>
+                </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* CV Upload */}
                 <div>
-                  <label className="block text-sm font-semibold text-white/70 mb-3">Upload CV (PDF Only)</label>
-                  <div className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center hover:bg-white/[0.02] hover:border-blue-500/50 transition-all group relative">
+                  <label className="block text-sm font-semibold text-[#344054] mb-3">Upload CV (PDF Only)</label>
+                  <div className="border-2 border-dashed border-gray-300 hover:border-[#6C4AB6] bg-white rounded-2xl p-8 text-center transition-all group relative shadow-sm">
                     <input
                       type="file"
                       accept=".pdf"
@@ -566,28 +606,28 @@ export default function Nominations() {
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
                     <div className="pointer-events-none">
-                      <FileText className="w-10 h-10 mx-auto mb-4 text-white/30 group-hover:text-blue-400 transition-colors" />
+                      <FileText className="w-10 h-10 mx-auto mb-4 text-gray-400 group-hover:text-[#6C4AB6] transition-colors" />
                       {formData.cvFile ? (
                         <div>
-                          <p className="text-white font-semibold truncate max-w-[200px] mx-auto">{formData.cvFile.name}</p>
-                          <p className="text-white/40 text-xs mt-1">{(formData.cvFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                          <span className="text-blue-400 text-sm mt-3 inline-block">Replace File</span>
+                          <p className="text-[#101828] font-semibold truncate max-w-[200px] mx-auto">{formData.cvFile.name}</p>
+                          <p className="text-gray-500 text-xs mt-1">{(formData.cvFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                          <span className="text-[#6C4AB6] text-sm mt-3 inline-block font-semibold">Replace File</span>
                         </div>
                       ) : (
                         <div>
-                          <p className="text-white/70 font-semibold mb-1">Click or drag & drop</p>
-                          <p className="text-white/40 text-xs">Maximum size 5MB</p>
+                          <p className="text-[#101828] font-semibold mb-1">Click or drag & drop</p>
+                          <p className="text-gray-500 text-xs">Maximum size 5MB (PDF only)</p>
                         </div>
                       )}
                     </div>
                   </div>
-                  {errors.cvFile && <p className="text-red-400 mt-2 text-sm">{errors.cvFile}</p>}
+                  {errors.cvFile && <p className="text-red-500 mt-2 text-sm font-medium">{errors.cvFile}</p>}
                 </div>
 
                 {/* Photo Upload */}
                 <div>
-                  <label className="block text-sm font-semibold text-white/70 mb-3">Upload Photo</label>
-                  <div className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center hover:bg-white/[0.02] hover:border-blue-500/50 transition-all group relative">
+                  <label className="block text-sm font-semibold text-[#344054] mb-3">Upload Photo</label>
+                  <div className="border-2 border-dashed border-gray-300 hover:border-[#6C4AB6] bg-white rounded-2xl p-8 text-center transition-all group relative shadow-sm">
                     <input
                       type="file"
                       accept="image/*"
@@ -595,49 +635,73 @@ export default function Nominations() {
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     />
                     <div className="pointer-events-none">
-                      <User className="w-10 h-10 mx-auto mb-4 text-white/30 group-hover:text-blue-400 transition-colors" />
+                      <User className="w-10 h-10 mx-auto mb-4 text-gray-400 group-hover:text-[#6C4AB6] transition-colors" />
                       {formData.photoFile ? (
                         <div>
-                          <p className="text-white font-semibold truncate max-w-[200px] mx-auto">{formData.photoFile.name}</p>
-                          <p className="text-white/40 text-xs mt-1">{(formData.photoFile.size / 1024 / 1024).toFixed(2)} MB</p>
-                          <span className="text-blue-400 text-sm mt-3 inline-block">Replace File</span>
+                          <p className="text-[#101828] font-semibold truncate max-w-[200px] mx-auto">{formData.photoFile.name}</p>
+                          <p className="text-gray-500 text-xs mt-1">{(formData.photoFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                          <span className="text-[#6C4AB6] text-sm mt-3 inline-block font-semibold">Replace File</span>
                         </div>
                       ) : (
                         <div>
-                          <p className="text-white/70 font-semibold mb-1">Click or drag & drop</p>
-                          <p className="text-white/40 text-xs">High resolution format</p>
+                          <p className="text-[#101828] font-semibold mb-1">Click or drag & drop</p>
+                          <p className="text-gray-500 text-xs">High resolution JPG or PNG format</p>
                         </div>
                       )}
                     </div>
                   </div>
-                  {errors.photoFile && <p className="text-red-400 mt-2 text-sm">{errors.photoFile}</p>}
+                  {errors.photoFile && <p className="text-red-500 mt-2 text-sm font-medium">{errors.photoFile}</p>}
                 </div>
               </div>
             </motion.div>
           )}
           
           {step === 7 && (
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-10">
-              <BadgeCheck className="w-20 h-20 text-emerald-400 mx-auto mb-6" />
-              <h2 className="text-3xl font-bold mb-4">Review & Payment</h2>
-              <p className="text-white/60 mb-8 max-w-lg mx-auto">
-                Please proceed to pay the ₹5,000 nomination fee. This mock step confirms your details are ready for Razorpay integration.
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-8">
+              <div className="w-20 h-20 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-6">
+                <BadgeCheck className="w-12 h-12" />
+              </div>
+              <h2 className="text-3xl font-extrabold text-[#101828] mb-3">Review & Submit Nomination</h2>
+              <p className="text-[#475467] mb-8 max-w-lg mx-auto text-base">
+                Your nomination for <strong className="text-[#6C4AB6]">{awardsList.find(a => a.id === formData.awardId)?.name}</strong> is ready. Proceed to complete the ₹5,000 nomination fee.
               </p>
+
+              <div className="max-w-md mx-auto bg-white p-6 rounded-2xl border border-gray-200 text-left mb-8 text-sm space-y-2 shadow-sm">
+                <div className="flex justify-between py-1 border-b border-gray-100">
+                  <span className="text-gray-500">Candidate:</span>
+                  <span className="font-semibold text-gray-900">{formData.fullName}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-gray-100">
+                  <span className="text-gray-500">Category:</span>
+                  <span className="font-semibold text-gray-900">{awardsList.find(a => a.id === formData.awardId)?.name}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-gray-100">
+                  <span className="text-gray-500">Email:</span>
+                  <span className="font-semibold text-gray-900">{formData.email}</span>
+                </div>
+                <div className="flex justify-between py-1">
+                  <span className="text-gray-500">Fee Amount:</span>
+                  <span className="font-bold text-[#6C4AB6]">₹5,000 (Complimentary Pass Included)</span>
+                </div>
+              </div>
+
               <button 
-                className="px-8 py-4 rounded-full bg-gradient-to-r from-blue-600 to-blue-500 text-white font-bold text-lg hover:-translate-y-0.5 transition-transform shadow-[0_0_20px_rgba(37,99,235,0.3)]"
+                type="button"
+                className="px-10 py-4 rounded-full bg-gradient-to-r from-[#6C4AB6] to-[#e244b7] text-white font-bold text-lg hover:opacity-95 transition-transform shadow-lg shadow-[#e244b7]/30 hover:-translate-y-0.5"
                 onClick={() => alert("Proceeding to Razorpay checkout (mock)")}
               >
-                Pay ₹5,000 & Submit
+                Pay ₹5,000 & Submit Nomination
               </button>
             </motion.div>
           )}
 
           {/* Navigation Buttons */}
-          <div className="mt-12 pt-8 border-t border-white/10 flex items-center justify-between">
+          <div className="mt-12 pt-8 border-t border-gray-100 flex items-center justify-between">
             {step > 1 ? (
               <button
+                type="button"
                 onClick={handlePrev}
-                className="flex items-center gap-2 px-6 py-3 rounded-full bg-white/[0.05] hover:bg-white/10 text-white font-semibold transition-colors"
+                className="flex items-center gap-2 px-6 py-3 rounded-full bg-white border border-gray-200 hover:bg-gray-50 text-[#344054] font-semibold transition-colors text-sm shadow-sm"
               >
                 <ArrowLeft className="w-4 h-4" /> Back
               </button>
@@ -645,15 +709,17 @@ export default function Nominations() {
             
             {step < 6 ? (
               <button
+                type="button"
                 onClick={handleNext}
-                className="flex items-center gap-2 px-8 py-3 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold transition-colors shadow-lg shadow-blue-500/20"
+                className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-[#6C4AB6] to-[#e244b7] hover:opacity-95 text-white font-bold transition-all shadow-md shadow-[#e244b7]/25 text-sm"
               >
                 {step === 1 ? "Start Your Nomination" : "Continue"} <ArrowRight className="w-4 h-4" />
               </button>
             ) : step === 6 ? (
               <button
+                type="button"
                 onClick={handleNext}
-                className="flex items-center gap-2 px-8 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition-colors shadow-lg shadow-emerald-500/20"
+                className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-[#6C4AB6] to-[#e244b7] hover:opacity-95 text-white font-bold transition-all shadow-md shadow-[#e244b7]/25 text-sm"
               >
                 Review Application <ArrowRight className="w-4 h-4" />
               </button>

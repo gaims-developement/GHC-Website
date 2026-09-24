@@ -48,8 +48,8 @@ function SummaryCard({ title, value, helper, icon: Icon }) {
   return <article className="admin-kpi-card"><Icon size={20} /><strong>{value}</strong><span>{title}</span>{helper && <small>{helper}</small>}</article>;
 }
 
-function AdminPartners({ api }) {
-  const [tab, setTab] = useState("partners");
+function AdminPartners({ api, initialTab = "partners" }) {
+  const [tab, setTab] = useState(initialTab);
 
   return (
     <div className="admin-speakers-page partner-hub">

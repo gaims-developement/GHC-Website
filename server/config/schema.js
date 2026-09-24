@@ -244,7 +244,10 @@ const rolePermissionMap = {
   EDITOR: ['dashboard.view', 'view_registrations'],
   VIEWER: ['dashboard.view', 'view_registrations'],
   MEDIA: ['dashboard.view', 'media.manage', 'upload_resources'],
-  RESEARCH: ['dashboard.view', 'research.manage', 'manage_abstracts', 'manage_reviewers', 'assign_reviewers', 'review_abstracts', 'manage_awards', 'manage_judges', 'publish_scientific_program'],
+  RESEARCH: ['research.manage', 'manage_abstracts', 'manage_reviewers', 'assign_reviewers', 'review_abstracts', 'manage_judges', 'publish_scientific_program'],
+  SCIENTIFIC_CHAIRPERSON: ['research.manage', 'manage_abstracts', 'manage_reviewers', 'assign_reviewers', 'review_abstracts', 'manage_judges', 'publish_scientific_program'],
+  SCIENTIFIC_REVIEWER: ['review_abstracts'],
+  REVIEWER: ['review_abstracts'],
   VOLUNTEER: ['dashboard.view', 'checkin.scan', 'attendance.manage', 'operations.view', 'manage_registrations', 'view_registrations', 'manage_checkins'],
   CHECKIN: ['dashboard.view', 'checkin.scan', 'attendance.manage'],
   OPERATIONS: ['dashboard.view', 'analytics.view', 'checkin.scan', 'attendance.manage', 'operations.view', 'certificates.manage'],
@@ -582,6 +585,22 @@ const createSpeakerTables = async () => {
       approved_by INT NULL,
       CONSTRAINT fk_cme_records_session_id FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE,
       CONSTRAINT fk_cme_records_approved_by FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS schedules (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      day VARCHAR(50) NOT NULL,
+      date VARCHAR(50) NOT NULL,
+      time VARCHAR(50) NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      description TEXT NOT NULL,
+      image_url TEXT,
+      location VARCHAR(255),
+      speaker VARCHAR(255),
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `);
 };
@@ -1694,6 +1713,13 @@ const createResearchTables = async () => {
       designation VARCHAR(255),
       institution VARCHAR(255),
       country VARCHAR(100),
+      status VARCHAR(30) DEFAULT 'active',
+      suspension_reason TEXT NULL,
+      suspended_at DATETIME NULL,
+      suspended_by INT NULL,
+      reinstatement_status VARCHAR(30) DEFAULT 'none',
+      reinstatement_reason TEXT NULL,
+      reinstatement_requested_at DATETIME NULL,
       UNIQUE KEY uq_reviewers_user_id (user_id),
       CONSTRAINT fk_reviewers_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
@@ -3151,6 +3177,18 @@ const createCommitteeTables = async () => {
   `);
 };
 
+const createNewsletterTables = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      email VARCHAR(255) NOT NULL UNIQUE,
+      status ENUM('active', 'unsubscribed') DEFAULT 'active',
+      subscribed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+};
+
 const initializeDatabase = async () => {
   try {
     await createAuthTables();
@@ -3170,6 +3208,7 @@ const initializeDatabase = async () => {
     await createMobileTables();
     await createCoreArchitectureTables();
     await createCommitteeTables();
+    await createNewsletterTables();
     await seedAuthData();
     await seedCoreArchitectureData();
     await seedSpeakers();
@@ -3212,4 +3251,6 @@ module.exports = {
   seedResearch,
   seedTickets,
   createCommitteeTables,
+  createNewsletterTables,
+  rolePermissionMap,
 };

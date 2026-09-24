@@ -196,7 +196,13 @@ const eventContext = async (req, res, next) => {
     const globalRequested = reference?.type === 'global' || getRequestedGlobalView(req);
     if (globalRequested) {
       if (!isSuperAdmin) {
-        return res.status(403).json({ message: 'Global event view requires Super Admin access' });
+        const defaultEv = await findDefaultActiveEvent();
+        req.eventContext = buildContext({
+          event: defaultEv,
+          isSuperAdmin: false,
+          eventIds: defaultEv ? [defaultEv.id] : [],
+        });
+        return next();
       }
 
       req.eventContext = buildContext({

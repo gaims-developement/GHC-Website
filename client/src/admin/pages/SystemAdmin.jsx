@@ -22,8 +22,8 @@ function DataTable({ columns, rows, empty = "No records found." }) {
   );
 }
 
-function SystemAdmin({ api, onNavigate }) {
-  const [activeTab, setActiveTab] = useState("dashboard");
+function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");

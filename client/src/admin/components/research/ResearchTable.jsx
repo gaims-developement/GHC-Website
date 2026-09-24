@@ -8,7 +8,7 @@ function ResearchTable({ onAssignReviewer, onAward, onDelete, onEdit, onReject, 
 
     return (
       <div className={mobile ? "speaker-actions mobile-actions" : "speaker-actions"}>
-        <button onClick={() => onPreview(submission)} title="Preview"><Eye size={16} />{mobile && "Preview"}</button>
+        <button onClick={() => onPreview(submission)} title="View Abstract"><Eye size={16} />{mobile && "View Abstract"}</button>
         <button onClick={() => onScore(submission)} title="Scoring"><Star size={16} />{mobile && "Scoring"}</button>
         {!isFinal && (
           <>

@@ -184,6 +184,18 @@ function Schedule({ api }) {
     loadData();
   };
 
+  const handleDeleteSession = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this session?")) return;
+    try {
+      await api.delete(`/api/speakers/sessions/${id}`);
+      setSessionModal(null);
+      loadData();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete session");
+    }
+  };
+
   const unscheduled = sessions.filter(s => !s.hall_id);
   const scheduled = sessions.filter(s => s.hall_id);
 
@@ -196,7 +208,7 @@ function Schedule({ api }) {
             <h1>Master Schedule</h1>
             <p className="admin-muted">Drag and drop sessions into halls. Manage CME and Halls in one place.</p>
           </div>
-          <button className="admin-primary-button" onClick={() => setSessionModal({ title: "", status: "draft" })}>
+          <button className="admin-primary-button" onClick={() => setSessionModal({ title: "", status: "draft", session_type: "lecture" })}>
             <Plus size={18} /> New Session
           </button>
         </div>
@@ -275,7 +287,7 @@ function Schedule({ api }) {
       {sessionModal && (
         <div style={{ position: "fixed", inset: 0, backgroundColor: "rgba(15, 23, 42, 0.6)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "1rem" }}>
           <form className="admin-panel" style={{ width: "100%", maxWidth: "800px", maxHeight: "90vh", overflowY: "auto", borderRadius: "16px", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }} onSubmit={saveSession}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem", paddingBottom: "1rem", borderBottom: "1px solid #e2e8f0" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", paddingBottom: "1rem", borderBottom: "1px solid #e2e8f0" }}>
               <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: "600", color: "#0f172a" }}>{sessionModal.id ? "Edit Session" : "New Session"}</h2>
               <button type="button" onClick={() => setSessionModal(null)} style={{ background: "#f1f5f9", border: "none", width: "32px", height: "32px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "#64748b", transition: "background 0.2s" }} onMouseEnter={(e) => e.currentTarget.style.background = "#e2e8f0"} onMouseLeave={(e) => e.currentTarget.style.background = "#f1f5f9"}>&times;</button>
             </div>
@@ -288,21 +300,67 @@ function Schedule({ api }) {
             )}
 
             <div className="super-form-grid" style={{ gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-              <label style={{ gridColumn: "1 / -1" }}>Title<input value={sessionModal.title || ""} onChange={(e) => setSessionModal({...sessionModal, title: e.target.value})} required /></label>
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                <h3 style={{ fontSize: "1.1rem", borderBottom: "1px solid #eee", paddingBottom: "0.5rem" }}>Scheduling</h3>
+              <label style={{ gridColumn: "1 / -1" }}>Title<input value={sessionModal.title || ""} onChange={(e) => setSessionModal({...sessionModal, title: e.target.value})} placeholder="Session title" required /></label>
+              
+              <label style={{ gridColumn: "1 / -1" }}>
+                Description
+                <textarea 
+                  rows={3} 
+                  value={sessionModal.description || ""} 
+                  onChange={(e) => setSessionModal({...sessionModal, description: e.target.value})} 
+                  placeholder="Overview of the session, topics covered, target audience..." 
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", border: "1px solid #cbd5e1", marginTop: "4px", fontSize: "13px", resize: "vertical" }} 
+                />
+              </label>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#0f172a", borderBottom: "1px solid #eee", paddingBottom: "0.5rem", margin: 0 }}>Date & Hall</h3>
+                
+                <div>
+                  <small style={{ display: "block", color: "#64748b", marginBottom: "6px", fontWeight: "600" }}>Quick Conference Day Presets:</small>
+                  <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                    <button type="button" className="admin-secondary-button" style={{ fontSize: "11px", padding: "4px 8px" }} onClick={() => {
+                      const startTime = sessionModal.start_time ? `2026-11-22T${String(sessionModal.start_time).slice(11, 16) || '09:00'}` : "2026-11-22T09:00";
+                      const endTime = sessionModal.end_time ? `2026-11-22T${String(sessionModal.end_time).slice(11, 16) || '10:30'}` : "2026-11-22T10:30";
+                      setSessionModal(prev => ({ ...prev, start_time: startTime, end_time: endTime }));
+                    }}>Day 1 (Nov 22)</button>
+                    <button type="button" className="admin-secondary-button" style={{ fontSize: "11px", padding: "4px 8px" }} onClick={() => {
+                      const startTime = sessionModal.start_time ? `2026-11-23T${String(sessionModal.start_time).slice(11, 16) || '09:00'}` : "2026-11-23T09:00";
+                      const endTime = sessionModal.end_time ? `2026-11-23T${String(sessionModal.end_time).slice(11, 16) || '10:30'}` : "2026-11-23T10:30";
+                      setSessionModal(prev => ({ ...prev, start_time: startTime, end_time: endTime }));
+                    }}>Day 2 (Nov 23)</button>
+                    <button type="button" className="admin-secondary-button" style={{ fontSize: "11px", padding: "4px 8px" }} onClick={() => {
+                      const startTime = sessionModal.start_time ? `2026-11-24T${String(sessionModal.start_time).slice(11, 16) || '09:00'}` : "2026-11-24T09:00";
+                      const endTime = sessionModal.end_time ? `2026-11-24T${String(sessionModal.end_time).slice(11, 16) || '10:30'}` : "2026-11-24T10:30";
+                      setSessionModal(prev => ({ ...prev, start_time: startTime, end_time: endTime }));
+                    }}>Day 3 (Nov 24)</button>
+                  </div>
+                </div>
+
                 <label>Hall<select value={sessionModal.hall_id || ""} onChange={(e) => setSessionModal({...sessionModal, hall_id: e.target.value})}><option value="">Unassigned</option>{halls.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}</select></label>
                 <label>Start Time<input type="datetime-local" value={sessionModal.start_time ? String(sessionModal.start_time).slice(0,16) : ""} onChange={(e) => setSessionModal({...sessionModal, start_time: e.target.value})} /></label>
                 <label>End Time<input type="datetime-local" value={sessionModal.end_time ? String(sessionModal.end_time).slice(0,16) : ""} onChange={(e) => setSessionModal({...sessionModal, end_time: e.target.value})} /></label>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                <h3 style={{ fontSize: "1.1rem", borderBottom: "1px solid #eee", paddingBottom: "0.5rem" }}>Details & CME</h3>
-                <label>Speaker<select value={sessionModal.speaker_id || ""} onChange={(e) => setSessionModal({...sessionModal, speaker_id: e.target.value})}><option value="">Unassigned</option>{speakers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-                <label>CME Points<input type="number" value={sessionModal.cme_credit_points || 0} onChange={(e) => setSessionModal({...sessionModal, cme_credit_points: e.target.value})} /></label>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
+                <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#0f172a", borderBottom: "1px solid #eee", paddingBottom: "0.5rem", margin: 0 }}>Details, Speaker & CME</h3>
+                <label>Speaker<select value={sessionModal.speaker_id || ""} onChange={(e) => setSessionModal({...sessionModal, speaker_id: e.target.value})}><option value="">Unassigned</option>{speakers.map(s => <option key={s.id} value={s.id}>{s.name || s.full_name}</option>)}</select></label>
+                <label>Track<select value={sessionModal.track_id || ""} onChange={(e) => setSessionModal({...sessionModal, track_id: e.target.value})}><option value="">None / General</option>{tracks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+                <label>Session Type<select value={sessionModal.session_type || "lecture"} onChange={(e) => setSessionModal({...sessionModal, session_type: e.target.value})}><option value="lecture">Lecture</option><option value="keynote">Keynote</option><option value="panel">Panel Discussion</option><option value="workshop">Workshop</option><option value="breakout">Breakout Session</option></select></label>
+                <label>CME Credit Points<input type="number" step="0.5" value={sessionModal.cme_credit_points || 0} onChange={(e) => setSessionModal({...sessionModal, cme_credit_points: e.target.value})} /></label>
               </div>
             </div>
-            <div style={{ display: "flex", gap: "1rem", marginTop: "2rem", paddingTop: "1rem", borderTop: "1px solid #eee" }}>
-              <button className="admin-primary-button" type="submit">Save Session</button>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "2rem", paddingTop: "1rem", borderTop: "1px solid #eee" }}>
+              {sessionModal.id ? (
+                <button type="button" className="admin-secondary-button" style={{ color: "#ef4444", borderColor: "#fca5a5" }} onClick={() => handleDeleteSession(sessionModal.id)}>
+                  Delete Session
+                </button>
+              ) : <div />}
+              <div style={{ display: "flex", gap: "0.75rem" }}>
+                <button type="button" className="admin-secondary-button" onClick={() => setSessionModal(null)}>Cancel</button>
+                <button className="admin-primary-button" type="submit">Save Session</button>
+              </div>
             </div>
           </form>
         </div>

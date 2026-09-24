@@ -11,15 +11,16 @@ const quickItems = [
 
 const moreItems = [
   { label: "Home", to: "/", icon: Home },
-  { label: "About", to: "/#about", icon: Info },
-  { label: "Tracks", to: "/#tracks", icon: Stethoscope },
+  { label: "About", to: "/about", icon: Info },
   { label: "Speakers", to: "/#world-class-speakers", icon: Mic2 },
   { label: "Workshops", to: "/#workshops-experience", icon: CalendarDays },
-  { label: "Timeline", to: "/#ghc-timeline", icon: CalendarDays },
-  { label: "Research", to: "/#research-hub", icon: Info },
-  { label: "Register", to: "/register", icon: Ticket },
-  { label: "Submit Abstract", to: "/abstract-registration", icon: Ticket },
+  { label: "Schedule", to: "/#ghc-timeline", icon: CalendarDays },
+  { label: "Abstract Submission", to: "/abstract-registration", icon: Ticket },
+  { label: "Awards", to: "/#awards", icon: Ticket },
+  { label: "Venue", to: "/venue", icon: Home },
+  { label: "Committees", to: "/committees", icon: MoreHorizontal },
   { label: "Contact", to: "/#contact", icon: MoreHorizontal },
+  { label: "Register", to: "/register", icon: Ticket },
 ];
 
 function MobileRadialNav() {
@@ -71,11 +72,11 @@ function MobileRadialNav() {
             grid-template-columns: 1fr 1.14fr 1fr 1fr;
             align-items: center;
             gap: 2px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.06);
             border-radius: 32px;
-            background: rgba(18, 6, 40, 0.86);
+            background: rgba(225, 240, 255, 0.88);
             padding: clamp(8px, 2.4vw, 10px) clamp(10px, 3.6vw, 14px);
-            box-shadow: 0 18px 60px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
             backdrop-filter: blur(20px);
             font-family: Inter, Outfit, system-ui, sans-serif;
           }
@@ -89,7 +90,7 @@ function MobileRadialNav() {
             border: 0;
             border-radius: 22px;
             background: transparent;
-            color: rgba(255, 255, 255, 0.45);
+            color: rgba(16, 24, 40, 0.55);
             font-size: clamp(9px, 2.7vw, 10px);
             font-weight: 800;
             line-height: 1;
@@ -109,12 +110,12 @@ function MobileRadialNav() {
 
           .mobile-bottom-nav a.active,
           .mobile-bottom-nav button.active {
-            color: #ff3b8b;
+            color: #173B8F;
           }
 
           .mobile-bottom-home {
             transform: translateY(-5px);
-            color: #ff3b8b !important;
+            color: #173B8F !important;
           }
 
           .mobile-bottom-home .home-icon-shell {
@@ -122,10 +123,10 @@ function MobileRadialNav() {
             width: clamp(2.18rem, 10vw, 2.45rem);
             aspect-ratio: 1;
             place-items: center;
-            border: 1px solid rgba(255, 59, 139, 0.52);
+            border: 1px solid rgba(23, 59, 143, 0.52);
             border-radius: 999px;
-            background: rgba(255, 59, 139, 0.1);
-            box-shadow: 0 0 24px rgba(255, 59, 139, 0.22);
+            background: rgba(23, 59, 143, 0.1);
+            box-shadow: 0 0 24px rgba(23, 59, 143, 0.22);
           }
 
           .mobile-more-backdrop {
@@ -148,11 +149,11 @@ function MobileRadialNav() {
             gap: 0.35rem;
             max-height: min(62vh, 30rem);
             overflow-y: auto;
-            border: 1px solid rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(0, 0, 0, 0.06);
             border-radius: 28px;
-            background: rgba(18, 6, 40, 0.92);
+            background: rgba(230, 240, 255, 0.95);
             padding: 0.85rem;
-            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.5);
             backdrop-filter: blur(24px);
             font-family: Inter, Outfit, system-ui, sans-serif;
           }
@@ -162,7 +163,7 @@ function MobileRadialNav() {
             align-items: center;
             justify-content: space-between;
             padding: 0.35rem 0.4rem 0.55rem;
-            color: rgba(255, 255, 255, 0.62);
+            color: rgba(16, 24, 40, 0.5);
             font-size: 0.72rem;
             font-weight: 900;
             letter-spacing: 0.12em;
@@ -174,10 +175,10 @@ function MobileRadialNav() {
             grid-template-columns: auto 1fr auto;
             align-items: center;
             gap: 0.78rem;
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.04);
             border-radius: 18px;
-            background: rgba(255, 255, 255, 0.055);
-            color: rgba(255, 255, 255, 0.84);
+            background: rgba(255, 255, 255, 0.6);
+            color: rgba(16, 24, 40, 0.85);
             padding: 0.82rem 0.9rem;
             font-size: 0.9rem;
             font-weight: 850;
@@ -186,7 +187,7 @@ function MobileRadialNav() {
           .mobile-more-sheet a svg {
             width: 18px;
             height: 18px;
-            color: #ff6eb0;
+            color: #173B8F;
           }
 
           @media (max-width: 360px) {

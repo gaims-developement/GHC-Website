@@ -5,35 +5,36 @@
    ========================================================================== */
 
 :root {
-  --ghc-primary: #2563eb;
-  --ghc-primary-strong: #1d4ed8;
-  --ghc-primary-soft: #dbeafe;
-  --ghc-primary-muted: #bfdbfe;
-  --ghc-accent: #2563eb;
-  --ghc-bg: #f8fafc;
-  --ghc-surface: #ffffff;
-  --ghc-surface-alt: #f1f5f9;
-  --ghc-border: #e2e8f0;
-  --ghc-border-soft: #f8fafc;
-  --ghc-text: #0f172a;
-  --ghc-text-secondary: #475569;
-  --ghc-text-muted: #64748b;
-  --ghc-success: #10b981;
-  --ghc-success-soft: #d1fae5;
-  --ghc-warning: #f59e0b;
-  --ghc-warning-soft: #fef3c7;
-  --ghc-danger: #ef4444;
-  --ghc-danger-soft: #fee2e2;
-  --ghc-info: #3b82f6;
-  --ghc-info-soft: #dbeafe;
-  --ghc-radius: 14px;
-  --ghc-radius-sm: 10px;
-  --ghc-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --ghc-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  --ghc-shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
-  --ghc-sidebar-w: 252px;
-  --ghc-sidebar-w-collapsed: 72px;
-  --ghc-topbar-h: 60px;
+  --ghc-primary: #6C63FF;
+  --ghc-primary-strong: #5952D4;
+  --ghc-primary-soft: #F0EEFF;
+  --ghc-primary-muted: #D9D6FE;
+  --ghc-accent: #6C63FF;
+  --ghc-bg: #F7F7FC;
+  --ghc-surface: #FFFFFF;
+  --ghc-surface-alt: #FAFAFD;
+  --ghc-border: #E9E9F2;
+  --ghc-border-soft: #F4F4F9;
+  --ghc-text: #17172B;
+  --ghc-text-secondary: #77778A;
+  --ghc-text-muted: #A0A0B3;
+  --ghc-success: #48B89B;
+  --ghc-success-soft: #E4F7F2;
+  --ghc-warning: #F4B740;
+  --ghc-warning-soft: #FDF5E6;
+  --ghc-danger: #E96A7A;
+  --ghc-danger-soft: #FDF0F2;
+  --ghc-info: #6C63FF;
+  --ghc-info-soft: #F0EEFF;
+  --ghc-radius: 18px;
+  --ghc-radius-sm: 12px;
+  --ghc-radius-lg: 24px;
+  --ghc-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.03);
+  --ghc-shadow: 0 8px 24px rgba(23, 23, 43, 0.04), 0 2px 8px rgba(23, 23, 43, 0.02);
+  --ghc-shadow-md: 0 16px 40px rgba(23, 23, 43, 0.06), 0 4px 12px rgba(23, 23, 43, 0.03);
+  --ghc-sidebar-w: 260px;
+  --ghc-sidebar-w-collapsed: 80px;
+  --ghc-topbar-h: 72px;
   --ghc-font: Inter, ui-sans-serif, system-ui, sans-serif;
   --ghc-font-display: Sora, Inter, ui-sans-serif, system-ui, sans-serif;
 }
@@ -270,9 +271,9 @@ textarea {
   height: 100vh;
   flex-direction: column;
   gap: 1rem;
-  border-right: none;
-  background: #0f172a;
-  padding: 1rem 0.85rem;
+  border-right: 1px solid var(--ghc-border);
+  background: var(--ghc-surface);
+  padding: 1.25rem 1rem;
   overflow: hidden;
   transition: width 190ms ease;
 }
@@ -286,24 +287,26 @@ textarea {
 
 .admin-brand .ghc-brand-mark {
   display: grid;
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 2.6rem;
+  height: 2.6rem;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 12px;
   color: #ffffff;
   background: linear-gradient(135deg, var(--ghc-primary), #A855F7);
   font-family: var(--ghc-font-display);
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 800;
+  box-shadow: 0 4px 10px rgba(108, 99, 255, 0.25);
 }
 
 .admin-brand strong {
   display: block;
   font-family: var(--ghc-font-display);
-  font-size: 1rem;
-  color: #ffffff;
+  font-size: 1.05rem;
+  color: var(--ghc-text);
   line-height: 1.1;
+  font-weight: 700;
 }
 
 .admin-brand small,
@@ -348,16 +351,41 @@ textarea {
   white-space: nowrap;
 }
 
-.admin-sidebar nav {
-  display: grid;
-  gap: 0.2rem;
+.admin-sidebar nav,
+.admin-nav-grouped {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
   overflow-y: auto;
   flex: 1;
   padding-right: 0.15rem;
   scrollbar-width: thin;
 }
 
-.admin-sidebar nav::-webkit-scrollbar {
+.admin-nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.admin-nav-section-title {
+  padding: 0.4rem 0.95rem 0.2rem;
+  color: #8B8BA7;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.admin-nav-section-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.admin-sidebar nav::-webkit-scrollbar,
+.admin-nav-grouped::-webkit-scrollbar {
   width: 4px;
 }
 
@@ -381,13 +409,13 @@ textarea {
   width: 100%;
   align-items: center;
   gap: 0.85rem;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.02);
+  border: none;
+  border-radius: 12px;
+  background: transparent;
   padding: 0.75rem 0.95rem;
-  color: #cbd5e1;
-  font-size: 0.98rem;
-  font-weight: 500;
+  color: var(--ghc-text-secondary);
+  font-size: 0.95rem;
+  font-weight: 600;
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
@@ -400,7 +428,7 @@ textarea {
   flex: 0 0 auto;
   width: 20px;
   height: 20px;
-  color: #94a3b8;
+  color: var(--ghc-text-muted);
   transition: color 120ms ease;
 }
 
@@ -409,13 +437,14 @@ textarea {
 .ghc-sb-item:hover,
 .ghc-sb-item:focus-visible,
 .admin-logout:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.12);
+  color: var(--ghc-primary);
+  background: var(--ghc-primary-soft);
+  border-color: transparent;
 }
 
-.ghc-sb-item:hover svg {
-  color: #cbd5e1;
+.ghc-sb-item:hover svg,
+.admin-sidebar nav button:hover svg {
+  color: var(--ghc-primary);
 }
 
 .admin-sidebar nav button.active,
@@ -423,8 +452,8 @@ textarea {
   color: #ffffff;
   background: var(--ghc-primary);
   border-color: transparent;
-  font-weight: 500;
-  box-shadow: none;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(108, 99, 255, 0.25);
 }
 
 .admin-sidebar nav button.active svg,
@@ -585,17 +614,18 @@ textarea {
   align-items: center;
   gap: 0.55rem;
   border: 1px solid var(--ghc-border);
-  border-radius: 10px;
-  background: var(--ghc-surface-alt);
-  padding: 0 0.85rem;
+  border-radius: 999px;
+  background: var(--ghc-surface);
+  padding: 0 1.25rem;
   color: var(--ghc-text-muted);
+  box-shadow: var(--ghc-shadow-sm);
   transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
 }
 
 .admin-search:focus-within {
   border-color: var(--ghc-primary);
   background: var(--ghc-surface);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+  box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.12);
 }
 
 .admin-search svg {
@@ -732,7 +762,8 @@ textarea {
   position: relative;
 }
 
-.ghc-profile {
+.ghc-profile,
+.admin-profile {
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -743,11 +774,13 @@ textarea {
   transition: background 120ms ease;
 }
 
-.ghc-profile:hover {
+.ghc-profile:hover,
+.admin-profile:hover {
   background: var(--ghc-surface-alt);
 }
 
-.ghc-profile-avatar {
+.ghc-profile-avatar,
+.admin-profile > span {
   display: grid;
   width: 2.2rem;
   height: 2.2rem;
@@ -761,7 +794,8 @@ textarea {
   font-weight: 700;
 }
 
-.ghc-profile strong {
+.ghc-profile strong,
+.admin-profile strong {
   display: block;
   font-size: 0.85rem;
   color: var(--ghc-text);
@@ -867,11 +901,11 @@ textarea {
 
 .admin-hero-panel,
 .admin-panel {
-  border: 1px solid var(--ghc-border);
-  border-radius: var(--ghc-radius);
+  border: none;
+  border-radius: var(--ghc-radius-lg);
   background: var(--ghc-surface);
-  box-shadow: var(--ghc-shadow);
-  padding: 1.35rem;
+  box-shadow: var(--ghc-shadow-md);
+  padding: 2rem;
 }
 
 .admin-hero-panel {
@@ -885,11 +919,11 @@ textarea {
 }
 
 .admin-kpi-card {
-  border: 1px solid var(--ghc-border);
+  border: none;
   border-radius: var(--ghc-radius);
   background: var(--ghc-surface);
-  box-shadow: var(--ghc-shadow);
-  padding: 1.15rem 1.25rem;
+  box-shadow: var(--ghc-shadow-md);
+  padding: 1.5rem 1.5rem;
   transition: transform 140ms ease, box-shadow 140ms ease;
 }
 
@@ -1051,7 +1085,7 @@ textarea {
 .speaker-search:focus-within {
   border-color: var(--ghc-primary);
   background: var(--ghc-surface);
-  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+  box-shadow: 0 0 0 4px rgba(108, 99, 255, 0.12);
 }
 
 .speaker-search svg {
@@ -1083,7 +1117,7 @@ textarea {
 .speaker-filter-row button,
 .speaker-form-actions button {
   border: 1px solid var(--ghc-border);
-  border-radius: 9px;
+  border-radius: 999px;
   background: var(--ghc-surface);
   padding: 0.55rem 0.8rem;
   color: var(--ghc-text-secondary);
@@ -1117,10 +1151,10 @@ textarea {
 .workshop-kpi-row span,
 .cms-workshop-card,
 .workshop-preview {
-  border: 1px solid var(--ghc-border);
+  border: none;
   border-radius: var(--ghc-radius);
   background: var(--ghc-surface);
-  box-shadow: var(--ghc-shadow);
+  box-shadow: var(--ghc-shadow-md);
 }
 
 .workshop-kpi-row span {
@@ -1148,9 +1182,9 @@ textarea {
   justify-content: center;
   gap: 0.5rem;
   border: 0;
-  border-radius: 10px;
+  border-radius: 999px;
   background: var(--ghc-primary);
-  padding: 0.6rem 0.95rem;
+  padding: 0.75rem 1.15rem;
   color: #ffffff;
   font-size: 0.85rem;
   font-weight: 600;
@@ -1179,10 +1213,10 @@ textarea {
   justify-content: center;
   gap: 0.45rem;
   border: 1px solid var(--ghc-border);
-  border-radius: 10px;
+  border-radius: 999px;
   background: var(--ghc-surface);
   color: var(--ghc-text-secondary);
-  padding: 0.6rem 0.95rem;
+  padding: 0.75rem 1.15rem;
   font-size: 0.85rem;
   font-weight: 600;
   transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
@@ -1211,9 +1245,9 @@ textarea {
   justify-content: center;
   gap: 0.5rem;
   border: 0;
-  border-radius: 10px;
+  border-radius: 999px;
   background: var(--ghc-primary);
-  padding: 0.6rem 1rem;
+  padding: 0.75rem 1.25rem;
   color: #ffffff;
   font-size: 0.85rem;
   font-weight: 600;
@@ -1236,9 +1270,9 @@ textarea {
   justify-content: center;
   gap: 0.5rem;
   border: 1px solid var(--ghc-border);
-  border-radius: 10px;
+  border-radius: 999px;
   background: var(--ghc-surface);
-  padding: 0.6rem 1rem;
+  padding: 0.75rem 1.25rem;
   color: var(--ghc-text-secondary);
   font-size: 0.85rem;
   font-weight: 600;
@@ -1263,13 +1297,13 @@ textarea {
 
 .admin-inline-select {
   display: inline-flex;
-  min-height: 2.55rem;
+  min-height: 2.75rem;
   align-items: center;
   gap: 0.55rem;
   border: 1px solid var(--ghc-border);
-  border-radius: 10px;
+  border-radius: 999px;
   background: var(--ghc-surface-alt);
-  padding: 0 0.75rem;
+  padding: 0 1rem;
   color: var(--ghc-text-secondary);
   font-size: 0.82rem;
   font-weight: 600;
@@ -1332,9 +1366,9 @@ textarea {
 .research-review-panel textarea {
   width: 100%;
   border: 1px solid var(--ghc-border);
-  border-radius: 10px;
-  background: var(--ghc-surface);
-  padding: 0.65rem 0.8rem;
+  border-radius: var(--ghc-radius-sm);
+  background: var(--ghc-surface-alt);
+  padding: 0.75rem 1rem;
   color: var(--ghc-text);
   outline: 0;
   font-size: 0.88rem;
@@ -1722,9 +1756,10 @@ textarea {
 
 .speaker-table-wrap {
   overflow-x: auto;
-  border: 1px solid var(--ghc-border);
-  border-radius: var(--ghc-radius);
+  border: none;
+  border-radius: var(--ghc-radius-lg);
   background: var(--ghc-surface);
+  box-shadow: var(--ghc-shadow-md);
 }
 
 .admin-mobile-card-list {
@@ -1746,11 +1781,10 @@ textarea {
 }
 
 .speaker-table th {
-  color: var(--ghc-text-muted);
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  color: var(--ghc-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0;
   background: var(--ghc-surface-alt);
 }
 
@@ -1848,12 +1882,12 @@ textarea {
 .status-pill {
   display: inline-flex;
   align-items: center;
-  border-radius: 7px;
+  border-radius: 999px;
   background: var(--ghc-info-soft);
   color: var(--ghc-info);
-  padding: 0.28rem 0.6rem;
+  padding: 0.35rem 0.75rem;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: capitalize;
   white-space: nowrap;
 }
@@ -1899,13 +1933,13 @@ textarea {
 .cms-speaker-card {
   display: grid;
   justify-items: start;
-  border: 1px solid var(--ghc-border);
+  border: none;
   border-radius: var(--ghc-radius);
   background: var(--ghc-surface);
-  padding: 1.1rem;
+  padding: 1.5rem;
   color: var(--ghc-text);
   text-align: left;
-  box-shadow: var(--ghc-shadow);
+  box-shadow: var(--ghc-shadow-md);
   transition: transform 140ms ease, box-shadow 140ms ease;
 }
 

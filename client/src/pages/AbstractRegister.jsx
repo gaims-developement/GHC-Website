@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, FileText, Upload, User, BookOpen, CheckCircle2, ChevronRight, Info } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, Upload, User, BookOpen, CheckCircle2, ChevronRight, Info, Check, Microscope, Stethoscope } from "lucide-react";
 import { apiUrl } from "../config/api";
 import { Link } from "react-router-dom";
+import '../home-redesign.css';
 
 const specialties = [
   "Cardiology", "Gastroenterology", "Nephrology", "Oncology", "Hematology",
@@ -33,6 +34,35 @@ const initialForm = {
   consent: false,
 };
 
+const researchAbstractFormat = [
+  { num: "01", title: "TITLE", required: true },
+  { num: "02", title: "AUTHOR & CO-AUTHOR DETAILS", required: true },
+  { num: "03", title: "INTRODUCTION", required: true },
+  { num: "04", title: "AIMS & OBJECTIVES", required: true },
+  { num: "05", title: "METHODOLOGY", required: true },
+  { num: "06", title: "RESULTS", required: true },
+  { num: "07", title: "CONCLUSION", required: true },
+  { num: "08", title: "KEYWORDS", required: true },
+  { num: "09", title: "References", optional: true },
+  { num: "10", title: "Tables", optional: true },
+];
+
+const caseAbstractFormat = [
+  { num: "01", title: "TITLE", required: true },
+  { num: "02", title: "INTRODUCTION", required: true },
+  { num: "03", title: "AUTHOR & CO-AUTHOR DETAILS", required: true },
+  { num: "04", title: "CASE DESCRIPTION", required: true },
+];
+
+const caseDescriptionSubItems = [
+  "History",
+  "Examination",
+  "Investigations",
+  "Diagnosis",
+  "Treatment",
+  "Follow-up",
+];
+
 export default function AbstractRegister() {
   const [form, setForm] = useState(initialForm);
   const [pdf, setPdf] = useState(null);
@@ -41,6 +71,11 @@ export default function AbstractRegister() {
   const [submissionState, setSubmissionState] = useState({ status: "idle", message: "" });
   const [errors, setErrors] = useState({});
   const [isCallsOpen, setIsCallsOpen] = useState(null);
+
+  useEffect(() => {
+    document.body.classList.add('redesign-active')
+    return () => document.body.classList.remove('redesign-active')
+  }, [])
 
   useEffect(() => {
     axios.get(apiUrl("/api/settings/public"))
@@ -97,7 +132,6 @@ export default function AbstractRegister() {
     return () => clearTimeout(timer);
   }, [citySearchTerm, form.stateId]);
 
-  // Click outside city dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (cityDropdownRef.current && !cityDropdownRef.current.contains(event.target)) {
@@ -133,23 +167,23 @@ export default function AbstractRegister() {
   const validateStep = (currentStep) => {
     const newErrors = {};
     if (currentStep === 1) {
-      if (!form.name.trim()) newErrors.name = "Name is required";
-      if (!form.specialty.trim()) newErrors.specialty = "Specialty is required";
-      if (!form.yearOfStudy.trim()) newErrors.yearOfStudy = "Year of Study is required";
-      if (!form.college.trim()) newErrors.college = "College / Hospital is required";
-      if (!form.state.trim()) newErrors.state = "State is required";
-      if (!form.city.trim()) newErrors.city = "City is required";
-      if (!form.country.trim()) newErrors.country = "Country is required";
-      if (!form.phone.trim()) newErrors.phone = "Phone number is required";
-      if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) newErrors.email = "Valid email is required";
+      if (!form.name.trim()) newErrors.name = "Required";
+      if (!form.specialty.trim()) newErrors.specialty = "Required";
+      if (!form.yearOfStudy.trim()) newErrors.yearOfStudy = "Required";
+      if (!form.college.trim()) newErrors.college = "Required";
+      if (!form.state.trim()) newErrors.state = "Required";
+      if (!form.city.trim()) newErrors.city = "Required";
+      if (!form.country.trim()) newErrors.country = "Required";
+      if (!form.phone.trim()) newErrors.phone = "Required";
+      if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) newErrors.email = "Invalid email";
     }
     if (currentStep === 2) {
-      if (!form.title.trim()) newErrors.title = "Abstract title is required";
-      if (!pdf) newErrors.pdf = "Please upload your abstract file";
-      if (!declaration) newErrors.declaration = "Please upload your declaration form";
+      if (!form.title.trim()) newErrors.title = "Required";
+      if (!pdf) newErrors.pdf = "Upload required";
+      if (!declaration) newErrors.declaration = "Upload required";
     }
     if (currentStep === 3) {
-      if (!form.consent) newErrors.consent = "You must agree to the guidelines to submit";
+      if (!form.consent) newErrors.consent = "You must agree to submit";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -158,13 +192,11 @@ export default function AbstractRegister() {
   const nextStep = () => {
     if (step === 0 || validateStep(step)) {
       setStep((curr) => Math.min(curr + 1, 3));
-      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
   const prevStep = () => {
     setStep((curr) => Math.max(curr - 1, 0));
-    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const submitAbstract = async () => {
@@ -200,14 +232,14 @@ export default function AbstractRegister() {
 
   if (submissionState.status === "success") {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6 font-['Syne',sans-serif]">
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="max-w-md w-full bg-white/[0.03] border border-white/10 p-10 rounded-3xl text-center">
-          <div className="w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+      <div className="min-h-screen bg-[#E5F3EF] flex items-center justify-center p-6">
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="max-w-md w-full bg-white rounded-3xl p-10 text-center shadow-xl">
+          <div className="w-20 h-20 bg-[#349e81]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <CheckCircle2 className="w-10 h-10 text-[#349e81]" />
           </div>
-          <h2 className="text-3xl font-bold text-white mb-4">Submission Successful</h2>
-          <p className="text-white/60 mb-8 leading-relaxed">{submissionState.message}</p>
-          <Link to="/" className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-white/[0.05] hover:bg-white/10 text-white font-semibold transition-colors">
+          <h2 className="text-2xl font-bold text-[#1a2b3c] mb-4">Submission Successful</h2>
+          <p className="text-gray-500 mb-8">{submissionState.message}</p>
+          <Link to="/" className="inline-flex items-center justify-center px-8 py-3 bg-[#349e81] text-white rounded-full font-medium hover:bg-[#2b836b] transition-colors">
             Return to Homepage
           </Link>
         </motion.div>
@@ -217,14 +249,14 @@ export default function AbstractRegister() {
 
   if (isCallsOpen === false) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-6 font-['Syne',sans-serif]">
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="max-w-md w-full bg-white/[0.03] border border-white/10 p-10 rounded-3xl text-center shadow-2xl">
-          <div className="w-20 h-20 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(239,68,68,0.2)]">
+      <div className="min-h-screen bg-[#E5F3EF] flex items-center justify-center p-6">
+        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="max-w-md w-full bg-white rounded-3xl p-10 text-center shadow-xl border border-gray-100">
+          <div className="w-20 h-20 bg-red-50 border border-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <Info className="w-10 h-10 text-red-500" />
           </div>
-          <h2 className="text-3xl font-bold text-white mb-4">Calls are Closed</h2>
-          <p className="text-white/60 mb-8 leading-relaxed text-lg">Abstract submission calls are now closed for GHC 2026. You can apply next year.</p>
-          <Link to="/" className="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-white/[0.05] hover:bg-white/10 text-white font-semibold transition-colors border border-white/10">
+          <h2 className="text-2xl font-bold text-[#1a2b3c] mb-4">Calls are Closed</h2>
+          <p className="text-gray-500 mb-8">Abstract submission calls are now closed for GHC 2026. You can apply next year.</p>
+          <Link to="/" className="inline-flex items-center justify-center px-8 py-3 bg-[#349e81] text-white rounded-full font-medium hover:bg-[#2b836b] transition-colors gap-2">
             <ArrowLeft className="w-4 h-4" /> Return to Homepage
           </Link>
         </motion.div>
@@ -234,440 +266,522 @@ export default function AbstractRegister() {
 
   if (isCallsOpen === null) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center p-6 text-white font-['Syne',sans-serif]">
-        <div className="w-10 h-10 border-4 border-[#ff3d7f] border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-white/60 font-semibold animate-pulse">Loading submission portal...</p>
+      <div className="min-h-screen bg-[#E5F3EF] flex flex-col items-center justify-center p-6">
+        <div className="w-10 h-10 border-4 border-[#349e81] border-t-transparent rounded-full animate-spin mb-4"></div>
       </div>
     );
   }
 
+  const stepsList = ["Guidelines", "Personal Details", "Uploads", "Consent"];
+
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white font-['Syne',sans-serif] selection:bg-[#ff3d7f]/30">
-      <header className="sticky top-0 z-50 flex items-center justify-between px-6 py-5 border-b border-white/5 bg-[#0a0a0f]/80 backdrop-blur-xl">
-        <Link to="/" className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm font-semibold font-['DM_Sans']">
-          <ArrowLeft className="w-4 h-4" /> Back to Home
-        </Link>
-        <div className="text-xs font-bold tracking-widest text-white/40 uppercase">GHC 2026 Research</div>
-      </header>
-
-      <div className="max-w-4xl mx-auto px-6 py-12 md:py-16">
+    <div className="min-h-screen bg-[#E5F3EF] text-[#1a2b3c] font-sans flex items-center justify-center p-4 sm:p-8">
+      
+      <div className="max-w-6xl w-full bg-white rounded-[1.5rem] shadow-[0_15px_60px_-15px_rgba(0,0,0,0.1)] flex flex-col md:flex-row overflow-hidden min-h-[750px]">
         
-        {step > 0 && (
-          <div className="mb-12">
-            <div className="flex justify-between relative z-10">
-              {["Details", "Uploads", "Consent"].map((label, i) => {
-                const isActive = step >= i + 1;
-                return (
-                  <div key={label} className="flex flex-col items-center gap-3">
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-500 ${isActive ? "bg-gradient-to-br from-[#ff6b9d] to-[#ff3d7f] text-white shadow-[0_0_20px_rgba(255,61,127,0.4)]" : "border-2 border-white/15 text-white/30"}`}>
-                      {isActive && step > i + 1 ? <CheckCircle2 className="w-5 h-5" /> : i + 1}
+        {/* Left Sidebar */}
+        <div className="w-full md:w-[35%] bg-[#F4FAF8] p-8 md:p-12 border-b md:border-b-0 md:border-r border-gray-100 flex flex-col relative shrink-0">
+          <Link to="/" className="flex items-center gap-2 text-[#349e81] hover:text-[#2b836b] transition-colors font-semibold text-lg md:mb-16">
+            <ArrowLeft className="w-5 h-5" /> GHC
+          </Link>
+
+          <h2 className="text-2xl md:text-[1.6rem] font-bold mt-8 md:mt-0 mb-10 text-[#1a2b3c] leading-tight">Abstract<br/>Submission</h2>
+
+          <div className="flex flex-col gap-0 relative">
+            {stepsList.map((label, i) => {
+              const isActive = step === i;
+              const isPast = step > i;
+              
+              return (
+                <div key={label} className="flex relative z-10">
+                  <div className="flex flex-col items-center mr-5 relative">
+                    <div className={`w-[2.25rem] h-[2.25rem] rounded-full flex items-center justify-center text-sm font-semibold transition-colors duration-300 z-10 ${
+                      isActive || isPast 
+                        ? "bg-[#349e81] text-white" 
+                        : "bg-[#e5ece9] text-[#7a958b]"
+                    }`}>
+                      {isPast ? <Check className="w-[18px] h-[18px] stroke-[2.5]" /> : (isActive ? <Check className="w-[18px] h-[18px] stroke-[2.5]" /> : i + 1)}
                     </div>
-                    <span className={`text-xs font-semibold tracking-wider uppercase font-['DM_Sans'] ${isActive ? "text-white/90" : "text-white/30"}`}>{label}</span>
+                    {/* Vertical Line */}
+                    {i < stepsList.length - 1 && (
+                      <div className={`w-[2px] h-12 transition-colors duration-300 ${
+                        isPast ? "bg-[#349e81]" : "bg-[#e5ece9]"
+                      }`}></div>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-            <div className="h-1 bg-white/10 absolute top-[148px] md:top-[164px] left-0 right-0 max-w-4xl mx-auto px-16 -z-0">
-              <div className="h-full bg-gradient-to-r from-[#ff6b9d] to-[#ff3d7f] transition-all duration-500" style={{ width: `${((step - 1) / 2) * 100}%` }} />
-            </div>
+                  <div className={`pt-2 font-medium transition-colors duration-300 ${
+                    isActive ? "text-[#1a2b3c] font-bold" : isPast ? "text-[#349e81]" : "text-[#7a958b]"
+                  }`}>
+                    {label}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
+        </div>
 
-        <div className="bg-white/[0.02] border border-white/5 rounded-[2rem] p-8 md:p-12 shadow-2xl relative overflow-hidden">
-          
-          <AnimatePresence mode="wait">
-            
-            {/* STEP 0: GUIDELINES */}
-            {step === 0 && (
-              <motion.div key="step0" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-8 font-['DM_Sans']">
-                <div className="text-center mb-8">
-                  <h1 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#ff6b9d] to-[#ff3d7f] font-['Syne']">Abstract Submission</h1>
-                  <p className="text-white/60 mt-4 text-lg">Please read the guidelines carefully before submitting.</p>
-                </div>
-                
-                <div className="space-y-6 text-white/80 leading-relaxed text-sm md:text-base">
-                  <div className="bg-[#ff3d7f]/10 border border-[#ff3d7f]/20 rounded-2xl p-6">
-                    <p className="font-bold text-[#ff3d7f] text-lg mb-2 flex items-center gap-2"><Info className="w-5 h-5"/> Important Note</p>
-                    <p>Last date for Submission: <strong>30th October , 2026.</strong></p>
-                    <ul className="list-disc list-inside mt-4 space-y-2">
-                      <li>The file must be in <strong>PDF or DOCX</strong> format and not more than <strong>10 MB</strong> in size.</li>
-                      <li>All data entered must be accurate and verified.</li>
-                      <li>Abstracts may include tables and references.</li>
-                      <li>Word Limit: <strong>350–400 words</strong>.</li>
-                      <li>No AI-generated content. Plagiarism up to 10% allowed. (We will use a standardized tool to screen).</li>
-                      <li>If you are the presenting author, you can submit <strong>only one poster</strong> for presentation. You cannot be the presenting author on more than one submission. You may still be a co-author on other submissions — but you can present only one.</li>
-                      <li>Cash prize and Certificate of presentation will <strong>only be given to presenting author</strong>.</li>
-
-                    </ul>
-                  </div>
-
-                  <div className="grid md:grid-cols-2 gap-6 mt-6">
-                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-                      <h3 className="font-bold text-xl text-white mb-4 border-b border-white/10 pb-2">Research Abstract Format</h3>
-                      <ul className="space-y-1 opacity-80">
-                        <li>1. TITLE</li>
-                        <li>2. AUTHOR & CO-AUTHOR DETAILS</li>
-                        <li>3. INTRODUCTION</li>
-                        <li>4. AIMS & OBJECTIVES</li>
-                        <li>5. METHODOLOGY</li>
-                        <li>6. RESULTS</li>
-                        <li>7. CONCLUSION</li>
-                        <li>8. KEYWORDS</li>
-                        <li>9. References (Optional)</li>
-                        <li>10. Tables (Optional)</li>
+        {/* Right Content */}
+        <div className="w-full md:w-[65%] p-8 md:p-12 md:px-16 flex flex-col relative overflow-y-auto max-h-[85vh] md:max-h-none">
+          <div className="flex-1">
+            <AnimatePresence mode="wait">
+              
+              {/* STEP 0: GUIDELINES */}
+              {step === 0 && (
+                <motion.div key="step0" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                  <h3 className="text-[0.7rem] font-bold text-[#7a958b] tracking-wider uppercase mb-6">PLEASE READ CAREFULLY</h3>
+                  
+                  <div className="space-y-6 text-[#4a5f6e] text-sm">
+                    <div className="bg-[#fff5f5] border border-[#ffe0e0] rounded-xl p-5">
+                      <p className="font-bold text-[#e04040] mb-2 flex items-center gap-2"><Info className="w-4 h-4"/> Important Note</p>
+                      <p>Last date for Submission: <strong>30th October , 2026.</strong></p>
+                      <ul className="list-disc list-inside mt-3 space-y-1.5 opacity-90">
+                        <li>The file must be in <strong>PDF or DOCX</strong> format and not more than <strong>10 MB</strong> in size.</li>
+                        <li>All data entered must be accurate and verified.</li>
+                        <li>Abstracts may include tables and references.</li>
+                        <li>Word Limit: <strong>350–400 words</strong>.</li>
+                        <li>No AI-generated content. Plagiarism up to 10% allowed.</li>
+                        <li>If you are the presenting author, you can submit <strong>only one poster</strong> for presentation.</li>
+                        <li>Cash prize and Certificate of presentation will <strong>only be given to presenting author</strong>.</li>
                       </ul>
                     </div>
-                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6">
-                      <h3 className="font-bold text-xl text-white mb-4 border-b border-white/10 pb-2">Case Abstract Format</h3>
-                      <ul className="space-y-1 opacity-80">
-                        <li>1. TITLE</li>
-                        <li>2. INTRODUCTION</li>
-                        <li>3. AUTHOR & CO-AUTHOR DETAILS</li>
-                        <li>4. CASE DESCRIPTION</li>
-                      </ul>
-                      <p className="mt-4 text-xs opacity-60 italic">Note: The Case Description should include History, Examination, Investigations, Diagnosis, Treatment, and Follow-up presented together under the single CASE DESCRIPTION heading.</p>
+
+                    <div className="grid lg:grid-cols-2 gap-5">
+                      {/* Research Abstract Format */}
+                      <div className="bg-white border border-gray-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-[#349e81]/40 transition-colors">
+                        <div>
+                          <div className="flex items-center justify-between gap-3 pb-3.5 border-b border-gray-100">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-8 h-8 rounded-lg bg-[#349e81]/10 text-[#349e81] flex items-center justify-center shrink-0">
+                                <Microscope className="w-4 h-4" />
+                              </span>
+                              <div className="min-w-0">
+                                <h4 className="font-bold text-[#1a2b3c] text-sm tracking-tight truncate">Research Abstract</h4>
+                                <p className="text-[11px] text-gray-500 font-medium truncate">Original Research Studies</p>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#349e81]/10 text-[#2b836b] border border-[#349e81]/20 whitespace-nowrap shrink-0">
+                              10 Sections
+                            </span>
+                          </div>
+
+                          <div className="mt-3.5 space-y-1.5">
+                            {researchAbstractFormat.map((item) => (
+                              <div
+                                key={item.num}
+                                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-colors ${
+                                  item.optional
+                                    ? "bg-amber-50/40 border border-dashed border-amber-200/80"
+                                    : "bg-gray-50/80 border border-gray-100"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <span className="w-5 h-5 rounded-md bg-white border border-gray-200 text-[#1a2b3c] font-bold text-[10px] flex items-center justify-center shrink-0 shadow-2xs">
+                                    {item.num}
+                                  </span>
+                                  <span className="font-semibold text-[#1a2b3c] tracking-tight text-[11px] sm:text-xs">
+                                    {item.title}
+                                  </span>
+                                </div>
+                                {item.optional ? (
+                                  <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 shrink-0 ml-2">
+                                    Optional
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded shrink-0 ml-2">
+                                    Required
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Case Abstract Format */}
+                      <div className="bg-white border border-gray-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-[#173B8F]/40 transition-colors">
+                        <div>
+                          <div className="flex items-center justify-between gap-3 pb-3.5 border-b border-gray-100">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-8 h-8 rounded-lg bg-[#173B8F]/10 text-[#173B8F] flex items-center justify-center shrink-0">
+                                <Stethoscope className="w-4 h-4" />
+                              </span>
+                              <div className="min-w-0">
+                                <h4 className="font-bold text-[#1a2b3c] text-sm tracking-tight truncate">Case Abstract</h4>
+                                <p className="text-[11px] text-gray-500 font-medium truncate">Clinical Case Reports & Series</p>
+                              </div>
+                            </div>
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#173B8F]/10 text-[#173B8F] border border-[#173B8F]/20 whitespace-nowrap shrink-0">
+                              4 Sections
+                            </span>
+                          </div>
+
+                          <div className="mt-3.5 space-y-1.5">
+                            {caseAbstractFormat.map((item) => (
+                              <div
+                                key={item.num}
+                                className="flex items-center justify-between px-3 py-2 rounded-xl text-xs bg-gray-50/80 border border-gray-100"
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <span className="w-5 h-5 rounded-md bg-white border border-gray-200 text-[#1a2b3c] font-bold text-[10px] flex items-center justify-center shrink-0 shadow-2xs">
+                                    {item.num}
+                                  </span>
+                                  <span className="font-semibold text-[#1a2b3c] tracking-tight text-[11px] sm:text-xs">
+                                    {item.title}
+                                  </span>
+                                </div>
+                                <span className="text-[10px] font-medium text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded shrink-0 ml-2">
+                                  Required
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="mt-3.5 rounded-xl bg-gradient-to-br from-[#f8fafc] to-[#f1f5f9] border border-gray-200/90 p-3.5 space-y-2">
+                            <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-[#173B8F]">
+                              <Info className="w-3.5 h-3.5 shrink-0" />
+                              <span>Case Description Breakdown:</span>
+                            </div>
+                            <p className="text-[11px] text-gray-600 leading-relaxed">
+                              Must be presented together under the single <strong>CASE DESCRIPTION</strong> heading and include:
+                            </p>
+                            <div className="grid grid-cols-2 gap-1.5 pt-1">
+                              {caseDescriptionSubItems.map((part) => (
+                                <div key={part} className="flex items-center gap-1.5 text-[11px] text-[#1a2b3c] font-medium bg-white px-2.5 py-1.5 rounded-lg border border-gray-200/70 shadow-2xs whitespace-nowrap">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-[#173B8F] shrink-0" />
+                                  <span>{part}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="border-l-4 border-[#349e81] bg-[#f4faf8] p-4 rounded-r-xl">
+                      <p className="text-xs font-semibold text-[#1a2b3c]">Submission Instructions</p>
+                      <p className="text-xs mt-1 opacity-80">Kindly review the declaration form on the uploads page. If you agree with its terms, please sign the document and return a copy in PDF format. <strong>Submission of your signed declaration is mandatory.</strong></p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* STEP 1: DETAILS */}
+              {step === 1 && (
+                <motion.div key="step1" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
+                  
+                  {/* Personal Section */}
+                  <div>
+                    <h3 className="text-[0.7rem] font-bold text-[#7a958b] tracking-wider uppercase mb-4">YOUR PERSONAL DETAILS</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="sm:col-span-2">
+                        <input type="text" value={form.name} onChange={(e) => updateForm("name", e.target.value)} className={`w-full bg-white border ${errors.name ? 'border-red-300' : 'border-gray-200'} rounded-[0.4rem] px-4 py-[0.85rem] text-[#1a2b3c] focus:border-[#349e81] outline-none transition-all placeholder-gray-400`} placeholder="Full Name" />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <div className="flex bg-gray-50/50 p-1 rounded-[0.4rem] border border-gray-200">
+                          {["Medical Student/Interns", "Post Intern/Resident (Ongoing PG)"].map(cat => (
+                            <button 
+                              key={cat} 
+                              onClick={() => updateForm("category", cat)}
+                              className={`flex-1 py-2 px-3 text-xs sm:text-sm font-medium rounded-[0.3rem] transition-all ${form.category === cat ? "bg-white text-[#1a2b3c] shadow-sm border border-gray-100" : "text-gray-500 hover:text-gray-700"}`}
+                            >
+                              {cat}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <select value={form.specialty} onChange={(e) => updateForm("specialty", e.target.value)} className={`w-full bg-white border ${errors.specialty ? 'border-red-300' : 'border-gray-200'} rounded-[0.4rem] px-4 py-[0.85rem] text-[#1a2b3c] focus:border-[#349e81] outline-none transition-all appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%237a958b%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] bg-[length:0.6rem_auto]`}>
+                          <option value="" disabled>Specialty</option>
+                          {specialties.map(spec => <option key={spec} value={spec}>{spec}</option>)}
+                        </select>
+                      </div>
+
+                      <div>
+                        <select value={form.yearOfStudy} onChange={(e) => updateForm("yearOfStudy", e.target.value)} className={`w-full bg-white border ${errors.yearOfStudy ? 'border-red-300' : 'border-gray-200'} rounded-[0.4rem] px-4 py-[0.85rem] text-[#1a2b3c] focus:border-[#349e81] outline-none transition-all appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%237a958b%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] bg-[length:0.6rem_auto]`}>
+                          <option value="" disabled>Year of Study</option>
+                          {form.category === "Medical Student/Interns" 
+                            ? ["1st year", "2nd year", "3rd year", "4th year", "Intern"].map(y => <option key={y} value={y}>{y}</option>)
+                            : ["Post intern", "JR1", "JR2", "JR3"].map(y => <option key={y} value={y}>{y}</option>)
+                          }
+                        </select>
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <input type="text" value={form.college} onChange={(e) => updateForm("college", e.target.value)} className={`w-full bg-white border ${errors.college ? 'border-red-300' : 'border-gray-200'} rounded-[0.4rem] px-4 py-[0.85rem] text-[#1a2b3c] focus:border-[#349e81] outline-none transition-all placeholder-gray-400`} placeholder="College / Hospital" />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6 mt-6">
-                    <h3 className="font-bold text-blue-400 text-lg mb-2">Submission Instructions</h3>
-                    <p>Kindly review the declaration form on the uploads page. If you agree with its terms, please sign the document and return a copy in PDF format using this form. <strong>Submission of your signed declaration is mandatory</strong> to confirm your participation/submission.</p>
-                  </div>
-
-                  <div className="bg-[#ff3d7f]/10 border border-[#ff3d7f]/20 rounded-2xl p-6 mt-6">
-                    <h3 className="font-bold text-[#ff3d7f] text-lg mb-4">For Queries, Contact:</h3>
-                    <ul className="space-y-3">
-                      <li className="flex items-center gap-3">
-                        <span className="font-bold text-white w-32">Email:</span>
-                        <a href="mailto:ghcscientific@gmail.com" className="hover:text-[#ff3d7f] transition-colors">ghcscientific@gmail.com</a>
-                      </li>
-                      <li className="flex items-center gap-3">
-                        <span className="font-bold text-white w-32">Girik Subbudhi:</span>
-                        <a href="tel:+918169011833" className="hover:text-[#ff3d7f] transition-colors">+91 8169011833</a>
-                      </li>
-                      <li className="flex items-center gap-3">
-                        <span className="font-bold text-white w-32">Guarav Jayadev:</span>
-                        <a href="tel:+917022408203" className="hover:text-[#ff3d7f] transition-colors">+91 7022408203</a>
-                      </li>
-                      <li className="flex items-center gap-3">
-                        <span className="font-bold text-white w-32">Prakhar Bhajpai:</span>
-                        <a href="tel:+919758523839" className="hover:text-[#ff3d7f] transition-colors">+91 97585 23839</a>
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-
-                <div className="flex justify-center pt-8">
-                  <button onClick={nextStep} className="flex items-center gap-2 px-10 py-4 rounded-full bg-gradient-to-r from-[#ff6b9d] to-[#ff3d7f] text-white font-extrabold transition-all hover:scale-105 active:scale-95 shadow-[#ff3d7f]/20">
-                    I Have Read The Guidelines <ChevronRight className="w-5 h-5" />
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* STEP 1: DETAILS */}
-            {step === 1 && (
-              <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
-                <div className="flex items-center gap-4 border-b border-white/10 pb-6 mb-8">
-                  <div className="p-3 bg-[#ff3d7f]/10 rounded-2xl text-[#ff3d7f]"><User className="w-8 h-8" /></div>
+                  {/* Location Section */}
                   <div>
-                    <h2 className="text-3xl font-extrabold text-white">Section 1: Details</h2>
-                    <p className="text-white/50 text-sm mt-1 font-['DM_Sans']">Provide your personal and academic information.</p>
-                  </div>
-                </div>
+                    <h3 className="text-[0.7rem] font-bold text-[#7a958b] tracking-wider uppercase mb-4 mt-6">LOCATION DETAILS</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      
+                      <div className="sm:col-span-2">
+                        <select 
+                          value={form.countryId || ""} 
+                          onChange={(e) => {
+                            const country = countriesList.find(c => c.id.toString() === e.target.value);
+                            updateForm("countryId", country ? country.id : null, { country: country ? country.name : "" });
+                          }} 
+                          className={`w-full bg-white border ${errors.country ? 'border-red-300' : 'border-gray-200'} rounded-[0.4rem] px-4 py-[0.85rem] text-[#1a2b3c] focus:border-[#349e81] outline-none transition-all appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%237a958b%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] bg-[length:0.6rem_auto]`}
+                        >
+                          <option value="" disabled>Country</option>
+                          {countriesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </select>
+                      </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="col-span-full">
-                    <label className="block text-sm font-semibold text-white/70 mb-2">Name *</label>
-                    <input type="text" value={form.name} onChange={(e) => updateForm("name", e.target.value)} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans']" placeholder="Dr. John Doe" />
-                    {errors.name && <p className="text-red-400 mt-2 text-sm">{errors.name}</p>}
-                  </div>
-                  
-                  <div className="col-span-full">
-                    <label className="block text-sm font-semibold text-white/70 mb-2">Category *</label>
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      {["Medical Student/Interns", "Post Intern/Resident (Ongoing PG)"].map(cat => (
-                        <label key={cat} className={`flex-1 flex items-center justify-center p-4 rounded-xl border cursor-pointer transition-all ${form.category === cat ? "bg-blue-500/10 border-blue-500 text-blue-400" : "bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/[0.05]"}`}>
-                          <input type="radio" name="category" value={cat} checked={form.category === cat} onChange={() => updateForm("category", cat)} className="hidden" />
-                          <span className="font-bold text-center">{cat}</span>
-                        </label>
-                      ))}
+                      <div>
+                        <select 
+                          value={form.stateId || ""} 
+                          onChange={(e) => {
+                            const stateObj = statesList.find(s => s.id.toString() === e.target.value);
+                            updateForm("stateId", stateObj ? stateObj.id : null, { state: stateObj ? stateObj.name : "", city: "", cityId: null });
+                            setCitySearchTerm("");
+                          }}
+                          disabled={!form.countryId || statesList.length === 0}
+                          className={`w-full bg-white border ${errors.state ? 'border-red-300' : 'border-gray-200'} rounded-[0.4rem] px-4 py-[0.85rem] text-[#1a2b3c] focus:border-[#349e81] outline-none transition-all disabled:opacity-50 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%237a958b%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_1rem_center] bg-[length:0.6rem_auto]`}
+                        >
+                          <option value="" disabled>{statesList.length === 0 && form.countryId ? "No states available" : "State / Province"}</option>
+                          {statesList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                      </div>
+
+                      <div className="relative" ref={cityDropdownRef}>
+                        <div className="relative">
+                          <input 
+                            type="text" 
+                            value={form.cityId ? form.city : citySearchTerm} 
+                            onChange={(e) => {
+                              setCitySearchTerm(e.target.value);
+                              updateForm("city", "", { cityId: null });
+                              setShowCityDropdown(true);
+                            }}
+                            onFocus={() => {
+                              if (!form.cityId) setShowCityDropdown(true);
+                            }}
+                            disabled={!form.stateId}
+                            className={`w-full bg-white border ${errors.city ? 'border-red-300' : 'border-gray-200'} rounded-[0.4rem] px-4 py-[0.85rem] text-[#1a2b3c] focus:border-[#349e81] outline-none transition-all disabled:opacity-50`} 
+                            placeholder={!form.stateId ? "Select a state first" : "City"} 
+                          />
+                          {loadingLocations && (
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                              <div className="w-4 h-4 border-2 border-[#349e81] border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                          )}
+                        </div>
+                        {showCityDropdown && citySearchTerm.length >= 2 && !form.cityId && (
+                          <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-[0.4rem] shadow-xl max-h-60 overflow-y-auto">
+                            {citiesList.length > 0 ? (
+                              citiesList.map(city => (
+                                <div 
+                                  key={city.id} 
+                                  onClick={() => {
+                                    updateForm("cityId", city.id, { city: city.name });
+                                    setCitySearchTerm("");
+                                    setShowCityDropdown(false);
+                                  }}
+                                  className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm text-[#1a2b3c]"
+                                >
+                                  {city.name}
+                                </div>
+                              ))
+                            ) : (
+                              !loadingLocations && <div className="px-4 py-3 text-gray-500 text-sm text-center">No cities found</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
+                  {/* Contact Section */}
                   <div>
-                    <label className="block text-sm font-semibold text-white/70 mb-2">Specialty *</label>
-                    <select value={form.specialty} onChange={(e) => updateForm("specialty", e.target.value)} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans'] [&>option]:bg-[#0a0a0f]">
-                      <option value="">Select Specialty</option>
-                      {specialties.map(spec => (
-                        <option key={spec} value={spec}>{spec}</option>
+                    <h3 className="text-[0.7rem] font-bold text-[#7a958b] tracking-wider uppercase mb-4 mt-6">CONTACT DETAILS</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <input type="tel" value={form.phone} onChange={(e) => updateForm("phone", e.target.value)} className={`w-full bg-white border ${errors.phone ? 'border-red-300' : 'border-gray-200'} rounded-[0.4rem] px-4 py-[0.85rem] text-[#1a2b3c] focus:border-[#349e81] outline-none transition-all placeholder-gray-400`} placeholder="Phone Number" />
+                      </div>
+                      <div>
+                        <input type="email" value={form.email} onChange={(e) => updateForm("email", e.target.value)} className={`w-full bg-white border ${errors.email ? 'border-red-300' : 'border-gray-200'} rounded-[0.4rem] px-4 py-[0.85rem] text-[#1a2b3c] focus:border-[#349e81] outline-none transition-all placeholder-gray-400`} placeholder="Email Address" />
+                      </div>
+                    </div>
+                  </div>
+
+                </motion.div>
+              )}
+
+              {/* STEP 2: UPLOADS */}
+              {step === 2 && (
+                <motion.div key="step2" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-8">
+                  <h3 className="text-[0.7rem] font-bold text-[#7a958b] tracking-wider uppercase mb-4">ABSTRACT DETAILS</h3>
+
+                  <div className="space-y-6">
+                    <div>
+                      <input type="text" value={form.title} onChange={(e) => updateForm("title", e.target.value)} className={`w-full bg-white border ${errors.title ? 'border-red-300' : 'border-gray-200'} rounded-[0.4rem] px-4 py-[0.85rem] text-[#1a2b3c] focus:border-[#349e81] outline-none transition-all placeholder-gray-400`} placeholder="Title of your Abstract" />
+                    </div>
+
+                    <div className="flex bg-gray-50/50 p-1 rounded-[0.4rem] border border-gray-200">
+                      {["Research abstract", "Case abstract"].map(cat => (
+                        <button 
+                          key={cat} 
+                          onClick={() => updateForm("subCategory", cat)}
+                          className={`flex-1 py-2 px-3 text-xs sm:text-sm font-medium rounded-[0.3rem] transition-all ${form.subCategory === cat ? "bg-white text-[#1a2b3c] shadow-sm border border-gray-100" : "text-gray-500 hover:text-gray-700"}`}
+                        >
+                          {cat}
+                        </button>
                       ))}
-                    </select>
-                    {errors.specialty && <p className="text-red-400 mt-2 text-sm">{errors.specialty}</p>}
-                  </div>
+                    </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-white/70 mb-2">Year of Study *</label>
-                    <select value={form.yearOfStudy} onChange={(e) => updateForm("yearOfStudy", e.target.value)} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans'] [&>option]:bg-[#0a0a0f]">
-                      <option value="">Select Year</option>
-                      {form.category === "Medical Student/Interns" 
-                        ? ["1st year", "2nd year", "3rd year", "4th year", "Intern"].map(y => <option key={y} value={y}>{y}</option>)
-                        : ["Post intern", "JR1", "JR2", "JR3"].map(y => <option key={y} value={y}>{y}</option>)
-                      }
-                    </select>
-                    {errors.yearOfStudy && <p className="text-red-400 mt-2 text-sm">{errors.yearOfStudy}</p>}
-                  </div>
-
-                  <div className="col-span-full">
-                    <label className="block text-sm font-semibold text-white/70 mb-2">College / Hospital *</label>
-                    <input type="text" value={form.college} onChange={(e) => updateForm("college", e.target.value)} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans']" placeholder="AIIMS New Delhi" />
-                    {errors.college && <p className="text-red-400 mt-2 text-sm">{errors.college}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-white/70 mb-2">Country *</label>
-                    <select 
-                      value={form.countryId || ""} 
-                      onChange={(e) => {
-                        const country = countriesList.find(c => c.id.toString() === e.target.value);
-                        updateForm("countryId", country ? country.id : null, { country: country ? country.name : "" });
-                      }} 
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans'] [&>option]:bg-[#0a0a0f]"
-                    >
-                      <option value="">Select Country</option>
-                      {countriesList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                    {errors.country && <p className="text-red-400 mt-2 text-sm">{errors.country}</p>}
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-semibold text-white/70 mb-2">State / Province / Region *</label>
-                    <select 
-                      value={form.stateId || ""} 
-                      onChange={(e) => {
-                        const stateObj = statesList.find(s => s.id.toString() === e.target.value);
-                        updateForm("stateId", stateObj ? stateObj.id : null, { state: stateObj ? stateObj.name : "", city: "", cityId: null });
-                        setCitySearchTerm("");
-                      }}
-                      disabled={!form.countryId || statesList.length === 0}
-                      className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans'] [&>option]:bg-[#0a0a0f] disabled:opacity-50"
-                    >
-                      <option value="">{statesList.length === 0 && form.countryId ? "No states available" : "Select State"}</option>
-                      {statesList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                    </select>
-                    {errors.state && <p className="text-red-400 mt-2 text-sm">{errors.state}</p>}
-                  </div>
-
-                  <div className="relative" ref={cityDropdownRef}>
-                    <label className="block text-sm font-semibold text-white/70 mb-2">City *</label>
-                    <div className="relative">
-                      <input 
-                        type="text" 
-                        value={form.cityId ? form.city : citySearchTerm} 
-                        onChange={(e) => {
-                          setCitySearchTerm(e.target.value);
-                          updateForm("city", "", { cityId: null }); // Clear selection on type
-                          setShowCityDropdown(true);
-                        }}
-                        onFocus={() => {
-                          if (!form.cityId) setShowCityDropdown(true);
-                        }}
-                        disabled={!form.stateId}
-                        className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans'] disabled:opacity-50" 
-                        placeholder={!form.stateId ? "Select a state first" : "Search city..."} 
-                      />
-                      {loadingLocations && (
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                          <div className="w-4 h-4 border-2 border-[#ff3d7f] border-t-transparent rounded-full animate-spin"></div>
+                    {/* Structure reference preview for selected category */}
+                    <div className="mt-3 p-3.5 rounded-xl bg-[#f8fafc] border border-gray-200 text-xs">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-[#1a2b3c] flex items-center gap-1.5 text-xs">
+                          {form.subCategory === "Research abstract" ? (
+                            <Microscope className="w-3.5 h-3.5 text-[#349e81]" />
+                          ) : (
+                            <Stethoscope className="w-3.5 h-3.5 text-[#173B8F]" />
+                          )}
+                          Format Outline for {form.subCategory}:
+                        </span>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white border border-gray-200 text-gray-600">
+                          {form.subCategory === "Research abstract" ? "10 Sections" : "4 Sections"}
+                        </span>
+                      </div>
+                      {form.subCategory === "Research abstract" ? (
+                        <div className="flex flex-wrap gap-1.5 text-[11px]">
+                          {researchAbstractFormat.map((item) => (
+                            <span
+                              key={item.num}
+                              className={`px-2 py-0.5 rounded-md font-medium border ${
+                                item.optional
+                                  ? "bg-amber-50 text-amber-700 border-amber-200/70"
+                                  : "bg-white text-[#1a2b3c] border-gray-200"
+                              }`}
+                            >
+                              <strong className="text-gray-400 mr-1">{item.num}.</strong> {item.title}
+                              {item.optional && <span className="ml-1 text-[9px] font-normal italic">(Optional)</span>}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-1.5 text-[11px]">
+                            {caseAbstractFormat.map((item) => (
+                              <span key={item.num} className="px-2 py-0.5 rounded-md font-medium bg-white text-[#1a2b3c] border border-gray-200">
+                                <strong className="text-gray-400 mr-1">{item.num}.</strong> {item.title}
+                              </span>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-gray-500 italic">
+                            * Case Description must include: History, Examination, Investigations, Diagnosis, Treatment, and Follow-up.
+                          </p>
                         </div>
                       )}
                     </div>
-                    {showCityDropdown && citySearchTerm.length >= 2 && !form.cityId && (
-                      <div className="absolute z-50 w-full mt-2 bg-[#0a0a0f] border border-white/10 rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar">
-                        {citiesList.length > 0 ? (
-                          citiesList.map(city => (
-                            <div 
-                              key={city.id} 
-                              onClick={() => {
-                                updateForm("cityId", city.id, { city: city.name });
-                                setCitySearchTerm("");
-                                setShowCityDropdown(false);
-                              }}
-                              className="px-5 py-3 hover:bg-white/5 cursor-pointer text-white/90 transition-colors"
-                            >
-                              {city.name}
-                            </div>
-                          ))
-                        ) : (
-                          !loadingLocations && <div className="px-5 py-4 text-white/50 text-sm text-center">No cities found</div>
-                        )}
-                      </div>
-                    )}
-                    {errors.city && <p className="text-red-400 mt-2 text-sm">{errors.city}</p>}
-                  </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-white/70 mb-2">Phone number *</label>
-                    <input type="tel" value={form.phone} onChange={(e) => updateForm("phone", e.target.value)} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans']" placeholder="+91 9876543210" />
-                    {errors.phone && <p className="text-red-400 mt-2 text-sm">{errors.phone}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-white/70 mb-2">Email ID *</label>
-                    <input type="email" value={form.email} onChange={(e) => updateForm("email", e.target.value)} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-[#ff3d7f] outline-none transition-all font-['DM_Sans']" placeholder="john@hospital.com" />
-                    {errors.email && <p className="text-red-400 mt-2 text-sm">{errors.email}</p>}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* STEP 2: UPLOADS */}
-            {step === 2 && (
-              <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
-                <div className="flex items-center gap-4 border-b border-white/10 pb-6 mb-8">
-                  <div className="p-3 bg-purple-500/10 rounded-2xl text-purple-400"><Upload className="w-8 h-8" /></div>
-                  <div>
-                    <h2 className="text-3xl font-extrabold text-white">Section 2: Uploads</h2>
-                    <p className="text-white/50 text-sm mt-1 font-['DM_Sans']">Abstract details and document uploads.</p>
-                  </div>
-                </div>
-
-                <div className="bg-[#ff3d7f]/5 border border-[#ff3d7f]/10 p-5 rounded-xl mb-6">
-                  <h4 className="font-bold text-[#ff3d7f] mb-2 text-sm">Guidelines for Submission -</h4>
-                  <ul className="list-disc list-inside text-sm text-white/70 space-y-1">
-                    <li>The file must be in PDF/Docx format, not more than (10mb) size</li>
-                    <li>Data entered must be correct and Verified</li>
-                    <li>Double Submissions for the Same Abstract would lead to direct Disqualification</li>
-                  </ul>
-                  <p className="mt-4 text-sm text-white/80">Kindly review the attached declaration form. If you agree with its terms, please sign the document and return a copy in PDF format in this form.<br/>Submission of your declaration would be necessary for confirming your participation/submission.</p>
-                  <p className="mt-4 text-xs font-bold text-white/60">For Queries ; Contact - <br/><a href="mailto:ghcscientific@gmail.com" className="text-blue-300 hover:text-blue-200">ghcscientific@gmail.com</a><br/>+91 8169011833 <br/>+91 7022408203</p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-6">
-                  <div>
-                    <label className="block text-sm font-semibold text-white/70 mb-2">Title of your Abstract *</label>
-                    <input type="text" value={form.title} onChange={(e) => updateForm("title", e.target.value)} className="w-full bg-white/[0.03] border border-white/10 rounded-xl px-5 py-4 text-white focus:border-purple-500 outline-none transition-all font-['DM_Sans']" placeholder="Enter the full title of your research" />
-                    {errors.title && <p className="text-red-400 mt-2 text-sm">{errors.title}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-white/70 mb-2">Sub - Category *</label>
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      {["Research abstract", "Case abstract"].map(cat => (
-                        <label key={cat} className={`flex-1 flex items-center justify-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${form.subCategory === cat ? "bg-purple-500/10 border-purple-500 text-purple-400" : "bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/[0.05]"}`}>
-                          <input type="radio" name="subCategory" value={cat} checked={form.subCategory === cat} onChange={() => updateForm("subCategory", cat)} className="hidden" />
-                          <span className="font-bold">{cat}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Abstract Upload */}
-                  <div>
-                    <label className="block text-sm font-semibold text-white/70 mb-2">Upload your abstract here *</label>
-                    <div className={`border-2 border-dashed ${errors.pdf ? "border-red-500/50 bg-red-500/5" : "border-white/15 hover:border-purple-500/50 hover:bg-purple-500/5"} rounded-2xl p-8 text-center transition-all group relative`}>
-                      <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => handleFileUpload(e, 'pdf')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                      <div className="pointer-events-none relative z-0 flex flex-col items-center">
-                        <FileText className="w-12 h-12 mb-3 text-white/20 group-hover:text-purple-400 transition-colors" />
-                        {pdf ? (
-                          <>
-                            <h4 className="font-bold text-white mb-1 truncate max-w-xs">{pdf.name}</h4>
-                            <p className="text-white/50 text-sm">{(pdf.size / 1024 / 1024).toFixed(2)} MB</p>
-                          </>
-                        ) : (
-                          <>
-                            <h4 className="font-bold text-white mb-1 group-hover:text-purple-400 transition-colors">Select Abstract Document</h4>
-                            <p className="text-white/40 text-xs">PDF or DOCX (Max 10MB)</p>
-                          </>
-                        )}
+                    {/* Abstract Upload */}
+                    <div>
+                      <h4 className="text-[0.7rem] font-bold text-[#7a958b] tracking-wider uppercase mb-3 mt-6">UPLOAD ABSTRACT</h4>
+                      <div className={`border-2 border-dashed ${errors.pdf ? "border-red-300 bg-[#fff5f5]" : "border-gray-200 hover:border-[#349e81] hover:bg-[#F4FAF8]"} rounded-xl p-8 text-center transition-all group relative`}>
+                        <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => handleFileUpload(e, 'pdf')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                        <div className="pointer-events-none relative z-0 flex flex-col items-center">
+                          <FileText className={`w-8 h-8 mb-2 transition-colors ${pdf ? 'text-[#349e81]' : 'text-gray-300 group-hover:text-[#349e81]'}`} />
+                          {pdf ? (
+                            <>
+                              <h4 className="font-bold text-[#1a2b3c] mb-1 truncate max-w-[200px] text-sm">{pdf.name}</h4>
+                              <p className="text-[#7a958b] text-xs">{(pdf.size / 1024 / 1024).toFixed(2)} MB</p>
+                            </>
+                          ) : (
+                            <>
+                              <h4 className="font-semibold text-[#1a2b3c] mb-1 text-sm">Select Abstract Document</h4>
+                              <p className="text-[#7a958b] text-xs">PDF or DOCX (Max 10MB)</p>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                    {errors.pdf && <p className="text-red-400 mt-2 text-center font-semibold text-sm">{errors.pdf}</p>}
-                  </div>
 
-                  {/* Declaration Form Upload */}
-                  <div className="pt-6 border-t border-white/10">
-                    <label className="block text-sm font-semibold text-white/70 mb-2 flex items-center justify-between">
-                      <span>Upload your Declaration form here *</span>
-                      <a href="/assets/forms/GHC%20Poster%20Presenter%20Declaration%20Form%201.docx" download="GHC Poster Presenter Declaration Form.docx" className="text-sm text-blue-400 hover:text-blue-300 font-bold flex items-center gap-1">
-                        Download declaration form <ArrowRight className="w-3 h-3"/>
-                      </a>
+                    {/* Declaration Form Upload */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3 mt-6">
+                        <h4 className="text-[0.7rem] font-bold text-[#7a958b] tracking-wider uppercase">SIGNED DECLARATION</h4>
+                        <a href="/assets/forms/GHC%20Poster%20Presenter%20Declaration%20Form%201.docx" download="GHC Poster Presenter Declaration Form.docx" className="text-xs text-[#349e81] hover:underline font-semibold flex items-center gap-1 z-20 relative">
+                          Download Form
+                        </a>
+                      </div>
+                      <div className={`border-2 border-dashed ${errors.declaration ? "border-red-300 bg-[#fff5f5]" : "border-gray-200 hover:border-[#349e81] hover:bg-[#F4FAF8]"} rounded-xl p-8 text-center transition-all group relative`}>
+                        <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => handleFileUpload(e, 'declaration')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                        <div className="pointer-events-none relative z-0 flex flex-col items-center">
+                          <FileText className={`w-8 h-8 mb-2 transition-colors ${declaration ? 'text-[#349e81]' : 'text-gray-300 group-hover:text-[#349e81]'}`} />
+                          {declaration ? (
+                            <>
+                              <h4 className="font-bold text-[#1a2b3c] mb-1 truncate max-w-[200px] text-sm">{declaration.name}</h4>
+                              <p className="text-[#7a958b] text-xs">{(declaration.size / 1024 / 1024).toFixed(2)} MB</p>
+                            </>
+                          ) : (
+                            <>
+                              <h4 className="font-semibold text-[#1a2b3c] mb-1 text-sm">Select Signed Declaration</h4>
+                              <p className="text-[#7a958b] text-xs">PDF or DOCX (Max 10MB)</p>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+                </motion.div>
+              )}
+
+              {/* STEP 3: CONSENT */}
+              {step === 3 && (
+                <motion.div key="step3" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
+                  <h3 className="text-[0.7rem] font-bold text-[#7a958b] tracking-wider uppercase mb-6">FINAL CONSENT</h3>
+
+                  <div className="border border-gray-200 bg-gray-50/50 rounded-xl p-6">
+                    <label className="flex items-start gap-4 cursor-pointer group">
+                      <div className="mt-1 flex-shrink-0">
+                        <div className={`w-5 h-5 rounded-[0.2rem] border flex items-center justify-center transition-colors ${form.consent ? 'bg-[#349e81] border-[#349e81] text-white' : 'border-gray-300 text-transparent group-hover:border-[#349e81]'}`}>
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </div>
+                        <input type="checkbox" className="hidden" checked={form.consent} onChange={(e) => updateForm("consent", e.target.checked)} />
+                      </div>
+                      <p className={`text-sm leading-relaxed transition-colors ${form.consent ? 'text-[#1a2b3c]' : 'text-gray-600'}`}>
+                        I hereby confirm that I have verified all the details submitted by me and the Guidelines provided by GAIMS are followed and I am officially Submitting my entry for the Abstract for the Competition.
+                      </p>
                     </label>
-                    <div className={`border-2 border-dashed ${errors.declaration ? "border-red-500/50 bg-red-500/5" : "border-white/15 hover:border-blue-500/50 hover:bg-blue-500/5"} rounded-2xl p-8 text-center transition-all group relative`}>
-                      <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(e) => handleFileUpload(e, 'declaration')} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                      <div className="pointer-events-none relative z-0 flex flex-col items-center">
-                        <FileText className="w-12 h-12 mb-3 text-white/20 group-hover:text-blue-400 transition-colors" />
-                        {declaration ? (
-                          <>
-                            <h4 className="font-bold text-white mb-1 truncate max-w-xs">{declaration.name}</h4>
-                            <p className="text-white/50 text-sm">{(declaration.size / 1024 / 1024).toFixed(2)} MB</p>
-                          </>
-                        ) : (
-                          <>
-                            <h4 className="font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">Select Signed Declaration</h4>
-                            <p className="text-white/40 text-xs">PDF or DOCX (Max 10MB)</p>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    {errors.declaration && <p className="text-red-400 mt-2 text-center font-semibold text-sm">{errors.declaration}</p>}
                   </div>
+                </motion.div>
+              )}
 
-                </div>
-              </motion.div>
-            )}
+            </AnimatePresence>
+          </div>
 
-            {/* STEP 3: CONSENT */}
-            {step === 3 && (
-              <motion.div key="step3" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
-                <div className="flex items-center gap-4 border-b border-white/10 pb-6 mb-8">
-                  <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-400"><CheckCircle2 className="w-8 h-8" /></div>
-                  <div>
-                    <h2 className="text-3xl font-extrabold text-white">Section 3: Consent</h2>
-                    <p className="text-white/50 text-sm mt-1 font-['DM_Sans']">Final confirmation before submitting.</p>
-                  </div>
-                </div>
-
-                <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-8">
-                  <label className="flex items-start gap-4 cursor-pointer group">
-                    <div className="mt-1 flex-shrink-0">
-                      <div className={`w-6 h-6 rounded border flex items-center justify-center transition-colors ${form.consent ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-white/30 text-transparent group-hover:border-emerald-500/50'}`}>
-                        <CheckCircle2 className="w-4 h-4" />
-                      </div>
-                      <input type="checkbox" className="hidden" checked={form.consent} onChange={(e) => updateForm("consent", e.target.checked)} />
-                    </div>
-                    <p className={`text-lg leading-relaxed transition-colors ${form.consent ? 'text-white' : 'text-white/70'}`}>
-                      I, Hereby Confirm that I have verified all the details submitted by me and the Guidelines provided by GAIMS are followed and I am officially Submitting my entry for the Abstract for the Competition.
-                    </p>
-                  </label>
-                  {errors.consent && <p className="text-red-400 mt-4 font-semibold text-sm ml-10">{errors.consent}</p>}
-                </div>
-              </motion.div>
-            )}
-
-          </AnimatePresence>
-
-          {/* Navigation */}
-          {step > 0 && (
-            <div className="mt-12 pt-8 border-t border-white/5 flex items-center justify-between">
-              <button onClick={prevStep} className="px-8 py-4 rounded-full border border-white/10 hover:bg-white/5 font-bold transition-colors">
+          {/* Bottom Navigation */}
+          <div className="mt-8 pt-6 border-t border-gray-100 flex items-center justify-between mt-auto">
+            {step === 0 ? (
+              <div /> // Placeholder to push Next button to right
+            ) : (
+              <button onClick={prevStep} className="px-6 py-2 rounded-full border border-gray-200 text-[#7a958b] hover:text-[#1a2b3c] hover:bg-gray-50 text-sm font-semibold transition-colors">
                 Back
               </button>
+            )}
 
-              {step < 3 ? (
-                <button onClick={nextStep} className="flex items-center gap-2 px-10 py-4 rounded-full bg-white text-[#0a0a0f] hover:bg-white/90 font-extrabold transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(255,255,255,0.2)]">
-                  Next Step <ChevronRight className="w-5 h-5" />
-                </button>
-              ) : (
-                <button onClick={submitAbstract} disabled={submissionState.status === "loading" || !form.consent} className={`flex items-center gap-2 px-10 py-4 rounded-full font-extrabold transition-all shadow-lg ${submissionState.status === "loading" || !form.consent ? "bg-white/20 text-white/30 cursor-not-allowed" : "bg-gradient-to-r from-[#ff6b9d] to-[#ff3d7f] text-white hover:scale-105 active:scale-95 shadow-[#ff3d7f]/20"}`}>
-                  {submissionState.status === "loading" ? "Submitting..." : "Submit Application"}
-                </button>
-              )}
-            </div>
-          )}
+            {step < 3 ? (
+              <button onClick={nextStep} className="px-10 py-2.5 bg-[#349e81] text-white rounded-full text-sm font-medium hover:bg-[#2b836b] transition-colors shadow-sm ml-auto">
+                Next
+              </button>
+            ) : (
+              <button onClick={submitAbstract} disabled={submissionState.status === "loading" || !form.consent} className={`px-10 py-2.5 rounded-full text-sm font-medium transition-colors shadow-sm ml-auto ${submissionState.status === "loading" || !form.consent ? "bg-gray-200 text-gray-400 cursor-not-allowed" : "bg-[#349e81] text-white hover:bg-[#2b836b]"}`}>
+                {submissionState.status === "loading" ? "Submitting..." : "Submit"}
+              </button>
+            )}
+          </div>
           
           {submissionState.status === "error" && (
-            <p className="mt-6 text-center text-red-400 bg-red-400/10 py-3 rounded-lg font-semibold">{submissionState.message}</p>
+            <p className="absolute bottom-1 left-1/2 -translate-x-1/2 w-max max-w-[80%] text-center text-[#e04040] text-xs font-semibold">{submissionState.message}</p>
           )}
 
         </div>

@@ -3,9 +3,10 @@ const { pool } = require('../config/db');
 const ActivityLog = require('../models/activityLogModel');
 const { uploadResearchPdf } = require('../services/googleDriveService');
 const { uploadToCloudinary } = require('../services/cloudinaryService');
-const { sendTemplateEmail } = require('../services/mailService');
+const { sendMail, sendTemplateEmail } = require('../services/mailService');
 const asyncHandler = require('../utils/asyncHandler');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
 
 const cloudinaryConfigured = () => Boolean(process.env.CLOUDINARY_NAME && process.env.CLOUDINARY_KEY && process.env.CLOUDINARY_SECRET);
 
@@ -24,7 +25,7 @@ const uploadFileHelper = async (file) => {
 
 const validCategories = ['poster', 'oral', 'research_paper', 'case_report'];
 const validStatuses = ['draft', 'submitted', 'under_review', 'revision_requested', 'revised_submitted', 'accepted', 'rejected', 'withdrawn'];
-const reviewRoles = ['SUPER_ADMIN', 'ADMIN', 'RESEARCH'];
+const reviewRoles = ['SUPER_ADMIN', 'ADMIN', 'RESEARCH', 'SCIENTIFIC_CHAIRPERSON', 'CHAIRPERSON', 'SCIENTIFIC_COMMITTEE_CHAIR'];
 
 const toBoolean = (value) => value === true || value === 'true' || value === '1' || value === 1;
 
@@ -92,8 +93,8 @@ const validatePublicSubmission = (payload, files) => {
 };
 
 const listResearch = asyncHandler(async (req, res) => {
-  const isSuperOrAdmin = reviewRoles.includes(req.user?.role) || req.user?.permissions?.includes('manage_abstracts');
-  const includeAll = req.query.admin === '1' && isSuperOrAdmin;
+  const isSuperOrAdmin = reviewRoles.includes(req.user?.role) || req.user?.permissions?.includes('manage_abstracts') || req.user?.permissions?.includes('assign_reviewers');
+  const includeAll = req.query.admin === '1' || isSuperOrAdmin;
   const isReviewer = !isSuperOrAdmin && req.user?.permissions?.includes('review_abstracts');
   const reviewerId = isReviewer ? req.user.id : null;
 
@@ -305,7 +306,10 @@ const listReviewers = asyncHandler(async (_req, res) => {
   const [reviewers] = await pool.query(`
     SELECT r.*, u.name, u.email,
       COUNT(DISTINCT ara.abstract_id) AS assigned_count,
-      COUNT(DISTINCT ar.id) AS completed_reviews
+      COUNT(DISTINCT ar.id) AS completed_reviews,
+      SUM(CASE WHEN ar.recommendation = 'accept' THEN 1 ELSE 0 END) AS approved_count,
+      SUM(CASE WHEN ar.recommendation = 'reject' THEN 1 ELSE 0 END) AS rejected_count,
+      SUM(CASE WHEN ar.recommendation = 'revise' THEN 1 ELSE 0 END) AS revision_count
     FROM reviewers r
     INNER JOIN users u ON u.id = r.user_id
     LEFT JOIN abstract_review_assignments ara ON ara.reviewer_id = r.id
@@ -313,19 +317,162 @@ const listReviewers = asyncHandler(async (_req, res) => {
     GROUP BY r.id
     ORDER BY u.name ASC
   `);
-  res.json({ reviewers });
+
+  const enriched = reviewers.map((rev) => {
+    const assigned = Number(rev.assigned_count || 0);
+    const completed = Number(rev.completed_reviews || 0);
+    const approved = Number(rev.approved_count || 0);
+    const rejected = Number(rev.rejected_count || 0);
+    const revision = Number(rev.revision_count || 0);
+    const pending = Math.max(0, assigned - completed);
+    const completion = assigned > 0 ? Math.round((completed / assigned) * 100) : 0;
+    return {
+      ...rev,
+      status: rev.status || 'active',
+      reinstatement_status: rev.reinstatement_status || 'none',
+      assigned_count: assigned,
+      completed_reviews: completed,
+      total_reviews: completed,
+      approved_count: approved,
+      rejected_count: rejected,
+      revision_count: revision,
+      pending_count: pending,
+      completion_rate: completion,
+    };
+  });
+
+  res.json({ reviewers: enriched });
 });
 
 const saveReviewer = asyncHandler(async (req, res) => {
-  const payload = [req.body.userId || req.body.user_id, req.body.specialization || null, req.body.designation || null, req.body.institution || null, req.body.country || null];
-  let id = req.params.id;
-  if (id) await pool.query('UPDATE reviewers SET user_id=?, specialization=?, designation=?, institution=?, country=? WHERE id=?', [...payload, id]);
-  else {
-    const [result] = await pool.query('INSERT INTO reviewers (user_id, specialization, designation, institution, country) VALUES (?, ?, ?, ?, ?)', payload);
-    id = result.insertId;
+  let userId = req.body.userId || req.body.user_id;
+
+  // Support adding a new reviewer user directly by Chairperson / Super Admin
+  if (!userId && req.body.email && req.body.name) {
+    const email = req.body.email.trim().toLowerCase();
+    const name = req.body.name.trim();
+
+    // Find SCIENTIFIC_REVIEWER role
+    const [[roleRow]] = await pool.query("SELECT id FROM roles WHERE name IN ('SCIENTIFIC_REVIEWER', 'REVIEWER') ORDER BY id DESC LIMIT 1");
+    const roleId = roleRow?.id || 987;
+
+    const [[existingUser]] = await pool.query('SELECT * FROM users WHERE email = ? LIMIT 1', [email]);
+    if (existingUser) {
+      userId = existingUser.id;
+      if (existingUser.role_id !== 1) {
+        await pool.query('UPDATE users SET role_id = ? WHERE id = ?', [roleId, userId]);
+      }
+    } else {
+      const plainPassword = req.body.password || 'Reviewer@123';
+      const passwordHash = await bcrypt.hash(plainPassword, 12);
+      const [insertUser] = await pool.query(
+        'INSERT INTO users (name, email, password_hash, role_id, is_active) VALUES (?, ?, ?, ?, 1)',
+        [name, email, passwordHash, roleId]
+      );
+      userId = insertUser.insertId;
+    }
   }
-  await logDecision(req, req.params.id ? 'updated_reviewer' : 'created_reviewer', id);
-  res.json({ id });
+
+  if (!userId) {
+    return res.status(400).json({ message: 'User ID or Name and Email are required to create a reviewer.' });
+  }
+
+  const specialization = req.body.specialization?.trim() || null;
+  const designation = req.body.designation?.trim() || null;
+  const institution = req.body.institution?.trim() || null;
+  const country = req.body.country?.trim() || 'India';
+
+  let id = req.params.id;
+  if (id) {
+    await pool.query(
+      'UPDATE reviewers SET user_id=?, specialization=?, designation=?, institution=?, country=? WHERE id=?',
+      [userId, specialization, designation, institution, country, id]
+    );
+  } else {
+    const [result] = await pool.query(
+      `INSERT INTO reviewers (user_id, specialization, designation, institution, country, status)
+       VALUES (?, ?, ?, ?, ?, 'active')
+       ON DUPLICATE KEY UPDATE 
+         specialization=VALUES(specialization), 
+         designation=VALUES(designation), 
+         institution=VALUES(institution), 
+         country=VALUES(country),
+         status='active'`,
+      [userId, specialization, designation, institution, country]
+    );
+    id = result.insertId || id;
+  }
+
+  await logDecision(req, req.params.id ? 'updated_reviewer' : 'created_reviewer', id, { userId });
+  res.json({ success: true, id, userId });
+});
+
+const suspendReviewer = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status = 'suspended', reason = '' } = req.body;
+  const isSuspended = status === 'suspended';
+
+  await pool.query(
+    `UPDATE reviewers 
+     SET status = ?, 
+         suspension_reason = ?, 
+         suspended_at = ?, 
+         suspended_by = ?,
+         reinstatement_status = ?
+     WHERE id = ?`,
+    [
+      status,
+      isSuspended ? (reason || 'Administrative suspension') : null,
+      isSuspended ? new Date() : null,
+      isSuspended ? req.user?.id : null,
+      isSuspended ? 'none' : 'approved',
+      id,
+    ]
+  );
+
+  await logDecision(req, isSuspended ? 'suspended_reviewer' : 'unsuspended_reviewer', id, { reason });
+  res.json({ success: true, status });
+});
+
+const applyReinstatement = asyncHandler(async (req, res) => {
+  const reviewer = await getReviewerForUser(req.user?.id);
+  if (!reviewer) {
+    return res.status(404).json({ message: 'Reviewer profile not found' });
+  }
+
+  const { reason = '' } = req.body;
+  await pool.query(
+    `UPDATE reviewers 
+     SET reinstatement_status = 'pending', 
+         reinstatement_reason = ?, 
+         reinstatement_requested_at = NOW() 
+     WHERE id = ?`,
+    [reason || 'Reviewer requested reinstatement', reviewer.id]
+  );
+
+  await logDecision(req, 'reviewer_applied_reinstatement', reviewer.id, { reason });
+  res.json({ success: true, message: 'Reinstatement request submitted successfully' });
+});
+
+const reinstateReviewer = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  await pool.query(
+    `UPDATE reviewers 
+     SET status = 'active', 
+         suspension_reason = NULL, 
+         suspended_at = NULL, 
+         reinstatement_status = 'approved'
+     WHERE id = ?`,
+    [id]
+  );
+
+  await logDecision(req, 'reinstated_reviewer', id);
+  res.json({ success: true, status: 'active' });
+});
+
+const getMyReviewerProfile = asyncHandler(async (req, res) => {
+  const reviewer = await getReviewerForUser(req.user?.id);
+  res.json({ reviewer: reviewer || null });
 });
 
 const assignReviewer = asyncHandler(async (req, res) => {
@@ -343,21 +490,53 @@ const removeReviewerAssignment = asyncHandler(async (req, res) => {
 
 const assignedReviews = asyncHandler(async (req, res) => {
   const reviewer = await getReviewerForUser(req.user?.id);
+  if (reviewer && reviewer.status === 'suspended') {
+    return res.json({
+      suspended: true,
+      reviewer,
+      assignments: [],
+      message: 'Your scientific reviewer access has been temporarily suspended.',
+    });
+  }
+
   if (!reviewer && req.user?.role !== 'SUPER_ADMIN') return res.json({ assignments: [] });
   const params = reviewer ? [reviewer.id] : [];
   const where = reviewer ? 'WHERE ara.reviewer_id = ?' : '';
   const [assignments] = await pool.query(`
-    SELECT ara.*, a.abstract_id AS abstractCode, a.title, a.category, a.keywords, a.abstract_text, a.file_url, a.status, a.submission_status
+    SELECT 
+      ara.*, 
+      a.abstract_id AS abstractCode, 
+      a.title, 
+      a.authors,
+      a.institution,
+      a.track,
+      a.category, 
+      a.keywords, 
+      a.abstract_text, 
+      a.file_url, 
+      a.pdf_url,
+      a.status, 
+      a.submission_status,
+      ar.id AS review_id,
+      ar.total_score,
+      ar.recommendation,
+      ar.reviewed_at,
+      CASE WHEN ar.id IS NOT NULL THEN 'completed' ELSE 'pending' END AS review_state
     FROM abstract_review_assignments ara
     INNER JOIN abstracts a ON a.id = ara.abstract_id
+    LEFT JOIN abstract_reviews ar ON ar.abstract_id = ara.abstract_id AND ar.reviewer_id = ara.reviewer_id
     ${where}
     ORDER BY ara.assigned_at DESC
   `, params);
-  res.json({ assignments });
+  res.json({ assignments, suspended: false, reviewer });
 });
 
 const submitScore = asyncHandler(async (req, res) => {
   const reviewer = await getReviewerForUser(req.user?.id);
+  if (reviewer && reviewer.status === 'suspended') {
+    return res.status(403).json({ message: 'Your reviewer account is suspended. You cannot submit evaluations.' });
+  }
+
   const reviewerId = req.body.reviewerId || req.body.reviewer_id || reviewer?.id;
   if (!reviewerId) return res.status(403).json({ message: 'Reviewer profile required' });
   const assigned = await pool.query('SELECT id FROM abstract_review_assignments WHERE abstract_id = ? AND reviewer_id = ? LIMIT 1', [req.params.id, reviewerId]);
@@ -380,7 +559,9 @@ const listReviews = asyncHandler(async (req, res) => {
   const reviewer = req.user?.permissions?.includes('manage_abstracts') || req.user?.role === 'SUPER_ADMIN' ? null : await getReviewerForUser(req.user?.id);
   const where = reviewer ? 'WHERE ar.reviewer_id = ?' : '';
   const [reviews] = await pool.query(`
-    SELECT ar.*, a.title, a.abstract_id AS abstractCode, u.name AS reviewer_name
+    SELECT ar.*, a.title, a.abstract_id AS abstractCode, a.category, a.track, a.abstract_text, a.pdf_url, a.file_url, a.status AS abstract_status,
+           a.presenting_author, a.authors, a.institution, a.email AS author_email, a.review_notes, a.review_score,
+           u.name AS reviewer_name, u.email AS reviewer_email, r.specialization
     FROM abstract_reviews ar
     INNER JOIN abstracts a ON a.id = ar.abstract_id
     INNER JOIN reviewers r ON r.id = ar.reviewer_id
@@ -560,15 +741,66 @@ const requestRevision = asyncHandler(async (req, res) => {
   
   await Research.requestRevision(req.params.id, token, expires);
   
-  const link = `${process.env.CLIENT_URL || 'http://localhost:3000'}/abstract-revision/${token}`;
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  const link = `${clientUrl}/abstract-revision/${token}`;
+  const notes = req.body.notes || req.body.comments || req.body.revisionNotes || '';
+  const authorEmail = submission.email;
   
-  await sendTemplateEmail('abstract_revision', submission.email, {
-    title: submission.title,
-    link,
-  });
+  let emailSent = false;
+  if (authorEmail) {
+    try {
+      const subject = `Revision Requested: ${submission.title}`;
+      const html = `
+        <div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 620px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+          <div style="border-bottom: 2px solid #6C4AB6; padding-bottom: 12px; margin-bottom: 20px;">
+            <strong style="color: #6C4AB6; font-size: 18px; text-transform: uppercase; letter-spacing: 0.05em;">Global Healthcare Conclave 2026</strong>
+          </div>
+          <h2 style="color: #1e293b; margin-top: 0; font-size: 20px;">Revision Requested for Your Research Abstract</h2>
+          <p style="font-size: 14px; line-height: 1.5;">Dear ${submission.presentingAuthor || submission.authors || 'Author'},</p>
+          <p style="font-size: 14px; line-height: 1.5;">The Scientific Committee has reviewed your submission to <strong>Global Healthcare Conclave 2026</strong>:</p>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; margin: 16px 0;">
+            <div style="font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700;">Abstract Code: ${submission.abstractId || `GHC-ABS-${String(submission.id).padStart(5, '0')}`}</div>
+            <div style="font-size: 15px; font-weight: bold; color: #0f172a; margin-top: 4px;">${submission.title}</div>
+          </div>
+          ${notes ? `
+          <div style="background: #fffbeb; border-left: 4px solid #d97706; padding: 14px 16px; margin: 18px 0; border-radius: 4px;">
+            <strong style="color: #b45309; display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em;">Reviewer & Committee Feedback / Required Changes:</strong>
+            <p style="margin: 8px 0 0 0; color: #334155; font-size: 14px; white-space: pre-wrap; line-height: 1.5;">${notes}</p>
+          </div>` : ''}
+          <p style="font-size: 14px; line-height: 1.5;">Please revise your manuscript/abstract addressing the feedback above and submit your updated version within <strong>14 days</strong> using the button below:</p>
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${link}" style="background: #6C4AB6; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">
+              Submit Revised Abstract
+            </a>
+          </div>
+          <p style="font-size: 12px; color: #64748b;">If the button does not work, visit: <a href="${link}" style="color: #6C4AB6;">${link}</a></p>
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+          <p style="font-size: 12px; color: #94a3b8; margin: 0;">Scientific Committee Secretariat • Global Healthcare Conclave 2026</p>
+        </div>
+      `;
+      await sendMail({
+        to: authorEmail,
+        subject,
+        html,
+        text: `Revision requested for "${submission.title}".\n\nFeedback:\n${notes}\n\nSubmit revision at: ${link}`,
+      });
+      emailSent = true;
+    } catch (mailErr) {
+      console.error('Failed to send revision email via sendMail, trying fallback:', mailErr.message);
+      try {
+        await sendTemplateEmail('abstract_revision', authorEmail, {
+          title: submission.title,
+          link,
+        });
+        emailSent = true;
+      } catch (e2) {
+        console.warn('Fallback sendTemplateEmail also failed:', e2.message);
+      }
+    }
+  }
   
-  await logDecision(req, 'requested_revision', req.params.id);
-  res.json({ success: true, token });
+  await logDecision(req, 'requested_revision', req.params.id, { email: authorEmail, emailSent, notes });
+  res.json({ success: true, token, emailSent, recipient: authorEmail });
 });
 
 const validateRevisionToken = asyncHandler(async (req, res) => {
@@ -651,4 +883,8 @@ module.exports = {
   requestRevision,
   validateRevisionToken,
   submitRevision,
+  suspendReviewer,
+  applyReinstatement,
+  reinstateReviewer,
+  getMyReviewerProfile,
 };

@@ -7,24 +7,24 @@ const configs = {
   "event-resources": { title: "Event Resources", endpoint: "/api/event-resources", icon: FolderUp, empty: { eventId: "", resourceName: "", resourceType: "pdf", resourceUrl: "" }, fields: [["eventId", "Event", "event"], ["resourceName", "Resource Name"], ["resourceType", "Type", "select", ["pdf", "ppt", "video", "link", "worksheet"]], ["resourceUrl", "Resource URL"]] },
   "event-feedback": { title: "Event Feedback", endpoint: "/api/event-feedback", icon: MessageSquareText, empty: { eventId: "", registrationId: "", rating: 5, npsScore: 0, feedback: "", suggestions: "" }, fields: [["eventId", "Event", "event"], ["registrationId", "Registration ID"], ["rating", "Rating", "number"], ["npsScore", "NPS Score", "number"], ["feedback", "Feedback", "textarea"], ["suggestions", "Suggestions", "textarea"]] },
   "event-certificates": { title: "Event Certificates", endpoint: "/api/event-certificates", icon: FileCheck2, empty: { eventId: "", registrationId: "", certificateType: "participation", certificateUrl: "" }, fields: [["eventId", "Event", "event"], ["registrationId", "Registration ID"], ["certificateType", "Certificate Type"], ["certificateUrl", "Certificate URL"]] },
-  venues: {
-    title: "Venues",
+  main: {
+    title: "Main Venue",
     endpoint: "/api/venues",
     key: "venues",
     icon: MapPinned,
     empty: { name: "", address: "", city: "", state: "", country: "", googleMapsLink: "", contactPerson: "", contactNumber: "", capacity: 0, description: "", status: "active", isActive: true },
     fields: [["name", "Name"], ["address", "Address"], ["city", "City"], ["state", "State"], ["country", "Country"], ["googleMapsLink", "Google Maps Link"], ["contactPerson", "Contact Person"], ["contactNumber", "Contact Number"], ["capacity", "Capacity", "number"], ["description", "Description", "textarea"], ["status", "Status", "select", ["active", "inactive"]]],
   },
-  cafes: {
-    title: "Cafes",
+  cafe: {
+    title: "Cafe",
     endpoint: "/api/cafes",
     key: "cafes",
     icon: Coffee,
     empty: { name: "", address: "", description: "", googleMapsLink: "", status: "active", isActive: true },
     fields: [["name", "Name"], ["address", "Address"], ["googleMapsLink", "Google Maps Link"], ["description", "Description", "textarea"], ["status", "Status", "select", ["active", "inactive"]]],
   },
-  stays: {
-    title: "Stays",
+  places: {
+    title: "Places",
     endpoint: "/api/stays",
     key: "stays",
     icon: Hotel,
@@ -47,10 +47,12 @@ function EventDirectory({ api, type = "event-registrations", hideHeader = false 
     setError("");
     try {
       const requests = [api.get(config.endpoint)];
-      if (type !== "venues") requests.push(api.get("/api/events"));
+      if (!["main", "cafe", "places"].includes(type)) {
+        requests.push(api.get("/api/events"));
+      }
       const [mainResponse, eventsResponse] = await Promise.all(requests);
       setItems(mainResponse.data[config.key || "items"] || []);
-      setEvents(eventsResponse?.data?.events || []);
+      if (eventsResponse) setEvents(eventsResponse.data?.events || []);
     } catch (err) {
       setError(err.response?.data?.message || `Unable to load ${config.title.toLowerCase()}.`);
     }

@@ -17,6 +17,7 @@ import HospitalityCMS from "./pages/HospitalityCMS";
 import EventReports from "./pages/EventReports";
 import Research from "./pages/Research";
 import Scientific from "./pages/Scientific";
+import ScientificTeam from "./pages/ScientificTeam";
 import ScientificDirectory from "./pages/ScientificDirectory";
 import Reviews from "./pages/Reviews";
 import Presentations from "./pages/Presentations";
@@ -115,7 +116,9 @@ const pages = {
   hospitality: (props) => <HospitalityCMS {...props} />,
   "event-reports": EventReports,
   research: Research,
-  scientific: Scientific,
+  scientific: (props) => <Scientific {...props} initialTab="overview" />,
+  "scientific-team": (props) => <Scientific {...props} initialTab="team" />,
+  "abstract-report": (props) => <Scientific {...props} initialTab="abstract-report" />,
   abstracts: Research,
   reviewers: (props) => <ScientificDirectory {...props} type="reviewers" />,
   reviews: Reviews,
@@ -131,6 +134,8 @@ const pages = {
   coupons: Coupons,
   reports: RegistrationReports,
   partners: AdminPartners,
+  sponsorships: (props) => <AdminPartners {...props} initialTab="sponsors" />,
+  sponsors: (props) => <AdminPartners {...props} initialTab="sponsors" />,
   exhibitors: (props) => <SponsorshipDirectory {...props} type="exhibitors" />,
   stalls: (props) => <SponsorshipDirectory {...props} type="stalls" />,
   contracts: (props) => <SponsorshipDirectory {...props} type="contracts" />,
@@ -192,18 +197,20 @@ const pages = {
   emergency: (props) => <LogisticsDirectory {...props} type="emergency" />,
   "logistics-reports": LogisticsReports,
   system: SystemAdmin,
+  "api-monitoring": (props) => <SystemAdmin {...props} initialTab="api-monitoring" />,
+  "system-api-monitoring": (props) => <SystemAdmin {...props} initialTab="api-monitoring" />,
 
   // Visa Applications
   "visa-applications": (props) => <VisaApplications {...props} />,
   "visa-settings": (props) => <VisaSettings {...props} />,
 
   "system-audit-logs": (props) => <SystemDirectory {...props} type="audit-logs" />,
-  "system-users": (props) => <SystemDirectory {...props} type="users" />,
-  "system-roles": (props) => <SystemDirectory {...props} type="roles" />,
-  "system-sessions": (props) => <SystemDirectory {...props} type="sessions" />,
+  "system-users": (props) => <Users {...props} initialTab="users" />,
+  "system-roles": (props) => <Users {...props} initialTab="roles" />,
+  "system-sessions": (props) => <Users {...props} initialTab="sessions" />,
   "system-feature-flags": (props) => <SystemDirectory {...props} type="feature-flags" />,
   launch: LaunchChecklist,
-  users: Users,
+  users: (props) => <Users {...props} initialTab="users" />,
   settings: AdminSettings,
   "cms-controls": CmsControls,
   teams: TeamManagement,
@@ -222,6 +229,8 @@ const pageFromPath = () => {
   if (parts[1] === "events" && parts[2] === "create") return "events-create";
   if (parts[1] === "events" && parts[2]) return `event-${parts[2]}`;
   if (parts[1] === "scientific" && parts[2] === "reports") return "scientific-reports";
+  if (parts[1] === "scientific" && parts[2] === "team") return "scientific-team";
+  if (parts[1] === "scientific" && parts[2] === "abstract-report") return "abstract-report";
   if (parts[1] === "sponsorship" && parts[2] === "reports") return "sponsorship-reports";
   if (parts[1] === "logistics" && parts[2] === "reports") return "logistics-reports";
   if (parts[1] === "certificates" && parts[2]) return `certificate-${parts[2]}`;
@@ -287,7 +296,22 @@ function AdminApp({ initialPage = "dashboard" }) {
 
     api
       .get("/api/auth/me")
-      .then((response) => setUser(response.data.user || response.data))
+      .then((response) => {
+        const currentUser = response.data.user || response.data;
+        setUser(currentUser);
+        const role = (currentUser?.role || "").toUpperCase();
+        const isSuper = role === "SUPER_ADMIN" || role === "ADMIN";
+        const isScientific =
+          role === "SCIENTIFIC_CHAIRPERSON" ||
+          role === "CHAIRPERSON" ||
+          role === "SCIENTIFIC_REVIEWER" ||
+          role === "REVIEWER" ||
+          role === "RESEARCH";
+        if (isScientific && !isSuper && (activePage === "dashboard" || !activePage)) {
+          setActivePage("scientific");
+          window.history.replaceState(null, "", "/admin/scientific");
+        }
+      })
       .catch(() => {
         localStorage.removeItem("ghc_admin_token");
         setToken(null);

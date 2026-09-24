@@ -18,14 +18,17 @@ const logisticsRoutes = require('./logisticsRoutes');
 const volunteerRoutes = require('./volunteerRoutes');
 const formRoutes = require('./formRoutes');
 const mobileRoutes = require('./mobileRoutes');
+const scheduleRoutes = require('./scheduleRoutes');
 const coreRoutes = require('./coreRoutes');
 const systemRoutes = require('./systemRoutes');
 const systemAdminRoutes = require('./systemAdminRoutes');
 const superAdminRoutes = require('./superAdminRoutes');
+const newsletterRoutes = require('./newsletterRoutes');
 const committeeRoutes = require('./committeeRoutes');
 const adminCommitteeRoutes = require('./adminCommitteeRoutes');
 const visaRoutes = require('./visaRoutes');
 const locationRoutes = require('./locationRoutes');
+const hospitalityRoutes = require('./hospitalityRoutes');
 const { optionalAuth, requireAuth, requirePermission } = require('../middleware/authMiddleware');
 const { eventContext } = require('../middleware/eventContextMiddleware');
 
@@ -39,11 +42,14 @@ router.use('/workshops', workshopRoutes);
 router.use('/partners', partnerRoutes);
 router.use('/media', mediaRoutes);
 router.use('/settings', settingsRoutes);
+router.use('/newsletter', newsletterRoutes);
 router.use('/trailer', trailerRoutes);
 router.use('/research', researchRoutes);
 router.use('/committees', committeeRoutes);
 router.use('/visa-applications', visaRoutes);
 router.use('/locations', locationRoutes);
+router.use('/schedules', scheduleRoutes);
+router.use('/', hospitalityRoutes);
 router.use('/admin/committees', requireAuth, requirePermission('speakers.manage', 'cms.manage', 'manage_homepage'), adminCommitteeRoutes);
 
 // Root-mounted routers (catch-all for their respective domains)

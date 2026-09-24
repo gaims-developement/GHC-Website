@@ -46,12 +46,15 @@ const requireRole = (...roles) => (req, res, next) => {
   return next();
 };
 
+const { rolePermissionMap } = require('../config/schema');
+
 const requirePermission = (...permissions) => (req, res, next) => {
   if (req.user?.role === 'SUPER_ADMIN') {
     return next();
   }
 
-  const userPermissions = req.user?.permissions || [];
+  const rolePermissions = (rolePermissionMap && req.user?.role ? rolePermissionMap[req.user.role] : null) || [];
+  const userPermissions = [...new Set([...(req.user?.permissions || []), ...rolePermissions])];
   const allowed = permissions.some((permission) => userPermissions.includes(permission));
 
   if (!allowed) {

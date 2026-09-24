@@ -3,7 +3,7 @@ export const navLinks = [
   ["About", "about"],
   ["Speakers", "world-class-speakers"],
   ["Workshops", "workshops-experience"],
-  ["Timeline", "ghc-timeline"],
+  ["Schedule", "ghc-timeline"],
   ["Abstract Submission", "research-hub"],
   ["Awards", "awards"],
   ["Venue", "venue"],

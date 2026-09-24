@@ -208,19 +208,39 @@ const stats = async () => {
   const [rows] = await pool.query(`
     SELECT
       COUNT(*) AS total,
+      SUM(status = 'submitted' OR status = 'draft') AS newSubmissions,
       SUM(status = 'under_review') AS underReview,
       SUM(status = 'accepted') AS accepted,
       SUM(status = 'rejected') AS rejected,
-      SUM(award_nomination = 1) AS awardNominees
+      SUM(status = 'revision_requested') AS revisionRequested,
+      SUM(award_nomination = 1) AS awardNominees,
+      (SELECT COUNT(*) FROM abstract_review_assignments) AS totalAssignments,
+      (SELECT COUNT(*) FROM abstract_reviews) AS totalCompletedReviews,
+      (SELECT COUNT(*) FROM abstracts WHERE (status = 'submitted' OR status = 'draft') AND id NOT IN (SELECT abstract_id FROM abstract_review_assignments)) AS unassignedCount,
+      (SELECT COUNT(*) FROM abstracts WHERE status = 'under_review' AND id IN (SELECT abstract_id FROM abstract_reviews)) AS awaitingDecisionCount
     FROM abstracts
   `);
 
+  const r = rows[0] || {};
+  const totalAssignments = Number(r.totalAssignments || 0);
+  const totalCompletedReviews = Number(r.totalCompletedReviews || 0);
+  const reviewsPending = Math.max(0, totalAssignments - totalCompletedReviews);
+  const reviewCompletion = totalAssignments > 0 ? Math.round((totalCompletedReviews / totalAssignments) * 100) : 0;
+
   return {
-    total: Number(rows[0].total || 0),
-    underReview: Number(rows[0].underReview || 0),
-    accepted: Number(rows[0].accepted || 0),
-    rejected: Number(rows[0].rejected || 0),
-    awardNominees: Number(rows[0].awardNominees || 0),
+    total: Number(r.total || 0),
+    newSubmissions: Number(r.newSubmissions || 0),
+    underReview: Number(r.underReview || 0),
+    accepted: Number(r.accepted || 0),
+    rejected: Number(r.rejected || 0),
+    revisionRequested: Number(r.revisionRequested || 0),
+    awardNominees: Number(r.awardNominees || 0),
+    totalAssignments,
+    totalCompletedReviews,
+    reviewsPending,
+    reviewCompletion,
+    unassignedCount: Number(r.unassignedCount || 0),
+    awaitingDecisionCount: Number(r.awaitingDecisionCount || 0),
   };
 };
 

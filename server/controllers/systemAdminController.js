@@ -66,7 +66,7 @@ const dashboard = asyncHandler(async (_req, res) => {
     statuses: {
       database: dbPing?.length ? 'healthy' : 'warning',
       api: 'healthy',
-      cloudinary: process.env.CLOUDINARY_CLOUD_NAME ? 'configured' : 'not configured',
+      cloudinary: process.env.CLOUDINARY_NAME ? 'configured' : 'not configured',
       email: Number(emails.failed || 0) ? 'warning' : (process.env.SMTP_HOST ? 'healthy' : 'not configured'),
       cloudinaryAssets: Number(cloudinaryAssets?.count || 0),
     },

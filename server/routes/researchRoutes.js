@@ -43,6 +43,10 @@ const {
   requestRevision,
   validateRevisionToken,
   submitRevision,
+  suspendReviewer,
+  applyReinstatement,
+  reinstateReviewer,
+  getMyReviewerProfile,
 } = require('../controllers/researchController');
 const { optionalAuth, requireAuth, requirePermission } = require('../middleware/authMiddleware');
 
@@ -89,6 +93,10 @@ router.put('/criteria/:id', requireAuth, canManageResearch, saveCriteria);
 router.get('/reviewers', requireAuth, canManageReviewers, listReviewers);
 router.post('/reviewers', requireAuth, canManageReviewers, saveReviewer);
 router.put('/reviewers/:id', requireAuth, canManageReviewers, saveReviewer);
+router.patch('/reviewers/:id/suspend', requireAuth, canManageReviewers, suspendReviewer);
+router.patch('/reviewers/:id/reinstate', requireAuth, canManageReviewers, reinstateReviewer);
+router.post('/reviewers/reinstatement-request', requireAuth, applyReinstatement);
+router.get('/reviewer/me', requireAuth, getMyReviewerProfile);
 router.get('/reviews', requireAuth, canReviewResearch, listReviews);
 router.get('/reviews/assigned', requireAuth, canReviewResearch, assignedReviews);
 router.get('/presentation-sessions', requireAuth, canPublishProgram, listPresentationSessions);
