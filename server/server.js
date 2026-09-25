@@ -23,6 +23,8 @@ const { initializeDatabase } = require('./config/schema');
 const { corsOptions } = require('./config/cors');
 const apiRoutes = require('./routes');
 const authRoutes = require('./routes/authRoutes');
+// TODO: Remove temporary SMTP diagnostic endpoint after Railway SMTP connectivity debugging is complete.
+const debugRoutes = require('./routes/debugRoutes');
 const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { apiLimiter, apiRequestLog, csrfProtection, sanitizeBody } = require('./middleware/productionMiddleware');
 const { trackMutations } = require('./middleware/activityMiddleware');
@@ -65,6 +67,8 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+// TODO: Remove temporary SMTP diagnostic endpoint after Railway SMTP connectivity debugging is complete.
+app.use('/api/debug', debugRoutes);
 app.use('/api', apiRoutes);
 app.use(notFound);
 app.use(errorHandler);
@@ -119,3 +123,5 @@ startServer().catch(async (error) => {
     process.exit(1);
   }
 });
+
+module.exports = { app, startServer };

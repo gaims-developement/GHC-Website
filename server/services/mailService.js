@@ -109,8 +109,8 @@ const createTransporter = (overridePort = null, overrideSecure = null) => {
           pass,
         }
       : undefined,
-    connectionTimeout: 8000,
-    greetingTimeout: 8000,
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
     socketTimeout: 15000,
     tls: {
       rejectUnauthorized: false,
@@ -119,7 +119,73 @@ const createTransporter = (overridePort = null, overrideSecure = null) => {
   });
 };
 
+const sendViaResend = async ({ to, subject, html, text }) => {
+  const fromName = process.env.SMTP_FROM_NAME || 'Global Health Conclave';
+  const fromEmail = process.env.RESEND_FROM || 'onboarding@resend.dev';
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: `${fromName} <${fromEmail}>`,
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      html,
+      text,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || JSON.stringify(data));
+  }
+  console.log(`[Resend] Email successfully sent to ${to} | ID: ${data.id}`);
+  return { messageId: data.id };
+};
+
+const sendViaBrevo = async ({ to, subject, html, text }) => {
+  const fromName = process.env.SMTP_FROM_NAME || 'Global Health Conclave';
+  const fromEmail = process.env.SMTP_FROM_EMAIL || 'itcellgaims@gmail.com';
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: fromName, email: fromEmail },
+      to: [{ email: to }],
+      subject,
+      htmlContent: html,
+      textContent: text,
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.message || JSON.stringify(data));
+  }
+  console.log(`[Brevo] Email successfully sent to ${to} | Message ID: ${data.messageId}`);
+  return { messageId: data.messageId };
+};
+
 const sendMail = async ({ to, subject, html, text, attachments = [] }) => {
+  if (process.env.RESEND_API_KEY) {
+    try {
+      return await sendViaResend({ to, subject, html, text });
+    } catch (apiErr) {
+      console.warn('[Resend Warning] HTTP send failed, falling back to SMTP:', apiErr.message);
+    }
+  }
+
+  if (process.env.BREVO_API_KEY) {
+    try {
+      return await sendViaBrevo({ to, subject, html, text });
+    } catch (apiErr) {
+      console.warn('[Brevo Warning] HTTP send failed, falling back to SMTP:', apiErr.message);
+    }
+  }
+
   const { host, port, secure, fromName, fromEmail } = getSmtpConfig();
   logSmtpDiagnostics(`Sending email to ${to}`, port, secure);
 

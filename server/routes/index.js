@@ -32,8 +32,13 @@ const hospitalityRoutes = require('./hospitalityRoutes');
 const { optionalAuth, requireAuth, requirePermission } = require('../middleware/authMiddleware');
 const { eventContext } = require('../middleware/eventContextMiddleware');
 
+// TODO: Remove temporary SMTP diagnostic endpoint after Railway SMTP connectivity debugging is complete.
+const debugRoutes = require('./debugRoutes');
+
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
+// TODO: Remove temporary SMTP diagnostic endpoint after Railway SMTP connectivity debugging is complete.
+router.use('/debug', debugRoutes);
 router.use(optionalAuth, eventContext);
 
 // Explicitly mounted routes (MUST be before root-mounted routers to avoid being swallowed)
