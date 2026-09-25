@@ -31,7 +31,11 @@ const sanitizeBody = (req, _res, next) => {
     return value;
   };
 
-  if (req.body && typeof req.body === 'object') req.body = walk(req.body);
+  if (req.body && typeof req.body === 'object') {
+    req.body = walk(req.body);
+  } else if (!req.body) {
+    req.body = {};
+  }
   next();
 };
 

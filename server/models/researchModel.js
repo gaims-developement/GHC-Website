@@ -57,10 +57,13 @@ const list = async ({ includeAll = false, reviewerId = null } = {}) => {
 };
 
 const findById = async (id) => {
-  const [rows] = await pool.query('SELECT * FROM abstracts WHERE id = ? LIMIT 1', [id]);
+  const isNumeric = !isNaN(Number(id));
+  const [rows] = isNumeric
+    ? await pool.query('SELECT * FROM abstracts WHERE id = ? OR abstract_id = ? LIMIT 1', [id, String(id)])
+    : await pool.query('SELECT * FROM abstracts WHERE abstract_id = ? LIMIT 1', [String(id)]);
   if (!rows.length) return null;
   const abstract = rows[0];
-  const [versions] = await pool.query('SELECT * FROM abstract_versions WHERE abstract_id = ? ORDER BY version_number DESC', [id]);
+  const [versions] = await pool.query('SELECT * FROM abstract_versions WHERE abstract_id = ? ORDER BY version_number DESC', [abstract.id]);
   abstract.versions = versions;
   return normalize(abstract);
 };
@@ -258,10 +261,18 @@ const createVersion = async (abstractId, versionNumber, pdfUrl, declarationUrl) 
 };
 
 const requestRevision = async (id, token, expires) => {
-  await pool.query(
-    'UPDATE abstracts SET status = ?, submission_status = ?, revision_token = ?, revision_token_expires = ? WHERE id = ?',
-    ['revision_requested', 'revision_requested', token, expires, id]
-  );
+  const isNumeric = !isNaN(Number(id));
+  if (isNumeric) {
+    await pool.query(
+      'UPDATE abstracts SET status = ?, submission_status = ?, revision_token = ?, revision_token_expires = ? WHERE id = ? OR abstract_id = ?',
+      ['revision_requested', 'revision_requested', token, expires, id, String(id)]
+    );
+  } else {
+    await pool.query(
+      'UPDATE abstracts SET status = ?, submission_status = ?, revision_token = ?, revision_token_expires = ? WHERE abstract_id = ?',
+      ['revision_requested', 'revision_requested', token, expires, String(id)]
+    );
+  }
   return findById(id);
 };
 

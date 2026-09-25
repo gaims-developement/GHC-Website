@@ -301,12 +301,12 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
   const handleRequestRevision = async (abstractId) => {
     setDecisionSubmitting(true);
     try {
-      await api.post(`/api/research/${abstractId}/request-revision`);
+      await api.post(`/api/research/${abstractId}/request-revision`, {});
       alert("Revision request sent to corresponding author.");
       setViewAbstract(null);
       await loadChairpersonData();
     } catch (err) {
-      alert(err.response?.data?.message || "Failed to request revision.");
+      alert(err.response?.data?.message || err.response?.data?.error || "Failed to request revision.");
     } finally {
       setDecisionSubmitting(false);
     }

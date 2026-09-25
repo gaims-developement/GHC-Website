@@ -21,6 +21,8 @@ function Research({ api }) {
   const [approveModal, setApproveModal] = useState(null);
   const [rejectModal, setRejectModal] = useState(null);
   const [revisionModal, setRevisionModal] = useState(null);
+  const [revisionNotes, setRevisionNotes] = useState("");
+  const [revisionLoading, setRevisionLoading] = useState(false);
   
   const fileInputRef = useRef(null);
 
@@ -117,12 +119,22 @@ function Research({ api }) {
   };
 
   const requestRevision = async () => {
+    setRevisionLoading(true);
     try {
-      await api.post(`/api/research/${revisionModal.id}/request-revision`);
+      const res = await api.post(`/api/research/${revisionModal.id}/request-revision`, {
+        notes: revisionNotes.trim(),
+        revisionNotes: revisionNotes.trim(),
+      });
+      alert(res.data?.emailSent 
+        ? `Revision request & notification email sent successfully to ${res.data?.recipient || 'the author'}!` 
+        : "Revision status updated successfully.");
       setRevisionModal(null);
+      setRevisionNotes("");
       loadSubmissions();
     } catch (error) {
-      alert(error.response?.data?.message || "Failed to request revision.");
+      alert(error.response?.data?.message || error.response?.data?.error || "Failed to request revision.");
+    } finally {
+      setRevisionLoading(false);
     }
   };
 
@@ -324,17 +336,32 @@ function Research({ api }) {
 
       {revisionModal && (
         <div className="admin-modal-overlay">
-          <div className="admin-modal">
+          <div className="admin-modal" style={{ maxWidth: '520px', width: '90%' }}>
             <header>
               <h2>Request Revision?</h2>
-              <button onClick={() => setRevisionModal(null)}><X size={20} /></button>
+              <button onClick={() => { setRevisionModal(null); setRevisionNotes(""); }} disabled={revisionLoading}><X size={20} /></button>
             </header>
-            <div style={{ padding: '1rem 0', color: '#666' }}>
-              This will update the status and send an email with a secure link to the author for submitting a revised version.
+            <div style={{ padding: '0.75rem 0 0.5rem', color: '#475569', fontSize: '0.9rem', lineHeight: '1.5' }}>
+              This will update the abstract status to <strong>Revision Requested</strong> and send an email with a secure revision link to the author <strong>({revisionModal.email || revisionModal.presentingAuthor || 'Author'})</strong>.
+            </div>
+            <div style={{ margin: '0.75rem 0 1rem' }}>
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
+                Reviewer / Committee Feedback for Author (Optional):
+              </label>
+              <textarea
+                value={revisionNotes}
+                onChange={(e) => setRevisionNotes(e.target.value)}
+                placeholder="Specify required corrections, additional data, formatting adjustments, etc."
+                rows={4}
+                style={{ width: '100%', padding: '0.6rem 0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.875rem', resize: 'vertical', boxSizing: 'border-box' }}
+                disabled={revisionLoading}
+              />
             </div>
             <div className="admin-form-actions">
-              <button onClick={() => setRevisionModal(null)}>Cancel</button>
-              <button onClick={requestRevision} className="admin-primary-button">Request Revision</button>
+              <button onClick={() => { setRevisionModal(null); setRevisionNotes(""); }} disabled={revisionLoading}>Cancel</button>
+              <button onClick={requestRevision} className="admin-primary-button" disabled={revisionLoading}>
+                {revisionLoading ? "Sending Request..." : "Request Revision"}
+              </button>
             </div>
           </div>
         </div>

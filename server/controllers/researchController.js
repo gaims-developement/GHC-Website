@@ -739,11 +739,11 @@ const requestRevision = asyncHandler(async (req, res) => {
   const token = crypto.randomBytes(32).toString('hex');
   const expires = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days
   
-  await Research.requestRevision(req.params.id, token, expires);
+  await Research.requestRevision(submission.id, token, expires);
   
   const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
   const link = `${clientUrl}/abstract-revision/${token}`;
-  const notes = req.body.notes || req.body.comments || req.body.revisionNotes || '';
+  const notes = req.body?.notes || req.body?.comments || req.body?.revisionNotes || '';
   const authorEmail = submission.email;
   
   let emailSent = false;
@@ -799,7 +799,7 @@ const requestRevision = asyncHandler(async (req, res) => {
     }
   }
   
-  await logDecision(req, 'requested_revision', req.params.id, { email: authorEmail, emailSent, notes });
+  await logDecision(req, 'requested_revision', submission.id, { email: authorEmail, emailSent, notes });
   res.json({ success: true, token, emailSent, recipient: authorEmail });
 });
 
