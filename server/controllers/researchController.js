@@ -786,16 +786,13 @@ const requestRevision = asyncHandler(async (req, res) => {
       });
       emailSent = true;
     } catch (mailErr) {
-      console.error('Failed to send revision email via sendMail, trying fallback:', mailErr.message);
+      console.error('Failed to send revision email:', mailErr.message);
       try {
-        await sendTemplateEmail('abstract_revision', authorEmail, {
-          title: submission.title,
-          link,
-        });
-        emailSent = true;
-      } catch (e2) {
-        console.warn('Fallback sendTemplateEmail also failed:', e2.message);
-      }
+        await pool.query(
+          "INSERT INTO email_logs (recipient, subject, status, error_message) VALUES (?, ?, 'failed', ?)",
+          [authorEmail, `Revision Requested: ${submission.title}`, mailErr.message || 'Connection timeout']
+        );
+      } catch (_) {}
     }
   }
   

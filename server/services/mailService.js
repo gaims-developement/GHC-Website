@@ -51,8 +51,8 @@ patchDnsResolverForIpv4();
  */
 const getSmtpConfig = () => {
   const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  const port = Number(process.env.SMTP_PORT || 587);
-  // Port 465 requires secure: true; Port 587 requires secure: false (with STARTTLS)
+  // Default to 465 (SSL) for Gmail if unspecified as it is rarely blocked by cloud providers
+  const port = Number(process.env.SMTP_PORT || (host.includes('gmail.com') ? 465 : 587));
   const secure = port === 465;
   const user = process.env.SMTP_USER || process.env.SMTP_USERNAME || null;
   const pass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD || null;
@@ -65,9 +65,11 @@ const getSmtpConfig = () => {
 /**
  * Diagnostic logger that prints SMTP connection info without exposing credentials.
  */
-const logSmtpDiagnostics = (status = 'Connecting') => {
+const logSmtpDiagnostics = (status = 'Connecting', customPort = null, customSecure = null) => {
   const { host, port, secure, user } = getSmtpConfig();
-  console.log(`[SMTP] Status: ${status} | Host: ${host} | Port: ${port} | Secure: ${secure} | Family: 4 | Username: ${user || '(none)'}`);
+  const activePort = customPort || port;
+  const activeSecure = customSecure !== null ? customSecure : (activePort === 465);
+  console.log(`[SMTP] Status: ${status} | Host: ${host} | Port: ${activePort} | Secure: ${activeSecure} | Family: 4 | Username: ${user || '(none)'}`);
 };
 
 /**
@@ -89,15 +91,17 @@ const logSmtpError = (context, error) => {
 };
 
 /**
- * Creates a Nodemailer transporter configured strictly for IPv4 and STARTTLS.
+ * Creates a Nodemailer transporter configured strictly for IPv4 and resilient timeouts.
  */
-const createTransporter = () => {
+const createTransporter = (overridePort = null, overrideSecure = null) => {
   const { host, port, secure, user, pass } = getSmtpConfig();
+  const targetPort = overridePort || port;
+  const targetSecure = overrideSecure !== null ? overrideSecure : (targetPort === 465);
 
   return nodemailer.createTransport({
     host,
-    port,
-    secure,
+    port: targetPort,
+    secure: targetSecure,
     family: 4,
     auth: user && pass
       ? {
@@ -105,18 +109,22 @@ const createTransporter = () => {
           pass,
         }
       : undefined,
-    connectionTimeout: 30000,
-    greetingTimeout: 30000,
-    socketTimeout: 60000,
+    connectionTimeout: 8000,
+    greetingTimeout: 8000,
+    socketTimeout: 15000,
+    tls: {
+      rejectUnauthorized: false,
+      minVersion: 'TLSv1.2',
+    },
   });
 };
 
 const sendMail = async ({ to, subject, html, text, attachments = [] }) => {
-  const { host, port, user, fromName, fromEmail } = getSmtpConfig();
-  logSmtpDiagnostics(`Sending email to ${to}`);
+  const { host, port, secure, fromName, fromEmail } = getSmtpConfig();
+  logSmtpDiagnostics(`Sending email to ${to}`, port, secure);
 
-  const transporter = createTransporter();
   try {
+    const transporter = createTransporter(port, secure);
     const result = await transporter.sendMail({
       from: `"${fromName}" <${fromEmail}>`,
       to,
@@ -125,9 +133,39 @@ const sendMail = async ({ to, subject, html, text, attachments = [] }) => {
       text,
       attachments,
     });
-    console.log(`[SMTP] Email successfully sent to ${to} | Message ID: ${result.messageId}`);
+    console.log(`[SMTP] Email successfully sent to ${to} on port ${port} | Message ID: ${result.messageId}`);
     return result;
   } catch (error) {
+    const isConnectionIssue = error.code === 'ETIMEDOUT' ||
+      error.code === 'ECONNREFUSED' ||
+      error.code === 'ESOCKETTIMEDOUT' ||
+      error.command === 'CONN' ||
+      String(error.message).toLowerCase().includes('timeout');
+
+    // Automatic fallback between 465 (SSL) and 587 (STARTTLS)
+    const fallbackPort = port === 465 ? 587 : 465;
+    const fallbackSecure = fallbackPort === 465;
+
+    if (isConnectionIssue) {
+      console.warn(`[SMTP Warning] Port ${port} failed (${error.message}). Attempting automatic fallback to port ${fallbackPort} (secure: ${fallbackSecure})...`);
+      try {
+        const fallbackTransporter = createTransporter(fallbackPort, fallbackSecure);
+        const result = await fallbackTransporter.sendMail({
+          from: `"${fromName}" <${fromEmail}>`,
+          to,
+          subject,
+          html,
+          text,
+          attachments,
+        });
+        console.log(`[SMTP Fallback] Email successfully sent to ${to} on fallback port ${fallbackPort} | Message ID: ${result.messageId}`);
+        return result;
+      } catch (fallbackErr) {
+        logSmtpError(`Fallback to port ${fallbackPort} also failed for ${to}`, fallbackErr);
+        throw fallbackErr;
+      }
+    }
+
     logSmtpError(`Failed to send email to ${to}`, error);
     throw error;
   }
