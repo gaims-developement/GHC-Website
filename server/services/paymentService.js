@@ -251,7 +251,7 @@ const generateInvoiceBuffer = async ({ payment, registration }) => {
 };
 
 const sendPaymentEmail = async ({ registration, payment, invoiceBuffer, qrBuffer }) => {
-  if (!registration.email || !process.env.SMTP_HOST) return;
+  if (!registration.email || (!process.env.RESEND_API_KEY && !process.env.SMTP_HOST)) return;
   await sendMail({
     to: registration.email,
     subject: 'GHC 2026 payment confirmation',

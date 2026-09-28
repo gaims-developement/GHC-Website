@@ -9,6 +9,7 @@ const defaults = {
   contact: { email: "", phone: "" },
   venue: { name: "", address: "" },
   faq: [],
+  earlyBirdManualOff: false,
 };
 
 function CmsControls({ api }) {
@@ -54,6 +55,50 @@ function CmsControls({ api }) {
       </section>
 
       <form className="settings-form-grid" onSubmit={submit}>
+        <section className="admin-panel settings-section">
+          <p className="admin-eyebrow">Registration & Early Bird</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem", padding: "1.2rem", backgroundColor: "#f8fafc", borderRadius: "0.75rem", border: "1px solid #e2e8f0" }}>
+            <div>
+              <strong style={{ fontSize: "1.05rem", color: controls.earlyBirdManualOff ? "#dc2626" : "#0d9488" }}>
+                Status: {controls.earlyBirdManualOff ? "Early Bird Manually Turned Off (Regular Registration Active)" : "Early Bird Active (Ends Oct 5, 2026 at 11:59 PM IST)"}
+              </strong>
+              <p style={{ margin: "0.5rem 0 0", fontSize: "0.875rem", color: "#64748b", lineHeight: 1.5 }}>
+                Early bird rates: <strong>GAIMS Elite Member 2500 / 1500</strong> & <strong>Non-Elite 3000 / 2000</strong>.
+                Website countdown is live until <strong>5th October 2026, 11:59 PM IST</strong>. You can manually disable or enable early bird here at any time.
+              </p>
+            </div>
+            <div>
+              <button
+                type="button"
+                className={controls.earlyBirdManualOff ? "admin-primary-button" : "admin-secondary-button"}
+                style={{
+                  cursor: "pointer",
+                  backgroundColor: controls.earlyBirdManualOff ? "#0d9488" : "#dc2626",
+                  color: "#ffffff",
+                  borderColor: controls.earlyBirdManualOff ? "#0d9488" : "#dc2626",
+                  fontWeight: "700",
+                  padding: "0.65rem 1.4rem",
+                  borderRadius: "0.5rem",
+                  fontSize: "0.95rem"
+                }}
+                onClick={async () => {
+                  const updated = !controls.earlyBirdManualOff;
+                  const newControls = { ...controls, earlyBirdManualOff: updated };
+                  setControls(newControls);
+                  try {
+                    await api.put("/api/super-admin/cms-controls", { controls: newControls });
+                    setSaved(true);
+                    window.setTimeout(() => setSaved(false), 2200);
+                  } catch (e) {
+                    console.error("Failed to toggle early bird:", e);
+                  }
+                }}
+              >
+                {controls.earlyBirdManualOff ? "Turn on Early Bird" : "Turn off Early Bird manually"}
+              </button>
+            </div>
+          </div>
+        </section>
         <section className="admin-panel settings-section">
           <p className="admin-eyebrow">Homepage</p>
           <label>Title<input value={controls.homepage?.title || ""} onChange={(event) => updateSection("homepage", "title", event.target.value)} /></label>

@@ -1,56 +1,43 @@
 const express = require('express');
-const dns = require('dns').promises;
-const { createTransporter, getSmtpConfig } = require('../services/mailService');
+const { verifyConnection, getSenderConfig } = require('../services/mailService');
 
 const router = express.Router();
 
-// TODO: Remove temporary SMTP diagnostic endpoint after Railway SMTP connectivity debugging is complete.
-router.get('/smtp', async (req, res) => {
-  const { host, port, secure } = getSmtpConfig();
-
-  console.log('--- SMTP DEBUG START ---');
-  console.log(`SMTP_HOST: ${host}`);
-  console.log(`SMTP_PORT: ${port}`);
-  console.log(`SMTP_SECURE: ${secure}`);
-
-  // Detailed DNS resolution check for Railway / container diagnostics
-  try {
-    const addresses = await dns.lookup(host, { all: true });
-    console.log('SMTP DNS RESOLUTION:', JSON.stringify(addresses));
-  } catch (dnsErr) {
-    console.error('SMTP DNS RESOLUTION FAILED:', dnsErr.message);
-  }
-
-  // Reuse the existing application Nodemailer transporter
-  const transporter = createTransporter();
+// TODO: Remove temporary email diagnostic endpoint after Resend migration is verified.
+router.get('/email', async (_req, res) => {
+  console.log('--- RESEND EMAIL DEBUG START ---');
+  const senderConfig = getSenderConfig();
+  console.log(`PROVIDER: Resend`);
+  console.log(`SENDER_FROM: ${senderConfig.from}`);
+  console.log(`RESEND_API_KEY_PRESENT: ${senderConfig.hasApiKey}`);
 
   try {
-    console.log('Initiating transporter.verify()...');
-    await transporter.verify();
-    console.log('SMTP DEBUG SUCCESS: Connection and authentication verified successfully');
-    console.log('--- SMTP DEBUG END ---');
+    const result = await verifyConnection();
+    console.log('RESEND EMAIL DEBUG SUCCESS: Authenticated successfully with Resend');
+    console.log('--- RESEND EMAIL DEBUG END ---');
 
     return res.json({
       success: true,
-      message: 'SMTP connection successful',
+      provider: 'resend',
+      message: result.message,
+      from: senderConfig.from,
     });
   } catch (error) {
-    console.error('SMTP DEBUG ERROR:');
-    console.error(`code: ${error.code || '(none)'}`);
-    console.error(`command: ${error.command || '(none)'}`);
+    console.error('RESEND EMAIL DEBUG ERROR:');
     console.error(`message: ${error.message || String(error)}`);
-    console.error(`response: ${error.response || '(none)'}`);
-    console.error(`responseCode: ${error.responseCode || '(none)'}`);
-    console.error('--- SMTP DEBUG END ---');
+    console.error('--- RESEND EMAIL DEBUG END ---');
 
     return res.status(500).json({
       success: false,
-      code: error.code || null,
-      command: error.command || null,
-      message: error.message || null,
-      response: error.response || null,
+      provider: 'resend',
+      message: error.message || 'Resend verification failed',
     });
   }
+});
+
+// Backward-compatible redirect for any existing callers of /smtp
+router.get('/smtp', (_req, res) => {
+  res.redirect('/api/debug/email');
 });
 
 module.exports = router;

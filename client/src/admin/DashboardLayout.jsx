@@ -167,6 +167,10 @@ const NAV_SECTIONS = [
       { id: "speakers", label: "Speakers", icon: Mic2, permissions: ["manage_speakers", "speakers.manage"] },
       { id: "schedule", label: "Schedule", icon: CalendarDays, permissions: ["manage_schedules", "schedule.manage"] },
       { id: "workshops", label: "Workshops", icon: Wrench, permissions: ["manage_workshops", "workshops.manage"] },
+      { id: "workshop-applications", label: "Workshop Applications", icon: ClipboardCheck, permissions: ["workshop_application_view", "manage_workshops"] },
+      { id: "workshop-attendance", label: "Workshop Attendance", icon: UserCheck, permissions: ["workshop_attendance_manage", "manage_workshops"] },
+      { id: "workshop-certificates", label: "Workshop Certificates", icon: BadgeCheck, permissions: ["workshop_certificate_manage", "manage_workshops"] },
+      { id: "workshop-reports", label: "Workshop Reports", icon: BarChart3, permissions: ["workshop_reports_view", "manage_workshops"] },
       { id: "hospitality", label: "Hospitality", icon: Hotel, permissions: ["manage_venues", "venues.manage", "hospitality.manage"], aliases: ["venues"] },
       { id: "logistics", label: "Logistics", icon: Bus, permissions: ["manage_logistics", "logistics.manage"] },
       { id: "resources", label: "Resources", icon: Archive, permissions: ["manage_resources", "resources.manage"] },
@@ -188,6 +192,7 @@ const NAV_SECTIONS = [
     id: "awards-certificates",
     title: "AWARDS & CERTIFICATES",
     items: [
+      { id: "award-nominations", label: "Award Nominations", icon: Trophy, permissions: ["award_nomination_view", "manage_awards"] },
       { id: "awards", label: "Awards", icon: Trophy, permissions: ["manage_awards", "awards.manage"] },
       { id: "certificate-templates", label: "Certificate Templates", icon: Layers3, permissions: ["manage_templates", "certificates.manage"] },
       { id: "certificate-generate", label: "Generate Certificates", icon: FileCheck2, permissions: ["generate_certificates", "certificates.manage"] },
@@ -257,6 +262,14 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
 
   const userRole = (user?.role || "").toUpperCase();
   const isSuperAdmin = userRole === "SUPER_ADMIN" || userRole === "ADMIN";
+  const userPermissions = user?.permissions || [];
+  const isAwardJudge =
+    (userRole === "AWARD_JUDGE" ||
+      userRole === "JUDGE" ||
+      userRole === "AWARD_JURY" ||
+      userRole === "AWARD JUDGE" ||
+      (userPermissions.includes("award_nomination_view") && !isSuperAdmin));
+
   const isChairperson =
     userRole === "SCIENTIFIC_CHAIRPERSON" ||
     userRole === "CHAIRPERSON" ||
@@ -266,37 +279,69 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
       userRole === "SCIENTIFIC_REVIEWER" ||
       userRole === "REVIEWER" ||
       userRole === "RESEARCH") &&
-    !isSuperAdmin;
-  const userPermissions = user?.permissions || [];
+    !isSuperAdmin &&
+    !isAwardJudge;
 
-  const visibleSections = NAV_SECTIONS.map((section) => {
-    if (isScientificOnly) {
-      if (section.id !== "scientific") return null;
-      return {
-        ...section,
-        items: section.items
-          .filter((item) => ["scientific", "scientific-team", "abstract-report"].includes(item.id))
-          .map((item) => ({
+  const isWorkshopTeam =
+    (userRole === "WORKSHOP_TEAM" ||
+      userRole === "WORKSHOP_LEAD" ||
+      userRole === "WORKSHOP" ||
+      (userPermissions.includes("workshop_application_view") && !isSuperAdmin && !isAwardJudge && !isScientificOnly));
+
+  const visibleSections = isAwardJudge
+    ? [
+        {
+          id: "judge-main",
+          title: "",
+          items: [
+            { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, navigationId: "dashboard" },
+            { id: "award-nominations", label: "Award Nominations", icon: Trophy, navigationId: "award-nominations" },
+          ],
+        },
+      ]
+    : isWorkshopTeam
+    ? [
+        {
+          id: "workshop-main",
+          title: "WORKSHOPS",
+          items: [
+            { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, navigationId: "dashboard" },
+            { id: "workshops", label: "Workshops", icon: Wrench, navigationId: "workshops" },
+            { id: "workshop-applications", label: "Workshop Applications", icon: ClipboardCheck, navigationId: "workshop-applications" },
+            { id: "workshop-attendance", label: "Workshop Attendance", icon: UserCheck, navigationId: "workshop-attendance" },
+            { id: "workshop-certificates", label: "Workshop Certificates", icon: BadgeCheck, navigationId: "workshop-certificates" },
+            { id: "workshop-reports", label: "Workshop Reports", icon: BarChart3, navigationId: "workshop-reports" },
+          ],
+        },
+      ]
+    : NAV_SECTIONS.map((section) => {
+        if (isScientificOnly) {
+          if (section.id !== "scientific") return null;
+          return {
+            ...section,
+            items: section.items
+              .filter((item) => ["scientific", "scientific-team", "abstract-report"].includes(item.id))
+              .map((item) => ({
+                ...item,
+                navigationId: item.targetId || item.id,
+              })),
+          };
+        }
+
+        const allowedItems = section.items.filter((item) => {
+          if (item.id === "reviews" && isChairperson) return false;
+          if (isSuperAdmin) return true;
+          if (!item.permissions || item.permissions.length === 0) return true;
+          return item.permissions.some((p) => userPermissions.includes(p));
+        });
+        return {
+          ...section,
+          items: allowedItems.map((item) => ({
             ...item,
             navigationId: item.targetId || item.id,
           })),
-      };
-    }
-
-    const allowedItems = section.items.filter((item) => {
-      if (item.id === "reviews" && isChairperson) return false;
-      if (isSuperAdmin) return true;
-      if (!item.permissions || item.permissions.length === 0) return true;
-      return item.permissions.some((p) => userPermissions.includes(p));
-    });
-    return {
-      ...section,
-      items: allowedItems.map((item) => ({
-        ...item,
-        navigationId: item.targetId || item.id,
-      })),
-    };
-  }).filter((section) => section && section.items && section.items.length > 0);
+        };
+      }).filter((section) => section && section.items && section.items.length > 0);
 
   const flatVisibleItems = visibleSections.flatMap((s) => s.items);
   const primaryMobileItems = flatVisibleItems.slice(0, 4);
@@ -333,9 +378,9 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
     <div className="admin-shell">
       <aside className={open ? "admin-sidebar open" : "admin-sidebar"} id="admin-mobile-sidebar">
         <div className="admin-brand">
-          <span><BriefcaseBusiness size={19} /></span>
+          <span>{isAwardJudge ? <Trophy size={19} /> : <BriefcaseBusiness size={19} />}</span>
           <div>
-            <strong>GHC CMS</strong>
+            <strong>{isAwardJudge ? "Award Judge" : "GHC CMS"}</strong>
           </div>
           <button className="admin-sidebar-close" onClick={() => setOpen(false)} aria-label="Close sidebar">
             <X size={18} />
@@ -367,15 +412,17 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
           ))}
         </nav>
 
-        <button className="admin-logout" style={{ marginBottom: "10px", color: "black" }} onClick={() => window.location.href = "/"}>
-          <Home size={18} />
-          Back to Website
-        </button>
+        <div style={{ marginTop: "auto", borderTop: "1px solid rgba(0,0,0,0.06)", paddingTop: "10px" }}>
+          <button className="admin-logout" style={{ marginBottom: "10px", color: "black" }} onClick={() => window.location.href = "/"}>
+            <Home size={18} />
+            Back to Website
+          </button>
 
-        <button className="admin-logout" onClick={onLogout}>
-          <LogOut size={18} />
-          Logout
-        </button>
+          <button className="admin-logout" onClick={onLogout}>
+            <LogOut size={18} />
+            Logout
+          </button>
+        </div>
       </aside>
       {open && <button className="admin-sidebar-backdrop" aria-label="Close navigation menu" onClick={() => setOpen(false)} />}
 

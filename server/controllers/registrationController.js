@@ -113,7 +113,7 @@ const createRegistration = asyncHandler(async (req, res) => {
 
   const registration = await Registration.createRegistration(payload, generateQrSvg, req);
   log(req, 'created_registration', 'registrations', registration.id);
-  if (process.env.SMTP_HOST) {
+  if (process.env.RESEND_API_KEY || process.env.SMTP_HOST) {
     sendMail({
       to: registration.email,
       subject: 'GHC 2026 registration received',

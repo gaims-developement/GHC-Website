@@ -492,7 +492,12 @@ const getCmsControls = asyncHandler(async (_req, res) => {
     contact: settings.settings.contact,
     venue: { name: settings.settings.conference.venue },
     faq: [],
+    earlyBirdManualOff: false,
   });
+
+  if (parsed.earlyBirdManualOff === undefined) {
+    parsed.earlyBirdManualOff = false;
+  }
 
   if (!parsed.hero) parsed.hero = {};
   if (!parsed.hero.collaboratingOrg && settings.settings.conference?.collaboratingOrg) {

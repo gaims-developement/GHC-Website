@@ -48,6 +48,7 @@ import {
   Bookmark,
   Settings,
   Trophy,
+  User,
   Users,
   Ticket,
   Wrench,
@@ -1023,10 +1024,15 @@ function WorkshopsExperience() {
     axios.get(apiUrl("/api/workshops")).then((response) => {
       const workshops = response.data.workshops || [];
       if (workshops.length) {
-        setWorkshopData(workshops.map((workshop) => ({
+        setWorkshopData(workshops.filter(w => w.status === 'published' || !w.status).map((workshop) => ({
           ...workshop,
           slug: workshop.slug || createWorkshopSlug(workshop.title),
-          remaining: Math.max(Number(workshop.capacity || 0) - Number(workshop.registeredCount || 0), 0),
+          remaining: Math.max(Number(workshop.availableSeats ?? (workshop.capacity - (workshop.registeredCount || 0))), 0),
+          isRegistrationOpen: workshop.isRegistrationOpen !== false && workshop.is_registration_open !== false,
+          certificateAvailable: Boolean(workshop.certificateAvailable ?? workshop.certificate_available ?? true),
+          organizer: workshop.organizer || workshop.faculty || "New Delhi",
+          venue: workshop.venue || "New Delhi",
+          displayDate: workshop.duration ? `${workshop.duration}, Nov 2026` : formatWorkshopDate(workshop.date),
         })));
       }
     }).catch(() => setWorkshopData(mockWorkshops));
@@ -1035,49 +1041,123 @@ function WorkshopsExperience() {
   const scrollWorkshops = (direction) => {
     const container = scrollRef.current;
     if (!container) return;
-    container.scrollBy({ left: direction * (container.clientWidth * 0.8), behavior: "smooth" });
+    const scrollAmount = container.clientWidth * 0.75;
+    container.scrollBy({ left: direction * scrollAmount, behavior: "smooth" });
   };
 
   return (
-    <section id="workshops-experience" className="section-shell reveal-section bg-[#F8F9FC] py-24 border-y border-gray-100">
-      <div className="mb-14 max-w-7xl mx-auto px-4 sm:px-6 flex flex-col justify-between gap-5 md:flex-row md:items-end">
-        <div>
-          <SectionHeading eyebrow="Workshops Experience" title="Premium clinical and research skill rooms." text="Each workshop is structured around capacity, faculty depth and delegate readiness." />
-          <p className="text-[#173B8F] font-bold mt-4 flex items-center gap-2">Swipe left to see all the workshops <ArrowRight className="h-4 w-4" /></p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button type="button" aria-label="Previous workshops" onClick={() => scrollWorkshops(-1)} className="w-12 h-12 flex items-center justify-center rounded-full border border-gray-200 bg-white text-[#173B8F] hover:bg-gray-50 transition-colors shadow-sm"><ArrowLeft className="h-5 w-5" /></button>
-          <button type="button" aria-label="Next workshops" onClick={() => scrollWorkshops(1)} className="w-12 h-12 flex items-center justify-center rounded-full border border-gray-200 bg-white text-[#173B8F] hover:bg-gray-50 transition-colors shadow-sm"><ArrowRight className="h-5 w-5" /></button>
-        </div>
+    <section id="workshops-experience" className="section-shell reveal-section bg-[#F8F9FC] py-24 border-y border-gray-100 overflow-hidden">
+      <div className="mb-10 max-w-7xl mx-auto px-4 sm:px-6">
+        <SectionHeading
+          eyebrow="Workshops Experience"
+          title="Premium clinical and research skill rooms."
+          text="Each workshop is structured around capacity, faculty depth and delegate readiness in New Delhi."
+        />
       </div>
-      <div ref={scrollRef} className="flex gap-6 overflow-x-auto pb-12 px-4 sm:px-6 snap-x max-w-7xl mx-auto custom-scrollbar">
+
+      {/* Slider Container with Navigation Buttons Inside */}
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 group/slider">
+        {/* Left Arrow Button Inside Slider */}
+        <button
+          type="button"
+          aria-label="Previous workshops"
+          onClick={() => scrollWorkshops(-1)}
+          className="absolute -left-2 sm:left-1 md:left-2 top-1/2 -translate-y-1/2 z-20 w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-full bg-white/95 backdrop-blur-md border border-gray-200 text-[#173B8F] shadow-[0_8px_30px_rgba(16,24,40,0.16)] hover:bg-[#173B8F] hover:text-white hover:border-[#173B8F] hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer"
+        >
+          <ArrowLeft className="h-6 w-6" />
+        </button>
+
+        {/* Right Arrow Button Inside Slider */}
+        <button
+          type="button"
+          aria-label="Next workshops"
+          onClick={() => scrollWorkshops(1)}
+          className="absolute -right-2 sm:right-1 md:right-2 top-1/2 -translate-y-1/2 z-20 w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-full bg-white/95 backdrop-blur-md border border-gray-200 text-[#173B8F] shadow-[0_8px_30px_rgba(16,24,40,0.16)] hover:bg-[#173B8F] hover:text-white hover:border-[#173B8F] hover:scale-110 active:scale-95 transition-all duration-300 cursor-pointer"
+        >
+          <ArrowRight className="h-6 w-6" />
+        </button>
+
+        {/* Slider Track */}
+        <div
+          ref={scrollRef}
+          className="flex flex-nowrap gap-7 overflow-x-auto pb-10 pt-2 px-2 sm:px-4 snap-x snap-mandatory scroll-smooth"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
         {workshopData?.map((workshop) => {
           const slug = workshop.slug || createWorkshopSlug(workshop.title);
+          const isClosed = !workshop.isRegistrationOpen || workshop.remaining <= 0;
+          const speakerName = workshop.faculty || workshop.organizer || "New Delhi Faculty";
+
           return (
-          <motion.article key={workshop.title} className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(16,24,40,0.04)] border border-gray-100 p-8 min-w-[320px] md:min-w-[400px] flex-shrink-0 snap-center flex flex-col" whileHover={{ y: -10, scale: 1.015, boxShadow: '0 20px 40px -10px rgba(16,24,40,0.08)' }}>
-            <div className="w-full h-48 rounded-xl overflow-hidden bg-[#F8F9FC] mb-6 flex items-center justify-center">
-              {workshop.imageUrl ? <img loading="lazy" src={workshop.imageUrl.startsWith("/uploads") ? apiUrl(workshop.imageUrl) : workshop.imageUrl} alt="" className="w-full h-full object-cover" /> : <ClipboardCheck className="h-10 w-10 text-gray-300" />}
-            </div>
-            
-            <h3 className="font-['Outfit'] text-2xl font-extrabold text-[#101828]">{workshop.title}</h3>
-            <p className="text-[#173B8F] font-bold text-sm mt-2">{workshop.faculty}</p>
-            {workshop.description && <p className="text-[#475467] font-medium text-sm mt-4 leading-relaxed line-clamp-3">{workshop.description}</p>}
-            
-            <div className="mt-auto pt-6">
-              <div className="grid grid-cols-2 gap-4 text-sm text-[#475467] font-medium mb-6">
-                <span className="flex items-center gap-2"><Users className="h-4 w-4 text-[#00A6A6]" />{workshop.capacity} capacity</span>
-                <span className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#00A6A6]" />{workshop.duration}</span>
-                <span className="flex items-center gap-2"><BadgeCheck className="h-4 w-4 text-[#00A6A6]" />{workshop.remaining} seats left</span>
-                {workshop.venue && <span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-[#00A6A6]" />{workshop.venue}</span>}
+            <motion.article
+              key={workshop.title || workshop.id}
+              className="w-[360px] sm:w-[410px] md:w-[450px] flex-shrink-0 snap-start bg-white rounded-[2.25rem] shadow-[0_8px_30px_rgba(16,24,40,0.04)] border border-gray-100 p-8 flex flex-col justify-between hover:border-[#173B8F]/30 hover:shadow-[0_20px_40px_-10px_rgba(16,24,40,0.08)] transition-all duration-300 relative overflow-hidden group"
+              whileHover={{ y: -6 }}
+            >
+              {/* Card Header & Badge */}
+              <div>
+                <div className="flex items-center justify-between gap-2 mb-4">
+                  <span className="inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-50 text-[#173B8F] truncate max-w-[220px]">
+                    {workshop.workshopType || workshop.category || "Clinical Skills"}
+                  </span>
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${isClosed ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'}`}>
+                    {isClosed ? 'Applications Closed' : 'Open'}
+                  </span>
+                </div>
+
+                {/* Workshop Name */}
+                <h3 className="font-['Outfit'] text-2xl sm:text-[1.65rem] font-black text-[#101828] group-hover:text-[#173B8F] transition-colors line-clamp-2 min-h-[4.25rem] leading-snug">
+                  {workshop.title}
+                </h3>
+
+                {/* Speaker Name */}
+                <div className="flex items-center gap-2 mt-2 text-sm sm:text-base text-[#173B8F] font-bold min-h-[1.75rem]">
+                  <User className="h-4 w-4 shrink-0 text-[#00A6A6]" />
+                  <span className="truncate">Speaker: {speakerName}</span>
+                </div>
+
+                {/* Brief Details */}
+                <p className="text-[#475467] font-medium text-sm sm:text-[15px] mt-3.5 leading-relaxed line-clamp-3 min-h-[4.75rem]">
+                  {workshop.description || "Hands-on clinical session with world-class faculty in New Delhi."}
+                </p>
               </div>
-              <div className="flex items-center gap-3">
-                <a href={`/workshops/${slug}`} className="flex-1 bg-[#173B8F] text-white text-center py-3 rounded-full font-bold text-sm hover:-translate-y-1 transition-transform shadow-md">View Details</a>
-                <button type="button" aria-label={`Share ${workshop.title}`} className="w-12 h-12 flex items-center justify-center rounded-full border border-gray-200 text-[#475467] hover:bg-gray-50 transition-colors"><Share2 className="h-5 w-5" /></button>
-                <button type="button" aria-label={`Save ${workshop.title}`} className="w-12 h-12 flex items-center justify-center rounded-full border border-gray-200 text-[#475467] hover:bg-gray-50 transition-colors"><Bookmark className="h-5 w-5" /></button>
+
+              {/* Info & Details Button pinned to bottom */}
+              <div className="mt-6 pt-5 border-t border-gray-100 flex flex-col justify-between">
+                <div className="grid grid-cols-2 gap-3 text-xs sm:text-sm text-[#475467] font-medium mb-6 bg-gray-50/80 p-4 rounded-2xl border border-gray-100 min-h-[6rem]">
+                  <span className="flex items-center gap-2 min-w-0" title={workshop.displayDate}>
+                    <CalendarDays className="h-4 w-4 text-[#00A6A6] shrink-0" />
+                    <span className="truncate">{workshop.displayDate}</span>
+                  </span>
+                  <span className="flex items-center gap-2 min-w-0" title={`${workshop.remaining} of ${workshop.capacity} seats left`}>
+                    <Users className="h-4 w-4 text-[#00A6A6] shrink-0" />
+                    <span className="truncate">{workshop.remaining} / {workshop.capacity} seats</span>
+                  </span>
+                  <span className="flex items-center gap-2 min-w-0" title={workshop.venue}>
+                    <MapPin className="h-4 w-4 text-[#00A6A6] shrink-0" />
+                    <span className="truncate">{workshop.venue}</span>
+                  </span>
+                  <span className="flex items-center gap-2 min-w-0">
+                    <BadgeCheck className="h-4 w-4 text-[#00A6A6] shrink-0" />
+                    <span className="truncate">{workshop.certificateAvailable ? 'Certificate: Yes' : 'No Certificate'}</span>
+                  </span>
+                </div>
+
+                {/* ONLY Details Button */}
+                <Link
+                  to={`/workshops/${slug}`}
+                  state={{ workshop }}
+                  onClick={() => window.scrollTo(0, 0)}
+                  className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-5 rounded-2xl font-bold text-sm sm:text-base bg-gradient-to-r from-[#173B8F] to-[#00A6A6] text-white hover:brightness-110 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+                >
+                  Details
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
-            </div>
-          </motion.article>
-        );})}
+            </motion.article>
+          );
+        })}
+        </div>
       </div>
     </section>
   );
@@ -1722,10 +1802,38 @@ function ResearchHub() {
 
 function PanelDiscussionSection() {
   const panels = [
-    { title: "HPV and Cervical Cancer", icon: HeartPulse, description: "Discussing prevention, early detection, and the latest treatment protocols." },
-    { title: "Stem Cell", icon: Dna, description: "Exploring regenerative medicine and ethical frontiers in stem cell research." },
-    { title: "Medical Education", icon: ClipboardCheck, description: "Navigating the evolving landscape for medical students." },
-    { title: "AI in Healthcare", icon: BrainCircuit, description: "Leveraging artificial intelligence for clinical decision support and automation." },
+    {
+      title: "HPV and Cervical Cancer",
+      icon: HeartPulse,
+      image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?q=80&w=800&auto=format&fit=crop",
+      badge: "Oncology & Prevention",
+      description: "Discussing prevention, early detection, and the latest treatment protocols.",
+      tags: ["Prevention", "Screening", "Oncology"],
+    },
+    {
+      title: "Stem Cell",
+      icon: Dna,
+      image: "https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?q=80&w=800&auto=format&fit=crop",
+      badge: "Regenerative Medicine",
+      description: "Exploring regenerative medicine and ethical frontiers in stem cell research.",
+      tags: ["Regenerative Medicine", "Cellular Biology"],
+    },
+    {
+      title: "Medical Education",
+      icon: ClipboardCheck,
+      image: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?q=80&w=800&auto=format&fit=crop",
+      badge: "Curriculum & Training",
+      description: "Navigating the evolving landscape for medical students.",
+      tags: ["Undergraduate (UG)", "Postgraduate (PG)", "FMGs"],
+    },
+    {
+      title: "AI in Healthcare",
+      icon: BrainCircuit,
+      image: "https://images.unsplash.com/photo-1516549655169-df83a0774514?q=80&w=800&auto=format&fit=crop",
+      badge: "Digital Health",
+      description: "Leveraging artificial intelligence for clinical decision support and automation.",
+      tags: ["Clinical AI", "Automation", "Diagnostics"],
+    },
   ];
 
   return (
@@ -1733,21 +1841,65 @@ function PanelDiscussionSection() {
       <div className="mb-10 max-w-7xl mx-auto px-4 sm:px-6 flex flex-col justify-between gap-5 md:flex-row md:items-end">
         <SectionHeading eyebrow="Expert Forums" title="Panel Discussions." text="Engage with thought leaders on critical healthcare topics and future directions." dark={false} />
       </div>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 items-stretch">
         {panels.map((panel) => {
           const Icon = panel.icon;
           return (
-            <motion.article key={panel.title} className="bg-[#F8F9FC] rounded-[2rem] border border-gray-100 shadow-sm p-8 flex flex-col hover:-translate-y-2 hover:shadow-md transition-all" whileHover={{ y: -6 }}>
-              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-[#173B8F] border border-gray-100 shadow-sm mb-6"><Icon className="h-7 w-7" /></div>
-              <h3 className="font-['Outfit'] text-xl font-bold text-[#101828] mb-3">{panel.title}</h3>
-              <p className="text-[#475467] font-medium text-sm leading-relaxed mb-6">{panel.description}</p>
-              {panel.title === "Medical Education" && (
-                <div className="mt-auto flex flex-col gap-2 pt-4 border-t border-gray-200">
-                  <span className="text-xs font-bold text-[#173B8F] bg-[#173B8F]/10 px-3 py-1 rounded-full w-fit">Undergraduate (UG)</span>
-                  <span className="text-xs font-bold text-[#00A6A6] bg-[#00A6A6]/10 px-3 py-1 rounded-full w-fit">Postgraduate (PG)</span>
-                  <span className="text-xs font-bold text-[#f43f5e] bg-[#f43f5e]/10 px-3 py-1 rounded-full w-fit">FMGs</span>
+            <motion.article
+              key={panel.title}
+              className="bg-[#F8F9FC] rounded-[2rem] border border-gray-100 shadow-sm p-6 flex flex-col justify-between h-full group hover:-translate-y-2 hover:shadow-lg hover:border-[#173B8F]/20 transition-all duration-300"
+              whileHover={{ y: -6 }}
+            >
+              <div>
+                {/* Panel Image Container */}
+                <div className="relative h-44 w-full rounded-2xl overflow-hidden mb-5 bg-gray-100">
+                  <img
+                    src={panel.image}
+                    alt={panel.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#081B33]/70 via-transparent to-transparent" />
+                  
+                  {/* Floating Icon */}
+                  <div className="absolute top-3 right-3 w-10 h-10 bg-white/90 backdrop-blur-md rounded-xl flex items-center justify-center text-[#173B8F] shadow-sm">
+                    <Icon className="h-5 w-5" />
+                  </div>
+
+                  {/* Badge */}
+                  <div className="absolute bottom-3 left-3 text-[11px] font-bold uppercase tracking-wider text-white bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/20">
+                    {panel.badge}
+                  </div>
                 </div>
-              )}
+
+                <h3 className="font-['Outfit'] text-xl font-bold text-[#101828] mb-2 min-h-[3.25rem] line-clamp-2 leading-snug">
+                  {panel.title}
+                </h3>
+                <p className="text-[#475467] font-medium text-sm leading-relaxed mb-4 min-h-[3.75rem] line-clamp-3">
+                  {panel.description}
+                </p>
+              </div>
+
+              {/* Tag Pills */}
+              <div className="mt-auto pt-4 border-t border-gray-200/80 flex flex-wrap gap-1.5">
+                {panel.tags?.map((tag, idx) => {
+                  const isMedical = panel.title === "Medical Education";
+                  const colors = isMedical
+                    ? idx === 0
+                      ? "text-[#173B8F] bg-[#173B8F]/10"
+                      : idx === 1
+                      ? "text-[#00A6A6] bg-[#00A6A6]/10"
+                      : "text-[#f43f5e] bg-[#f43f5e]/10"
+                    : "text-[#173B8F] bg-blue-50/80";
+                  return (
+                    <span
+                      key={tag}
+                      className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${colors}`}
+                    >
+                      {tag}
+                    </span>
+                  );
+                })}
+              </div>
             </motion.article>
           );
         })}
@@ -1757,15 +1909,15 @@ function PanelDiscussionSection() {
 }
 
 const defaultHospitalityCafes = [
-  { _id: "hc1", name: "SDA Market Cafes", description: "Right opposite IIT Delhi, a bustling hub of vibrant cafes, student hangouts, and budget eats.", address: "Opposite IIT Delhi (2 km from AIIMS)", googleMapsLink: "https://maps.google.com/?q=SDA+Market+New+Delhi" },
-  { _id: "hc2", name: "Green Park Market", description: "Quiet and aesthetic coffee shops offering high-speed Wi-Fi and relaxed work atmosphere.", address: "Green Park Main (1.5 km from AIIMS)", googleMapsLink: "https://maps.google.com/?q=Green+Park+Market+New+Delhi" },
+  { _id: "hc1", name: "SDA Market Cafes", description: "Right opposite IIT Delhi, a bustling hub of vibrant cafes, student hangouts, and budget eats.", address: "Opposite IIT Delhi, New Delhi", googleMapsLink: "https://maps.google.com/?q=SDA+Market+New+Delhi" },
+  { _id: "hc2", name: "Green Park Market", description: "Quiet and aesthetic coffee shops offering high-speed Wi-Fi and relaxed work atmosphere.", address: "Green Park Main, New Delhi", googleMapsLink: "https://maps.google.com/?q=Green+Park+Market+New+Delhi" },
   { _id: "hc3", name: "Satya Niketan", description: "South Campus hotspot famous for student-friendly pricing, hearty meals, and vibrant youth culture.", address: "South Campus, New Delhi", googleMapsLink: "https://maps.google.com/?q=Satya+Niketan+New+Delhi" },
 ];
 
 const defaultHospitalityStays = [
-  { _id: "hs1", name: "Le Méridien New Delhi", description: "Official GHC Gala venue. 5-star luxury in central Delhi, overlooking iconic Lutyens' Delhi.", address: "Windsor Place, Janpath, Connaught Place", googleMapsLink: "https://maps.google.com/?q=Le+Meridien+New+Delhi" },
+  { _id: "hs1", name: "Central Delhi Accommodations", description: "Premium accommodations in central Delhi within convenient reach of the conclave sessions.", address: "Connaught Place, New Delhi", googleMapsLink: "https://maps.google.com/?q=Connaught+Place+New+Delhi" },
   { _id: "hs2", name: "Green Park Hostels", description: "Clean, modern, and affordable student backpacker stays within 5 minutes of the Yellow Line metro.", address: "Green Park Main, New Delhi", googleMapsLink: "https://maps.google.com/?q=Green+Park+New+Delhi" },
-  { _id: "hs3", name: "South Extension Guest Houses", description: "Comfortable boutique accommodations offering great value and fast auto-rickshaw access to AIIMS.", address: "South Extension Part 1, New Delhi", googleMapsLink: "https://maps.google.com/?q=South+Extension+New+Delhi" },
+  { _id: "hs3", name: "South Extension Guest Houses", description: "Comfortable boutique accommodations offering great value and fast auto-rickshaw access in New Delhi.", address: "South Extension Part 1, New Delhi", googleMapsLink: "https://maps.google.com/?q=South+Extension+New+Delhi" },
 ];
 
 function VenueSection() {
@@ -1797,9 +1949,9 @@ function VenueSection() {
   const displayStays = stays.length > 0 ? stays : defaultHospitalityStays;
 
   const officialVenueInfo = [
-    { icon: MapPin, title: "Academic Venue", text: "S.E.T Facility, AIIMS New Delhi (Ansari Nagar)" },
-    { icon: Hotel, title: "Gala & Stays", text: "Le Méridien New Delhi (Janpath, Connaught Place)" },
-    { icon: Plane, title: "Transit Access", text: "AIIMS Metro Station (Yellow Line) & NDLS direct connectivity" },
+    { icon: MapPin, title: "Official Venue", text: "New Delhi" },
+    { icon: Hotel, title: "Accommodations", text: "Curated delegate stays and hotels across New Delhi" },
+    { icon: Plane, title: "Transit Access", text: "New Delhi transit connectivity & metro access" },
     { icon: BadgeCheck, title: "Delegate Desk", text: "On-site registration, badge issuance, and workshop routing" },
   ];
 
@@ -1808,25 +1960,25 @@ function VenueSection() {
       <div className="venue-grid">
         <div className="venue-visual">
           <div className="venue-media">
-            <span>S.E.T Facility, AIIMS Delhi</span>
+            <span>New Delhi</span>
           </div>
           <div className="map-placeholder">
             <a 
-              href="https://maps.google.com/?q=All+India+Institute+of+Medical+Sciences+New+Delhi" 
+              href="https://maps.google.com/?q=New+Delhi" 
               target="_blank" 
               rel="noopener noreferrer" 
               className="flex items-center gap-2 hover:text-blue-400 transition-colors"
             >
               <MapPin className="h-7 w-7 text-[#4FC3F7]" />
-              <span>View AIIMS Delhi on Google Maps</span>
+              <span>View New Delhi on Google Maps</span>
             </a>
           </div>
         </div>
         <div className="venue-content">
           <SectionHeading 
             eyebrow="Venue" 
-            title="S.E.T Facility, AIIMS New Delhi" 
-            text="The All India Institute of Medical Sciences (AIIMS) is India's premier medical institute. The state-of-the-art S.E.T facility hosts our academic keynotes, clinical workshops, and research showcases, paired with networking dinners at Le Méridien New Delhi." 
+            title="New Delhi" 
+            text="Join us in New Delhi for the flagship Global Healthcare Conclave 2026. The capital city hosts our academic keynotes, clinical workshops, research showcases, and delegate networking sessions." 
           />
           <div className="venue-info-grid">
             {officialVenueInfo.map((item) => {
@@ -2053,82 +2205,236 @@ function PastOrganisations() {
   );
 }
 
+const EARLY_BIRD_DEADLINE = new Date("2026-10-05T23:59:59+05:30").getTime();
+
 function PricingSection() {
-  const tiers = [
-    { name: "GAIMS Elite Member", early: "₹1,500", late: "₹2,500" },
-    { name: "Non-Member", early: "₹2,000", late: "₹3,000" },
-  ];
+  const [earlyBirdManualOff, setEarlyBirdManualOff] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const diff = EARLY_BIRD_DEADLINE - Date.now();
+    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true };
+    return {
+      days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+      hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+      minutes: Math.floor((diff / (1000 * 60)) % 60),
+      seconds: Math.floor((diff / 1000) % 60),
+      isExpired: false,
+    };
+  });
+
+  useEffect(() => {
+    axios
+      .get(apiUrl("/api/settings/public"))
+      .then((res) => {
+        if (res.data?.registration?.earlyBirdManualOff !== undefined) {
+          setEarlyBirdManualOff(Boolean(res.data.registration.earlyBirdManualOff));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const diff = EARLY_BIRD_DEADLINE - Date.now();
+      if (diff <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
+      } else {
+        setTimeLeft({
+          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+          hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+          minutes: Math.floor((diff / (1000 * 60)) % 60),
+          seconds: Math.floor((diff / 1000) % 60),
+          isExpired: false,
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const isEarlyBirdActive = !earlyBirdManualOff && !timeLeft.isExpired;
 
   return (
     <section id="pricing" className="section-shell reveal-section bg-white py-24">
       <div className="mb-14 max-w-7xl mx-auto px-4 sm:px-6 flex flex-col justify-between gap-5 md:flex-row md:items-end">
-        <SectionHeading eyebrow="Registration Fees" title="Conference Passes." text="Secure your delegate pass for the Global Healthcare Conclave 2026." />
+        <SectionHeading
+          eyebrow="Registration Fees"
+          title="Conference Passes."
+          text="Secure your delegate pass for the Global Healthcare Conclave 2026."
+        />
       </div>
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-        <motion.article className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgba(16,24,40,0.06)] p-10 flex flex-col hover:border-[#173B8F]/30 hover:shadow-[0_12px_40px_rgba(16,24,40,0.1)] transition-all" whileHover={{ y: -6 }}>
-          <div className="w-16 h-16 rounded-2xl bg-[#F8F9FC] text-[#173B8F] border border-gray-100 flex items-center justify-center mb-6"><Ticket className="h-8 w-8" /></div>
-          <h3 className="font-['Outfit'] text-2xl font-extrabold text-[#101828] mb-4">Early Bird Registration</h3>
-          <p className="text-[#475467] font-medium leading-relaxed mb-8 flex-1 text-lg">Last date for early registration: <strong className="text-[#101828]">October 5th</strong></p>
-          <div className="mt-auto pt-6 border-t border-gray-100 flex flex-col gap-4">
-            {tiers.map(t => (
-              <span key={t.name} className="flex justify-between items-center text-[#475467] font-medium text-lg">
-                {t.name} <strong className="text-[#101828] text-xl font-bold">{t.early}</strong>
-              </span>
-            ))}
-          </div>
-        </motion.article>
 
-        <motion.article className="bg-[#101828] rounded-[2rem] shadow-[0_8px_30px_rgba(16,24,40,0.1)] border border-gray-800 p-10 flex flex-col hover:-translate-y-1 transition-transform relative overflow-hidden" whileHover={{ y: -6 }}>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-[#00A6A6] rounded-full blur-[80px] opacity-20 -mr-20 -mt-20"></div>
-          <div className="relative z-10 w-16 h-16 rounded-2xl bg-[#00A6A6]/20 border border-[#00A6A6]/30 text-white flex items-center justify-center mb-6"><Clock3 className="h-8 w-8" /></div>
-          <h3 className="relative z-10 font-['Outfit'] text-2xl font-extrabold text-white mb-4">Regular Registration</h3>
-          <p className="relative z-10 text-gray-300 font-medium leading-relaxed mb-8 flex-1 text-lg">Last date for registration: <strong className="text-white">Mid November</strong></p>
-          <div className="relative z-10 mt-auto pt-6 border-t border-gray-800 flex flex-col gap-4">
-            {tiers.map(t => (
-              <span key={t.name} className="flex justify-between items-center text-gray-300 font-medium text-lg">
-                {t.name} <strong className="text-white text-xl font-bold">{t.late}</strong>
+      <div className="max-w-2xl mx-auto px-4 sm:px-6">
+        <motion.article
+          className="bg-[#101828] rounded-[2.5rem] shadow-[0_20px_60px_rgba(16,24,40,0.35)] border border-gray-800 p-8 sm:p-12 flex flex-col relative overflow-hidden"
+          whileHover={{ y: -4 }}
+          transition={{ duration: 0.3 }}
+        >
+          {/* Subtle ambient lighting glows */}
+          <div className="absolute top-0 right-0 w-80 h-80 bg-[#00A6A6] rounded-full blur-[100px] opacity-20 -mr-24 -mt-24 pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#173B8F] rounded-full blur-[100px] opacity-20 -ml-24 -mb-24 pointer-events-none" />
+
+          {/* Top header row */}
+          <div className="relative z-10 flex flex-wrap items-center justify-between gap-4 mb-6">
+            <div className="w-14 h-14 rounded-2xl bg-[#00A6A6]/20 border border-[#00A6A6]/30 text-[#00E5E5] flex items-center justify-center">
+              <Ticket className="h-7 w-7" />
+            </div>
+            {isEarlyBirdActive ? (
+              <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase bg-[#00A6A6]/20 text-[#00E5E5] border border-[#00A6A6]/30 shadow-[0_0_15px_rgba(0,166,166,0.25)]">
+                <Sparkles className="h-3.5 w-3.5" /> Early Bird Registration
               </span>
-            ))}
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase bg-white/10 text-gray-300 border border-white/10">
+                <Clock3 className="h-3.5 w-3.5" /> Regular Registration
+              </span>
+            )}
+          </div>
+
+          {/* Card Title & Subtitle */}
+          <h3 className="relative z-10 font-['Outfit'] text-3xl sm:text-4xl font-extrabold text-white mb-3">
+            Registration
+          </h3>
+          <p className="relative z-10 text-gray-300 font-medium leading-relaxed mb-8 text-base sm:text-lg">
+            {isEarlyBirdActive
+              ? "Avail special early bird delegate rates before regular registration opens."
+              : "Standard delegate registration passes for the Global Healthcare Conclave 2026."}
+          </p>
+
+          {/* Pricing items */}
+          <div className="relative z-10 flex flex-col gap-4 mb-8">
+            {/* GAIMS Elite Member */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-5 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-[#00A6A6]/40 transition-colors">
+              <div>
+                <span className="text-white font-['Outfit'] text-lg font-bold block">
+                  GAIMS Elite member
+                </span>
+                <span className="text-xs text-gray-400 font-medium">Verified GAIMS Members</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                {isEarlyBirdActive ? (
+                  <>
+                    <span className="text-gray-400 font-semibold line-through text-lg">2500</span>
+                    <span className="text-gray-500 font-light text-2xl">/</span>
+                    <span className="text-[#00E5E5] font-['Outfit'] text-3xl font-extrabold tracking-tight">
+                      1500
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-white font-['Outfit'] text-3xl font-extrabold tracking-tight">
+                    ₹2,500
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Non-Elite */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-5 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-[#00A6A6]/40 transition-colors">
+              <div>
+                <span className="text-white font-['Outfit'] text-lg font-bold block">
+                  Non Elite member
+                </span>
+                <span className="text-xs text-gray-400 font-medium">Standard / Non-Member Delegates</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                {isEarlyBirdActive ? (
+                  <>
+                    <span className="text-gray-400 font-semibold line-through text-lg">3000</span>
+                    <span className="text-gray-500 font-light text-2xl">/</span>
+                    <span className="text-[#00E5E5] font-['Outfit'] text-3xl font-extrabold tracking-tight">
+                      2000
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-white font-['Outfit'] text-3xl font-extrabold tracking-tight">
+                    ₹3,000
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Countdown timer / status box */}
+          <div className="relative z-10 mb-8">
+            {isEarlyBirdActive ? (
+              <div className="p-6 rounded-2xl bg-black/40 border border-[#00A6A6]/30 text-center relative overflow-hidden shadow-inner">
+                <div className="flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-bold text-[#00E5E5] mb-4">
+                  <Clock3 className="h-4 w-4 animate-pulse" />
+                  <span>Early Bird Ends In</span>
+                </div>
+                <div className="grid grid-cols-4 gap-2 sm:gap-4 max-w-sm mx-auto">
+                  <div className="p-3 rounded-xl bg-white/[0.05] border border-white/[0.08]">
+                    <div className="font-['Outfit'] text-2xl sm:text-3xl font-extrabold text-white">
+                      {String(timeLeft.days).padStart(2, "0")}
+                    </div>
+                    <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-400 mt-1">
+                      Days
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/[0.05] border border-white/[0.08]">
+                    <div className="font-['Outfit'] text-2xl sm:text-3xl font-extrabold text-white">
+                      {String(timeLeft.hours).padStart(2, "0")}
+                    </div>
+                    <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-400 mt-1">
+                      Hours
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/[0.05] border border-white/[0.08]">
+                    <div className="font-['Outfit'] text-2xl sm:text-3xl font-extrabold text-white">
+                      {String(timeLeft.minutes).padStart(2, "0")}
+                    </div>
+                    <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-400 mt-1">
+                      Mins
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/[0.05] border border-white/[0.08]">
+                    <div className="font-['Outfit'] text-2xl sm:text-3xl font-extrabold text-[#00E5E5]">
+                      {String(timeLeft.seconds).padStart(2, "0")}
+                    </div>
+                    <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#00E5E5]/80 mt-1">
+                      Secs
+                    </div>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-4 font-medium">
+                  Ends on 5th October 2026 at 11:59 PM IST
+                </p>
+              </div>
+            ) : (
+              <div className="p-5 rounded-2xl bg-white/[0.04] border border-white/[0.08] text-center">
+                <div className="flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-bold text-gray-200">
+                  <Check className="h-4 w-4 text-[#00A6A6]" />
+                  <span>Regular Registration Is Now Open</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5 font-medium">
+                  Early bird period has closed. Passes are now available at regular rates.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Register Now Button */}
+          <div className="relative z-10">
+            <a
+              href="https://mc.clirnet.com/mastercast/connect/D0921-Conclave-1"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full inline-flex items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-[#00A6A6] to-[#173B8F] hover:from-[#00b8b8] hover:to-[#1e48ad] px-8 py-4 font-['Inter'] text-base font-extrabold text-white shadow-[0_8px_25px_rgba(0,166,166,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(0,166,166,0.5)] active:translate-y-0"
+            >
+              Register Now <ArrowRight className="h-5 w-5" />
+            </a>
           </div>
         </motion.article>
       </div>
-      
-      <div className="mt-14 flex justify-center">
-        <a href="https://portal.gaims.org" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 rounded-full bg-[#173B8F] px-8 py-4 font-['Inter'] text-sm font-bold text-white shadow-lg transition-transform hover:-translate-y-1 hover:bg-[#0D47A1]">
-          Join GAIMS - ₹999 only <ArrowRight className="h-4 w-4" />
+
+      <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 text-center">
+        <p className="text-sm text-[#475467] font-medium">Not a GAIMS member yet?</p>
+        <a
+          href="https://portal.gaims.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-full bg-[#173B8F] px-6 py-2.5 font-['Inter'] text-xs font-bold text-white shadow-md transition-transform hover:-translate-y-0.5 hover:bg-[#0D47A1]"
+        >
+          Join GAIMS - ₹999 only <ArrowRight className="h-3.5 w-3.5" />
         </a>
-      </div>
-    </section>
-  );
-}
-
-function RegistrationCTA() {
-  return (
-    <section id="registration-cta" className="w-full border-t border-gray-100 bg-white">
-      <div className="section-shell reveal-section relative overflow-hidden py-32">
-      
-      <div className="registration-cta relative z-10 max-w-7xl mx-auto px-4 sm:px-6 flex flex-col lg:flex-row items-center gap-16">
-        <div className="flex-1">
-          <p className="text-[#173B8F] font-['Inter'] font-bold tracking-widest uppercase text-sm mb-4">Registration</p>
-          <h2 className="text-[#101828] font-['Outfit'] text-4xl md:text-5xl lg:text-6xl font-extrabold mb-6 leading-tight">Become a Delegate</h2>
-          <p className="text-[#475467] font-['Inter'] text-xl max-w-2xl leading-relaxed">Join healthcare leaders, researchers, students and innovators for the flagship GAIMS global health summit.</p>
-          <div className="mt-10 flex flex-wrap gap-4">
-            <a href="/register" className="inline-flex items-center gap-2 bg-[#173B8F] text-white px-8 py-4 rounded-full font-bold text-sm hover:-translate-y-1 transition-transform shadow-md">Register Now <ArrowRight className="h-4 w-4" /></a>
-            <a href="/abstract-registration" className="inline-flex items-center gap-2 bg-[#F8F9FC] border border-gray-200 text-[#101828] px-8 py-4 rounded-full font-bold text-sm hover:bg-gray-100 transition-colors shadow-sm">Submit Abstract <FileText className="h-4 w-4" /></a>
-            <PartnerCTAButton href="#partner-marquee" variant="hero" className="inline-flex items-center gap-2 bg-transparent border border-gray-200 text-[#101828] px-8 py-4 rounded-full font-bold text-sm hover:bg-gray-50 transition-colors shadow-sm">Become Partner <Award className="h-4 w-4" /></PartnerCTAButton>
-          </div>
-        </div>
-        <div className="cta-floating-cards flex-1 w-full flex flex-wrap justify-center lg:justify-end gap-6 relative">
-          {["Delegate Pass", "Research Track", "Partner Circle"]?.map((item, index) => (
-            <motion.div key={item} className="cta-float-card bg-[#F8F9FC] border border-gray-100 rounded-[2rem] p-8 flex flex-col justify-center min-w-[200px] h-[220px] shadow-sm relative overflow-hidden" animate={{ y: [0, -10, 0] }} transition={{ duration: 4 + index * 0.4, repeat: Infinity, ease: "easeInOut" }}>
-              <div className="absolute top-0 right-0 w-32 h-32 bg-[#173B8F] rounded-full blur-[40px] opacity-10 -mr-16 -mt-16"></div>
-              <span className="text-[#173B8F] font-['Outfit'] font-extrabold text-4xl mb-4 relative z-10">0{index + 1}</span>
-              <span className="text-[#101828] font-['Outfit'] font-bold text-xl leading-tight relative z-10">{item}</span>
-            </motion.div>
-          ))}
-        </div>
-      </div>
       </div>
     </section>
   );
@@ -2179,8 +2485,8 @@ const routeSeoDefaults = {
   },
   venue: {
     title: "Venue & Travel — Global Healthcare Conclave 2026",
-    description: "Venue, transport and travel guide for the Global Healthcare Conclave 2026 at AIIMS, New Delhi — including local attractions and metro directions.",
-    keywords: "GHC 2026 venue, AIIMS New Delhi, conclave location, travel guide New Delhi, metro directions",
+    description: "Venue, transport and travel guide for the Global Healthcare Conclave 2026 in New Delhi — including local attractions and metro directions.",
+    keywords: "GHC 2026 venue, New Delhi, conclave location, travel guide New Delhi, metro directions",
     path: "/venue",
     event: true,
   },
@@ -2287,27 +2593,45 @@ function App() {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith("/admin");
   const isWorkshopCmsRoute = location.pathname === "/admin/workshops";
-  const isWorkshopRegisterRoute = location.pathname.startsWith("/register/workshop/");
+  const isWorkshopRegisterRoute = location.pathname.startsWith("/register/workshop") || (location.pathname.startsWith("/workshops/") && location.pathname.endsWith("/apply"));
   const isRegisterRoute = location.pathname.startsWith("/register");
   const isAbstractRoute = location.pathname.startsWith("/abstract-registration");
   const isAbstractRevisionRoute = location.pathname.startsWith("/abstract-revision");
   const isPartnerRoute = location.pathname.startsWith("/partners") || location.pathname.startsWith("/partnership");
-  const isWorkshopDetailRoute = location.pathname.startsWith("/workshops/");
+  const isWorkshopDetailRoute = location.pathname.startsWith("/workshops/") && location.pathname !== "/workshops/" && !location.pathname.endsWith("/apply");
   const isGooglePayTestRoute = location.pathname.startsWith("/google-pay-test");
   const isVerifyCertificateRoute = location.pathname.startsWith("/verify-certificate");
   const isDynamicFormRoute = location.pathname.startsWith("/forms/");
   const isNominationsRoute = location.pathname.startsWith("/nominations");
   const isCommitteesRoute = location.pathname.startsWith("/committees");
-  const isVisaRoute = location.pathname.startsWith("/visa-application");
+  const isVisaRoute = location.pathname.startsWith("/visa-application") || location.pathname === "/visa" || location.pathname === "/visa/";
   const isVenueRoute = location.pathname.startsWith("/venue");
   const isAboutRoute = location.pathname.startsWith("/about");
   const isBoardMeetingRoute = location.pathname.startsWith("/board-meeting-register");
   const isAnnualMeetingRoute = location.pathname.startsWith("/annual-meeting-invite");
   const isQRAttendanceRoute = location.pathname.startsWith("/qr-attendance");
   const isScheduleRoute = location.pathname.startsWith("/schedule");
+  const isJudgeRoute = location.pathname.startsWith("/judge");
   const [installPrompt, setInstallPrompt] = useState(null);
   const [homepageSync, setHomepageSync] = useState({ banners: [], homepage: [], mediaPartners: [], notifications: [], seo: [] });
   const [partners, setPartners] = useState([]);
+
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.replace("#", "");
+      const el = document.getElementById(id);
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: "smooth" }), 100);
+      }
+    } else if (location.pathname === "/workshops" || location.pathname === "/workshops/") {
+      const el = document.getElementById("workshops-experience");
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: "smooth" }), 100);
+      }
+    } else {
+      window.scrollTo(0, 0);
+    }
+  }, [location.pathname, location.hash]);
 
   useEffect(() => {
     if (
@@ -2320,7 +2644,8 @@ function App() {
       isGooglePayTestRoute ||
       isVerifyCertificateRoute ||
       isDynamicFormRoute ||
-      isNominationsRoute
+      isNominationsRoute ||
+      isJudgeRoute
     ) {
       return undefined;
     }
@@ -2484,7 +2809,7 @@ function App() {
   ]);
 
   useEffect(() => {
-    const isRedesign = location.pathname === '/' || location.pathname === '/about' || location.pathname.startsWith('/abstract') || location.pathname.startsWith('/nominations');
+    const isRedesign = location.pathname === '/' || location.pathname === '/about' || location.pathname.startsWith('/abstract') || location.pathname.startsWith('/nominations') || location.pathname.startsWith('/visa-application') || location.pathname.startsWith('/visa');
     if (isRedesign) {
       document.body.classList.add('redesign-active');
       document.documentElement.classList.add('redesign-active');
@@ -2508,7 +2833,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (isAdminRoute || isRegisterRoute || isAbstractRoute || isPartnerRoute || isWorkshopDetailRoute || isWorkshopRegisterRoute || isGooglePayTestRoute || isVerifyCertificateRoute || isDynamicFormRoute || isNominationsRoute) {
+    if (isAdminRoute || isJudgeRoute || isRegisterRoute || isAbstractRoute || isPartnerRoute || isWorkshopDetailRoute || isWorkshopRegisterRoute || isGooglePayTestRoute || isVerifyCertificateRoute || isDynamicFormRoute || isNominationsRoute || isVisaRoute) {
       return undefined;
     }
 
@@ -2608,14 +2933,21 @@ function App() {
     routeContent = <Suspense fallback={<div className="admin-loading">Loading form...</div>}><DynamicForm /></Suspense>;
   } else if (isGooglePayTestRoute) {
     routeContent = <Suspense fallback={<div className="admin-loading">Loading Google Pay...</div>}><GooglePayTest /></Suspense>;
-  } else if (isAdminRoute) {
-    routeContent = <Suspense fallback={<div className="admin-loading">Loading GHC CMS...</div>}><AdminApp /></Suspense>;
+  } else if (isAdminRoute || isJudgeRoute) {
+    const initialPage = isJudgeRoute
+      ? (location.pathname.startsWith("/judge/nominations") ? "award-nominations" : "dashboard")
+      : undefined;
+    routeContent = <Suspense fallback={<div className="admin-loading">Loading GHC CMS...</div>}><AdminApp initialPage={initialPage} /></Suspense>;
   } else if (isWorkshopRegisterRoute) {
     routeContent = (
-      <>
-        <Suspense fallback={<div className="admin-loading">Loading workshop registration...</div>}><WorkshopRegister /></Suspense>
+      <div ref={appRef} className="min-h-screen overflow-hidden bg-[#F7FBFF] text-[#081B33]">
+        <Navbar />
+        <main>
+          <Suspense fallback={<div className="admin-loading">Loading workshop registration...</div>}><WorkshopRegister /></Suspense>
+        </main>
+        <Footer />
         <MobileRadialNav />
-      </>
+      </div>
     );
   } else if (isRegisterRoute) {
     routeContent = (
@@ -2665,10 +2997,14 @@ function App() {
     );
   } else if (isVisaRoute) {
     routeContent = (
-      <>
-        <Suspense fallback={<div className="admin-loading">Loading visa application...</div>}><VisaApplication /></Suspense>
+      <div ref={appRef} className="min-h-screen overflow-hidden bg-white text-[#081B33]">
+        <Navbar />
+        <main className="bg-white">
+          <Suspense fallback={<div className="admin-loading">Loading visa application...</div>}><VisaApplication /></Suspense>
+        </main>
+        <Footer />
         <MobileRadialNav />
-      </>
+      </div>
     );
   } else if (isCommitteesRoute) {
     routeContent = (
@@ -2734,10 +3070,14 @@ function App() {
     );
   } else if (isWorkshopDetailRoute) {
     routeContent = (
-      <>
-        <Suspense fallback={<div className="admin-loading">Loading workshop...</div>}><WorkshopDetail /></Suspense>
+      <div ref={appRef} className="min-h-screen overflow-x-hidden bg-[#F7FBFF] text-[#081B33]">
+        <Navbar />
+        <main>
+          <Suspense fallback={<div className="admin-loading">Loading workshop...</div>}><WorkshopDetail /></Suspense>
+        </main>
+        <Footer />
         <MobileRadialNav />
-      </>
+      </div>
     );
   } else {
     const activeHeroBanner = homepageSync.banners?.find((banner) => banner?.is_active !== false) || homepageSync.banners?.[0] || null;
@@ -2759,7 +3099,6 @@ function App() {
         <PastOrganisations />
         <PricingSection />
         <VisaCTA />
-        <RegistrationCTA />
       </main>
       <Footer />
       <MobileRadialNav />

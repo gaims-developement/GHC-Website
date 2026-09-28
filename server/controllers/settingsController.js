@@ -1,3 +1,4 @@
+const { pool } = require('../config/db');
 const Settings = require('../models/settingsModel');
 const asyncHandler = require('../utils/asyncHandler');
 
@@ -55,9 +56,21 @@ const getSettings = asyncHandler(async (_req, res) => {
 
 const getPublicSettings = asyncHandler(async (_req, res) => {
   const result = await Settings.get();
+  let earlyBirdManualOff = false;
+  try {
+    const [[cmsRow]] = await pool.query('SELECT setting_value FROM app_settings WHERE setting_key = "cms_controls" LIMIT 1');
+    if (cmsRow?.setting_value) {
+      const cms = typeof cmsRow.setting_value === 'string' ? JSON.parse(cmsRow.setting_value) : cmsRow.setting_value;
+      earlyBirdManualOff = Boolean(cms?.earlyBirdManualOff);
+    }
+  } catch {
+    earlyBirdManualOff = false;
+  }
+
   return res.json({
     registration: {
-      abstractSubmissionOpen: result.settings.registration?.abstractSubmissionOpen ?? true
+      abstractSubmissionOpen: result.settings.registration?.abstractSubmissionOpen ?? true,
+      earlyBirdManualOff,
     },
     conference: {
       name: result.settings.conference?.name,

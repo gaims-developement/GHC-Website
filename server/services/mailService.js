@@ -1,245 +1,137 @@
-const dns = require('dns');
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 const { pool } = require('../config/db');
 
-// Ensure Node's DNS resolution prefers IPv4
-if (dns.setDefaultResultOrder) {
-  dns.setDefaultResultOrder('ipv4first');
+// Single Resend client instance
+let resend = null;
+const getResendClient = () => {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) return null;
+  if (!resend || resend.key !== key) {
+    resend = new Resend(key);
+  }
+  return resend;
+};
+
+// Initial attempt to instantiate if key is present at require time
+if (process.env.RESEND_API_KEY) {
+  resend = new Resend(process.env.RESEND_API_KEY);
 }
 
-// In environments like Railway where outbound IPv6 is unreachable, nodemailer v8
-// resolves both A and AAAA records and randomly selects an address.
-// Intercepting resolve6 for SMTP hosts ensures only IPv4 addresses are selected.
-const patchDnsResolverForIpv4 = () => {
-  const isSmtpHost = (hostname) => {
-    const smtpHost = (process.env.SMTP_HOST || 'smtp.gmail.com').toLowerCase();
-    const target = (hostname || '').toLowerCase();
-    return target === smtpHost || target.endsWith('.gmail.com') || target.endsWith('.google.com');
+/**
+ * Normalizes sender address from environment variables.
+ * Priority:
+ * 1. EMAIL_FROM (e.g. "GHC <notifications@ghc.gaims.org>")
+ * 2. RESEND_FROM
+ * 3. Safe fallback for unverified domains / initial testing: "Global Healthcare Conclave <onboarding@resend.dev>"
+ */
+const getSenderConfig = () => {
+  const fromName = process.env.EMAIL_FROM_NAME || process.env.SMTP_FROM_NAME || 'Global Healthcare Conclave';
+  let fromAddress = process.env.EMAIL_FROM || process.env.RESEND_FROM;
+
+  if (!fromAddress) {
+    const legacyFromEmail = process.env.SMTP_FROM_EMAIL;
+    if (legacyFromEmail && !legacyFromEmail.endsWith('@gmail.com')) {
+      fromAddress = `"${fromName}" <${legacyFromEmail}>`;
+    } else {
+      // Resend requires a verified domain or onboarding@resend.dev for test sending
+      fromAddress = `"${fromName}" <onboarding@resend.dev>`;
+    }
+  }
+
+  return {
+    from: fromAddress,
+    hasApiKey: Boolean(process.env.RESEND_API_KEY),
+  };
+};
+
+/**
+ * Format attachments for Resend Node SDK.
+ * Supports: { filename, content: Buffer | string, path }
+ */
+const formatAttachments = (attachments = []) => {
+  if (!Array.isArray(attachments)) return [];
+  return attachments.map((att) => {
+    const formatted = {
+      filename: att.filename || att.name || 'attachment',
+    };
+    if (att.content !== undefined) {
+      formatted.content = att.content;
+    } else if (att.path) {
+      formatted.path = att.path;
+    }
+    if (att.contentType || att.content_type) {
+      formatted.content_type = att.contentType || att.content_type;
+    }
+    if (att.cid || att.content_id) {
+      formatted.content_id = att.cid || att.content_id;
+    }
+    return formatted;
+  });
+};
+
+/**
+ * Main email sending method using Resend
+ */
+const sendMail = async ({ to, subject, html, text, attachments = [] }) => {
+  const client = getResendClient();
+  if (!client) {
+    const err = new Error('RESEND_API_KEY is not configured in environment variables.');
+    console.error('[EMAIL] Provider: Resend');
+    console.error('[EMAIL] Send failed');
+    console.error(`[EMAIL] Error: ${err.message}`);
+    throw err;
+  }
+
+  const { from } = getSenderConfig();
+  const recipients = Array.isArray(to) ? to : [to];
+
+  const payload = {
+    from,
+    to: recipients,
+    subject,
+    html: html || (text ? `<p style="white-space: pre-wrap;">${text}</p>` : ''),
+    text: text || undefined,
   };
 
-  if (dns.Resolver && dns.Resolver.prototype && dns.Resolver.prototype.resolve6) {
-    const originalResolve6 = dns.Resolver.prototype.resolve6;
-    dns.Resolver.prototype.resolve6 = function (hostname, callback) {
-      if (isSmtpHost(hostname)) {
-        const err = new Error(`IPv6 resolution bypassed for SMTP host: ${hostname}`);
-        err.code = dns.NODATA;
-        return setImmediate(() => callback(err));
-      }
-      return originalResolve6.apply(this, arguments);
-    };
+  const formattedAttachments = formatAttachments(attachments);
+  if (formattedAttachments.length > 0) {
+    payload.attachments = formattedAttachments;
   }
-
-  if (typeof dns.resolve6 === 'function') {
-    const originalDnsResolve6 = dns.resolve6;
-    dns.resolve6 = function (hostname, ...args) {
-      const callback = args[args.length - 1];
-      if (typeof callback === 'function' && isSmtpHost(hostname)) {
-        const err = new Error(`IPv6 resolution bypassed for SMTP host: ${hostname}`);
-        err.code = dns.NODATA;
-        return setImmediate(() => callback(err));
-      }
-      return originalDnsResolve6.apply(this, args);
-    };
-  }
-};
-
-patchDnsResolverForIpv4();
-
-/**
- * Normalizes and reads SMTP configuration from environment variables.
- * Supports both SMTP_USER / SMTP_PASS and SMTP_USERNAME / SMTP_PASSWORD.
- */
-const getSmtpConfig = () => {
-  const host = process.env.SMTP_HOST || 'smtp.gmail.com';
-  // Default to 465 (SSL) for Gmail if unspecified as it is rarely blocked by cloud providers
-  const port = Number(process.env.SMTP_PORT || (host.includes('gmail.com') ? 465 : 587));
-  const secure = port === 465;
-  const user = process.env.SMTP_USER || process.env.SMTP_USERNAME || null;
-  const pass = process.env.SMTP_PASS || process.env.SMTP_PASSWORD || null;
-  const fromName = process.env.SMTP_FROM_NAME || 'Global Health Conclave';
-  const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.MAIL_FROM || user;
-
-  return { host, port, secure, user, pass, fromName, fromEmail };
-};
-
-/**
- * Diagnostic logger that prints SMTP connection info without exposing credentials.
- */
-const logSmtpDiagnostics = (status = 'Connecting', customPort = null, customSecure = null) => {
-  const { host, port, secure, user } = getSmtpConfig();
-  const activePort = customPort || port;
-  const activeSecure = customSecure !== null ? customSecure : (activePort === 465);
-  console.log(`[SMTP] Status: ${status} | Host: ${host} | Port: ${activePort} | Secure: ${activeSecure} | Family: 4 | Username: ${user || '(none)'}`);
-};
-
-/**
- * Diagnostic error logger that formats SMTP error details cleanly.
- * Never logs the SMTP password.
- */
-const logSmtpError = (context, error) => {
-  const { host, port, user } = getSmtpConfig();
-  console.error(`[SMTP Error] ${context}:`, {
-    host,
-    port,
-    user: user || '(none)',
-    code: error.code || null,
-    command: error.command || null,
-    response: error.response || null,
-    responseCode: error.responseCode || null,
-    message: error.message || String(error),
-  });
-};
-
-/**
- * Creates a Nodemailer transporter configured strictly for IPv4 and resilient timeouts.
- */
-const createTransporter = (overridePort = null, overrideSecure = null) => {
-  const { host, port, secure, user, pass } = getSmtpConfig();
-  const targetPort = overridePort || port;
-  const targetSecure = overrideSecure !== null ? overrideSecure : (targetPort === 465);
-
-  return nodemailer.createTransport({
-    host,
-    port: targetPort,
-    secure: targetSecure,
-    family: 4,
-    auth: user && pass
-      ? {
-          user,
-          pass,
-        }
-      : undefined,
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 15000,
-    tls: {
-      rejectUnauthorized: false,
-      minVersion: 'TLSv1.2',
-    },
-  });
-};
-
-const sendViaResend = async ({ to, subject, html, text }) => {
-  const fromName = process.env.SMTP_FROM_NAME || 'Global Health Conclave';
-  const fromEmail = process.env.RESEND_FROM || 'onboarding@resend.dev';
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: `${fromName} <${fromEmail}>`,
-      to: Array.isArray(to) ? to : [to],
-      subject,
-      html,
-      text,
-    }),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || JSON.stringify(data));
-  }
-  console.log(`[Resend] Email successfully sent to ${to} | ID: ${data.id}`);
-  return { messageId: data.id };
-};
-
-const sendViaBrevo = async ({ to, subject, html, text }) => {
-  const fromName = process.env.SMTP_FROM_NAME || 'Global Health Conclave';
-  const fromEmail = process.env.SMTP_FROM_EMAIL || 'itcellgaims@gmail.com';
-  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      'api-key': process.env.BREVO_API_KEY,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      sender: { name: fromName, email: fromEmail },
-      to: [{ email: to }],
-      subject,
-      htmlContent: html,
-      textContent: text,
-    }),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    throw new Error(data.message || JSON.stringify(data));
-  }
-  console.log(`[Brevo] Email successfully sent to ${to} | Message ID: ${data.messageId}`);
-  return { messageId: data.messageId };
-};
-
-const sendMail = async ({ to, subject, html, text, attachments = [] }) => {
-  if (process.env.RESEND_API_KEY) {
-    try {
-      return await sendViaResend({ to, subject, html, text });
-    } catch (apiErr) {
-      console.warn('[Resend Warning] HTTP send failed, falling back to SMTP:', apiErr.message);
-    }
-  }
-
-  if (process.env.BREVO_API_KEY) {
-    try {
-      return await sendViaBrevo({ to, subject, html, text });
-    } catch (apiErr) {
-      console.warn('[Brevo Warning] HTTP send failed, falling back to SMTP:', apiErr.message);
-    }
-  }
-
-  const { host, port, secure, fromName, fromEmail } = getSmtpConfig();
-  logSmtpDiagnostics(`Sending email to ${to}`, port, secure);
 
   try {
-    const transporter = createTransporter(port, secure);
-    const result = await transporter.sendMail({
-      from: `"${fromName}" <${fromEmail}>`,
-      to,
-      subject,
-      html,
-      text,
-      attachments,
-    });
-    console.log(`[SMTP] Email successfully sent to ${to} on port ${port} | Message ID: ${result.messageId}`);
-    return result;
-  } catch (error) {
-    const isConnectionIssue = error.code === 'ETIMEDOUT' ||
-      error.code === 'ECONNREFUSED' ||
-      error.code === 'ESOCKETTIMEDOUT' ||
-      error.command === 'CONN' ||
-      String(error.message).toLowerCase().includes('timeout');
+    const { data, error } = await client.emails.send(payload);
 
-    // Automatic fallback between 465 (SSL) and 587 (STARTTLS)
-    const fallbackPort = port === 465 ? 587 : 465;
-    const fallbackSecure = fallbackPort === 465;
-
-    if (isConnectionIssue) {
-      console.warn(`[SMTP Warning] Port ${port} failed (${error.message}). Attempting automatic fallback to port ${fallbackPort} (secure: ${fallbackSecure})...`);
-      try {
-        const fallbackTransporter = createTransporter(fallbackPort, fallbackSecure);
-        const result = await fallbackTransporter.sendMail({
-          from: `"${fromName}" <${fromEmail}>`,
-          to,
-          subject,
-          html,
-          text,
-          attachments,
-        });
-        console.log(`[SMTP Fallback] Email successfully sent to ${to} on fallback port ${fallbackPort} | Message ID: ${result.messageId}`);
-        return result;
-      } catch (fallbackErr) {
-        logSmtpError(`Fallback to port ${fallbackPort} also failed for ${to}`, fallbackErr);
-        throw fallbackErr;
-      }
+    if (error) {
+      throw new Error(error.message || 'Failed to send email via Resend');
     }
 
-    logSmtpError(`Failed to send email to ${to}`, error);
-    throw error;
+    const emailId = data?.id || 'unknown';
+    console.log('[EMAIL] Provider: Resend');
+    console.log('[EMAIL] Sent successfully');
+    console.log(`[EMAIL] ID: ${emailId}`);
+
+    return {
+      messageId: emailId,
+      id: emailId,
+      data,
+    };
+  } catch (error) {
+    const sanitizedError = (error.message || String(error)).replace(/re_[a-zA-Z0-9_\-]+/g, '[REDACTED]');
+    console.error('[EMAIL] Provider: Resend');
+    console.error('[EMAIL] Send failed');
+    console.error(`[EMAIL] Error: ${sanitizedError}`);
+    throw new Error(sanitizedError);
   }
 };
 
+/**
+ * Template email rendering, variable interpolation, and persistent logging
+ */
 const sendTemplateEmail = async (templateKey, to, variables = {}) => {
   let logId = null;
   let subject = 'No Subject';
+  const recipient = Array.isArray(to) ? to.join(', ') : to;
+
   try {
     const [templates] = await pool.query('SELECT * FROM email_templates WHERE template_key = ? LIMIT 1', [templateKey]);
     const template = templates[0];
@@ -253,13 +145,15 @@ const sendTemplateEmail = async (templateKey, to, variables = {}) => {
 
     for (const [key, value] of Object.entries(variables)) {
       const regex = new RegExp(`{{${key}}}`, 'g');
-      subject = subject.replace(regex, value);
-      body = body.replace(regex, value);
+      subject = subject.replace(regex, value !== undefined && value !== null ? value : '');
+      body = body.replace(regex, value !== undefined && value !== null ? value : '');
     }
+
+    const htmlBody = body.includes('<') ? body : `<div style="font-family: sans-serif; line-height: 1.6; white-space: pre-wrap;">${body}</div>`;
 
     const [logResult] = await pool.query(
       "INSERT INTO email_logs (recipient, subject, status) VALUES (?, ?, 'queued')",
-      [to, subject]
+      [recipient, subject]
     );
     logId = logResult.insertId;
 
@@ -267,61 +161,89 @@ const sendTemplateEmail = async (templateKey, to, variables = {}) => {
       to,
       subject,
       text: body,
-      html: body,
+      html: htmlBody,
     });
 
     await pool.query(
-      "UPDATE email_logs SET status = 'sent', sent_at = NOW() WHERE id = ?",
+      "UPDATE email_logs SET status = 'sent', sent_at = NOW(), error_message = NULL WHERE id = ?",
       [logId]
     );
 
     return result;
   } catch (error) {
-    console.error('Error sending template email:', error);
-
     if (logId) {
       await pool.query(
         "UPDATE email_logs SET status = 'failed', error_message = ? WHERE id = ?",
         [error.message || String(error), logId]
-      );
+      ).catch(() => {});
     } else {
       await pool.query(
         "INSERT INTO email_logs (recipient, subject, status, error_message) VALUES (?, ?, 'failed', ?)",
-        [to, subject, error.message || String(error)]
-      );
+        [recipient, subject, error.message || String(error)]
+      ).catch(() => {});
     }
 
     throw error;
   }
 };
 
+/**
+ * Safe Resend configuration and API diagnostic verification.
+ * Does not send any email.
+ */
 const verifyConnection = async () => {
-  const { host, port, secure, user } = getSmtpConfig();
-  logSmtpDiagnostics('Verifying SMTP connection');
-
-  const transporter = createTransporter();
-  try {
-    await transporter.verify();
-    console.log(`[SMTP] Connection verified successfully -> ${host}:${port} (family: 4)`);
-    return {
-      success: true,
-      host,
-      port,
-      secure,
-      family: 4,
-      user: user || null,
-      status: 'connected',
-    };
-  } catch (error) {
-    logSmtpError('Verification failed', error);
-    throw error;
+  const client = getResendClient();
+  if (!client) {
+    throw new Error('RESEND_API_KEY environment variable is missing.');
   }
+
+  // Check authentication by calling domains.list() or apiKeys.list()
+  // Note: Sending-only keys might return 403 on domain/api-key listing, which still verifies authentication
+  try {
+    const { data, error } = await client.apiKeys.list();
+    if (error) {
+      if (error.statusCode === 401 || error.statusCode === 400) {
+        throw new Error(`Resend authentication failed: ${error.message || 'Invalid API key'}`);
+      }
+      // If 403, key is authentic but has restricted permissions (e.g. sending-only)
+      if (error.statusCode === 403) {
+        return {
+          success: true,
+          provider: 'resend',
+          message: 'Resend API authenticated successfully (Sending-restricted access)',
+          from: getSenderConfig().from,
+        };
+      }
+    }
+  } catch (err) {
+    if (err.message && err.message.includes('Resend authentication failed')) {
+      throw err;
+    }
+    // If apiKeys failed with another reason, attempt domains.list as fallback check
+    try {
+      const { error: domainError } = await client.domains.list();
+      if (domainError && (domainError.statusCode === 401 || domainError.statusCode === 400)) {
+        throw new Error(`Resend authentication failed: ${domainError.message || 'Invalid API key'}`);
+      }
+    } catch (domainErr) {
+      if (domainErr.message && domainErr.message.includes('Resend authentication failed')) {
+        throw domainErr;
+      }
+    }
+  }
+
+  return {
+    success: true,
+    provider: 'resend',
+    message: 'Resend API authenticated successfully',
+    from: getSenderConfig().from,
+  };
 };
 
 module.exports = {
-  createTransporter,
-  getSmtpConfig,
   sendMail,
+  sendEmail: sendMail,
   sendTemplateEmail,
   verifyConnection,
+  getSenderConfig,
 };

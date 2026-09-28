@@ -33,6 +33,7 @@
     "pdfkit": "^0.18.0",
     "qrcode": "^1.5.4",
     "razorpay": "^2.9.6",
+    "resend": "^6.29.0",
     "stripe": "^22.2.0"
   },
   "devDependencies": {

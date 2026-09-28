@@ -129,7 +129,7 @@ const launchChecklist = asyncHandler(async (_req, res) => {
   res.json({
     items: [
       { id: 'payments', label: 'Payments', complete: Boolean(process.env.RAZORPAY_KEY_ID) || Number(payments.count) > 0 },
-      { id: 'smtp', label: 'SMTP', complete: Boolean(process.env.SMTP_HOST) },
+      { id: 'email', label: 'Email Service', complete: Boolean(process.env.RESEND_API_KEY || process.env.SMTP_HOST) },
       { id: 'seo', label: 'SEO', complete: true },
       { id: 'tickets', label: 'Tickets', complete: Number(tickets.count) > 0 },
       { id: 'research', label: 'Research', complete: Number(research.count) > 0 },

@@ -1,4 +1,4 @@
-import { Edit3, Lock, Send, Star, Trash2 } from "lucide-react";
+import { Edit3, ExternalLink, Lock, Send, Star, Trash2 } from "lucide-react";
 
 function WorkshopTable({ workshops, onClose, onDelete, onEdit, onFeature, onPublish }) {
   return (
@@ -6,6 +6,7 @@ function WorkshopTable({ workshops, onClose, onDelete, onEdit, onFeature, onPubl
       <div className="admin-mobile-card-list">
         {workshops?.map((workshop) => {
           const remaining = Math.max(Number(workshop.capacity || 0) - Number(workshop.registeredCount || 0), 0);
+          const slug = workshop.slug || workshop.id;
           return (
             <article className="admin-mobile-data-card" key={workshop.id}>
               <div>
@@ -18,6 +19,7 @@ function WorkshopTable({ workshops, onClose, onDelete, onEdit, onFeature, onPubl
                 <div><dt>Seats left</dt><dd>{remaining} / {workshop.capacity}</dd></div>
               </dl>
               <div className="speaker-actions mobile-actions">
+                <a href={`/workshops/${slug}`} target="_blank" rel="noopener noreferrer" title="View Public Page" className="admin-action-btn"><ExternalLink size={16} />View Page</a>
                 <button onClick={() => onEdit(workshop)} title="Edit"><Edit3 size={16} />Edit</button>
                 <button onClick={() => onPublish(workshop)} title="Publish"><Send size={16} />Publish</button>
                 <button onClick={() => onClose(workshop)} title="Close"><Lock size={16} />Close</button>
@@ -43,6 +45,7 @@ function WorkshopTable({ workshops, onClose, onDelete, onEdit, onFeature, onPubl
           <tbody>
             {workshops?.map((workshop) => {
               const remaining = Math.max(Number(workshop.capacity || 0) - Number(workshop.registeredCount || 0), 0);
+              const slug = workshop.slug || workshop.id;
               return (
                 <tr key={workshop.id}>
                   <td>
@@ -55,6 +58,7 @@ function WorkshopTable({ workshops, onClose, onDelete, onEdit, onFeature, onPubl
                   <td><span className={`status-pill ${workshop.status}`}>{workshop.status}</span></td>
                   <td>
                     <div className="speaker-actions">
+                      <a href={`/workshops/${slug}`} target="_blank" rel="noopener noreferrer" title="View Public Page" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', color: '#173B8F', textDecoration: 'none' }}><ExternalLink size={15} /></a>
                       <button onClick={() => onEdit(workshop)} title="Edit"><Edit3 size={16} /></button>
                       <button onClick={() => onPublish(workshop)} title="Publish"><Send size={16} /></button>
                       <button onClick={() => onClose(workshop)} title="Close"><Lock size={16} /></button>

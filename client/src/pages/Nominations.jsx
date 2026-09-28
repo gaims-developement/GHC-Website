@@ -1,6 +1,28 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Award, ChevronRight, User, Briefcase, FileText, Share2, Check, ArrowRight, ArrowLeft, Upload, BadgeCheck, X } from "lucide-react";
+import {
+  Award,
+  ChevronRight,
+  User,
+  Briefcase,
+  FileText,
+  Share2,
+  Check,
+  ArrowRight,
+  ArrowLeft,
+  Upload,
+  BadgeCheck,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  ExternalLink,
+  CreditCard,
+  Lock,
+  RefreshCw,
+  MapPin,
+} from "lucide-react";
+import axios from "axios";
+import { API_BASE_URL } from "../config/api";
 import { setPageSeo, trackEvent } from "../utils/seo";
 
 const awardsList = [
@@ -38,17 +60,108 @@ export default function Nominations() {
     email: "",
     mobile: "",
     socialLinks: [{ platform: "LinkedIn", url: "" }],
+    nominationStatement: "",
     cvFile: null,
     photoFile: null,
+    paymentId: "",
   });
 
+  const [nominationConfig, setNominationConfig] = useState({
+    fee: 5000,
+    currency: "INR",
+    paymentUrl: "https://mc.clirnet.com/mastercast/connect/D0921-Conclave-2",
+    instructions: "Complete your nomination payment through CLIRNET. After payment, return to this page and enter your Payment ID to submit your nomination.",
+  });
+
+  const [savedCvUrl, setSavedCvUrl] = useState("");
+  const [savedCvName, setSavedCvName] = useState("");
+  const [savedPhotoUrl, setSavedPhotoUrl] = useState("");
+  const [savedPhotoName, setSavedPhotoName] = useState("");
+  const [draftId, setDraftId] = useState("");
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [clirnetOpened, setClirnetOpened] = useState(false);
+
   const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(null);
+  const [submitError, setSubmitError] = useState("");
   const formTopRef = useRef(null);
 
+  // Fetch dynamic payment configuration from backend
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    axios
+      .get(`${API_BASE_URL}/api/judge/public/config`)
+      .then((res) => {
+        if (res.data) {
+          setNominationConfig((prev) => ({ ...prev, ...res.data }));
+        }
+      })
+      .catch((err) => {
+        console.warn("Using default nomination payment config:", err.message);
+      });
+  }, []);
+
+  // Restore draft from localStorage (satisfies Section 4 & 28 requirement)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("ghc_nomination_draft");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === "object") {
+          setFormData((prev) => ({
+            ...prev,
+            ...parsed,
+            cvFile: null,
+            photoFile: null,
+          }));
+          if (parsed.savedCvUrl) setSavedCvUrl(parsed.savedCvUrl);
+          if (parsed.savedCvName) setSavedCvName(parsed.savedCvName);
+          if (parsed.savedPhotoUrl) setSavedPhotoUrl(parsed.savedPhotoUrl);
+          if (parsed.savedPhotoName) setSavedPhotoName(parsed.savedPhotoName);
+          if (parsed.draftId) setDraftId(parsed.draftId);
+          if (parsed.clirnetOpened) setClirnetOpened(true);
+          if (parsed.step && parsed.step > 1 && parsed.step <= 7) {
+            setStep(parsed.step);
+          }
+          setDraftRestored(true);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to restore draft from localStorage:", e);
+    }
+  }, []);
+
+  // Persist draft to localStorage on any change (preserves entered data)
+  useEffect(() => {
+    if (submitSuccess) return;
+    const timeout = setTimeout(() => {
+      try {
+        const dataToSave = {
+          ...formData,
+          cvFile: null,
+          photoFile: null,
+          savedCvUrl,
+          savedCvName,
+          savedPhotoUrl,
+          savedPhotoName,
+          draftId,
+          clirnetOpened,
+          step,
+        };
+        localStorage.setItem("ghc_nomination_draft", JSON.stringify(dataToSave));
+      } catch (e) {
+        console.warn("Failed to save draft to localStorage:", e);
+      }
+    }, 400);
+
+    return () => clearTimeout(timeout);
+  }, [formData, savedCvUrl, savedCvName, savedPhotoUrl, savedPhotoName, draftId, clirnetOpened, step, submitSuccess]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     setPageSeo({
-      title: "GHC Awards 2026 — Nominations",
+      title: "GHC Awards 2026 — Nominations & Awards",
       description: "Nominate outstanding healthcare professionals, educators, and leaders for the GHC Awards.",
       path: "/nominations",
     });
@@ -156,8 +269,13 @@ export default function Nominations() {
       });
     }
     if (step === 6) {
-      if (!formData.cvFile) newErrors.cvFile = "CV is required.";
-      if (!formData.photoFile) newErrors.photoFile = "Photo is required.";
+      if (!formData.cvFile && !savedCvUrl) newErrors.cvFile = "CV is required.";
+      if (!formData.photoFile && !savedPhotoUrl) newErrors.photoFile = "Photo is required.";
+    }
+    if (step === 7) {
+      if (!formData.paymentId || !formData.paymentId.trim()) {
+        newErrors.paymentId = "After completing your payment on CLIRNET, enter the Payment ID provided to you.";
+      }
     }
 
     setErrors(newErrors);
@@ -185,7 +303,122 @@ export default function Nominations() {
       return;
     }
 
-    updateForm(type === "cv" ? "cvFile" : "photoFile", file);
+    if (type === "cv") {
+      setSavedCvName(file.name);
+      updateForm("cvFile", file);
+    } else {
+      setSavedPhotoName(file.name);
+      updateForm("photoFile", file);
+    }
+  };
+
+  const handlePayClick = async () => {
+    setSavingDraft(true);
+    setSubmitError("");
+    try {
+      const currentDraftId = draftId || (`ghc-draft-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`);
+      if (!draftId) setDraftId(currentDraftId);
+
+      const data = new FormData();
+      data.append("draftId", currentDraftId);
+      data.append("awardId", formData.awardId);
+      const awardObj = awardsList.find((a) => a.id === formData.awardId);
+      data.append("awardCategory", awardObj?.name || formData.awardId);
+      data.append("fullName", formData.fullName);
+      data.append("email", formData.email);
+      data.append(
+        "formData",
+        JSON.stringify({
+          ...formData,
+          cvFile: null,
+          photoFile: null,
+          savedCvUrl,
+          savedPhotoUrl,
+          awardCategory: awardObj?.name || formData.awardId,
+        })
+      );
+
+      if (formData.cvFile) data.append("cvFile", formData.cvFile);
+      if (formData.photoFile) data.append("photoFile", formData.photoFile);
+
+      const res = await axios.post(`${API_BASE_URL}/api/judge/public/draft`, data);
+      if (res.data?.cvUrl) setSavedCvUrl(res.data.cvUrl);
+      if (res.data?.photoUrl) setSavedPhotoUrl(res.data.photoUrl);
+
+      // Open CLIRNET payment in new tab (satisfies Section 3 & 4 requirement)
+      window.open(nominationConfig.paymentUrl, "_blank", "noopener,noreferrer");
+      setClirnetOpened(true);
+    } catch (err) {
+      console.warn("Failed to persist backend draft session, proceeding with local draft:", err);
+      window.open(nominationConfig.paymentUrl, "_blank", "noopener,noreferrer");
+      setClirnetOpened(true);
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  const handleSubmitNomination = async () => {
+    const newErrors = {};
+    if (!formData.paymentId || !formData.paymentId.trim()) {
+      newErrors.paymentId = "After completing your payment on CLIRNET, enter the Payment ID provided to you.";
+      setErrors(newErrors);
+      return;
+    }
+    const cleanId = formData.paymentId.trim();
+    if (cleanId.length < 3 || cleanId.length > 100) {
+      newErrors.paymentId = "Please enter a valid CLIRNET Payment ID (between 3 and 100 characters).";
+      setErrors(newErrors);
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError("");
+    try {
+      const data = new FormData();
+      data.append("awardId", formData.awardId);
+      const awardObj = awardsList.find((a) => a.id === formData.awardId);
+      data.append("awardCategory", awardObj?.name || formData.awardId);
+      data.append("awardKey", formData.awardId);
+      if (formData.ageCategory) data.append("ageCategory", formData.ageCategory);
+      data.append("fullName", formData.fullName);
+      data.append("dob", formData.dob);
+      if (calculatedAge) data.append("age", calculatedAge);
+      data.append("sex", formData.sex);
+      data.append("medicalCollege", formData.medicalCollege || "");
+      data.append("organisation", formData.orgAffiliation);
+      data.append("designation", formData.designation);
+      data.append("email", formData.email);
+      data.append("mobile", formData.mobile);
+      data.append("socialLinks", JSON.stringify(formData.socialLinks || []));
+      data.append("nominationStatement", formData.nominationStatement || "");
+      data.append("paymentId", cleanId);
+      if (draftId) data.append("draftId", draftId);
+
+      if (formData.cvFile) {
+        data.append("cvFile", formData.cvFile);
+      } else if (savedCvUrl) {
+        data.append("cvUrl", savedCvUrl);
+      }
+
+      if (formData.photoFile) {
+        data.append("photoFile", formData.photoFile);
+      } else if (savedPhotoUrl) {
+        data.append("photoUrl", savedPhotoUrl);
+      }
+
+      const res = await axios.post(`${API_BASE_URL}/api/judge/public/submit`, data);
+      setSubmitSuccess(res.data);
+      localStorage.removeItem("ghc_nomination_draft");
+      scrollToFormTop();
+    } catch (err) {
+      console.error("Nomination submission error:", err);
+      setSubmitError(
+        err.response?.data?.message ||
+          "Failed to submit nomination. Please verify your Payment ID and try again."
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -202,13 +435,23 @@ export default function Nominations() {
       {/* Hero Section */}
       {step === 1 && (
         <section className="relative px-6 py-10 md:py-14 overflow-hidden text-center max-w-5xl mx-auto bg-white">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-2 px-4 py-1.5 mb-6 rounded-full bg-[#e244b7]/10 border border-[#e244b7]/25 text-[#e244b7] text-xs font-bold tracking-widest uppercase"
-          >
-            <BadgeCheck className="w-4 h-4 text-[#e244b7]" /> GHC Awards 2026
-          </motion.div>
+          <div className="flex flex-wrap items-center justify-center gap-2.5 mb-6">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#e244b7]/10 border border-[#e244b7]/25 text-[#e244b7] text-xs font-bold tracking-widest uppercase"
+            >
+              <BadgeCheck className="w-4 h-4 text-[#e244b7]" /> GHC Awards 2026
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.05 }}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#6C4AB6]/10 border border-[#6C4AB6]/25 text-[#6C4AB6] text-xs font-bold tracking-wider uppercase"
+            >
+              <MapPin className="w-3.5 h-3.5 text-[#6C4AB6]" /> Venue: New Delhi
+            </motion.div>
+          </div>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -334,6 +577,7 @@ export default function Nominations() {
                 <ul className="space-y-3 text-sm sm:text-base text-[#344054]">
                   <li className="flex items-center gap-3"><Check className="w-5 h-5 text-[#e244b7] shrink-0" /> Award nomination consideration by expert jury</li>
                   <li className="flex items-center gap-3"><Check className="w-5 h-5 text-[#e244b7] shrink-0" /> Complimentary GHC event registration</li>
+                  <li className="flex items-center gap-3"><MapPin className="w-5 h-5 text-[#6C4AB6] shrink-0" /> <span className="font-semibold text-slate-800">Conclave Venue:</span> New Delhi</li>
                   <li className="flex items-center gap-3"><Check className="w-5 h-5 text-[#e244b7] shrink-0" /> Opportunity to showcase your work and impact</li>
                   <li className="flex items-center gap-3"><Check className="w-5 h-5 text-[#e244b7] shrink-0" /> Official nomination acknowledgement & certificate</li>
                 </ul>
@@ -613,6 +857,16 @@ export default function Nominations() {
                           <p className="text-gray-500 text-xs mt-1">{(formData.cvFile.size / 1024 / 1024).toFixed(2)} MB</p>
                           <span className="text-[#6C4AB6] text-sm mt-3 inline-block font-semibold">Replace File</span>
                         </div>
+                      ) : savedCvName || savedCvUrl ? (
+                        <div>
+                          <span className="inline-block px-2.5 py-0.5 mb-2 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Preserved in Draft
+                          </span>
+                          <p className="text-[#101828] font-semibold truncate max-w-[200px] mx-auto">
+                            {savedCvName || "Curriculum Vitae (PDF)"}
+                          </p>
+                          <span className="text-[#6C4AB6] text-sm mt-2 inline-block font-semibold">Click to Replace</span>
+                        </div>
                       ) : (
                         <div>
                           <p className="text-[#101828] font-semibold mb-1">Click or drag & drop</p>
@@ -642,6 +896,16 @@ export default function Nominations() {
                           <p className="text-gray-500 text-xs mt-1">{(formData.photoFile.size / 1024 / 1024).toFixed(2)} MB</p>
                           <span className="text-[#6C4AB6] text-sm mt-3 inline-block font-semibold">Replace File</span>
                         </div>
+                      ) : savedPhotoName || savedPhotoUrl ? (
+                        <div>
+                          <span className="inline-block px-2.5 py-0.5 mb-2 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Preserved in Draft
+                          </span>
+                          <p className="text-[#101828] font-semibold truncate max-w-[200px] mx-auto">
+                            {savedPhotoName || "Candidate Photo"}
+                          </p>
+                          <span className="text-[#6C4AB6] text-sm mt-2 inline-block font-semibold">Click to Replace</span>
+                        </div>
                       ) : (
                         <div>
                           <p className="text-[#101828] font-semibold mb-1">Click or drag & drop</p>
@@ -656,48 +920,220 @@ export default function Nominations() {
             </motion.div>
           )}
           
+          {/* STEP 7: Review & Dedicated Payment Section */}
           {step === 7 && (
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-8">
-              <div className="w-20 h-20 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-6">
-                <BadgeCheck className="w-12 h-12" />
-              </div>
-              <h2 className="text-3xl font-extrabold text-[#101828] mb-3">Review & Submit Nomination</h2>
-              <p className="text-[#475467] mb-8 max-w-lg mx-auto text-base">
-                Your nomination for <strong className="text-[#6C4AB6]">{awardsList.find(a => a.id === formData.awardId)?.name}</strong> is ready. Proceed to complete the ₹5,000 nomination fee.
-              </p>
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="py-2">
+              {submitSuccess ? (
+                /* CONFIRMATION PAGE (Section 13 requirement) */
+                <div className="space-y-6 text-center py-6">
+                  <div className="w-20 h-20 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-md">
+                    <CheckCircle2 className="w-12 h-12" />
+                  </div>
+                  <h2 className="text-3xl sm:text-4xl font-extrabold text-[#101828]">
+                    ✓ Nomination Submitted Successfully
+                  </h2>
+                  <p className="text-[#475467] text-base max-w-lg mx-auto">
+                    Your nomination has been received by the Global Health Conclave.
+                  </p>
 
-              <div className="max-w-md mx-auto bg-white p-6 rounded-2xl border border-gray-200 text-left mb-8 text-sm space-y-2 shadow-sm">
-                <div className="flex justify-between py-1 border-b border-gray-100">
-                  <span className="text-gray-500">Candidate:</span>
-                  <span className="font-semibold text-gray-900">{formData.fullName}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-gray-100">
-                  <span className="text-gray-500">Category:</span>
-                  <span className="font-semibold text-gray-900">{awardsList.find(a => a.id === formData.awardId)?.name}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-gray-100">
-                  <span className="text-gray-500">Email:</span>
-                  <span className="font-semibold text-gray-900">{formData.email}</span>
-                </div>
-                <div className="flex justify-between py-1">
-                  <span className="text-gray-500">Fee Amount:</span>
-                  <span className="font-bold text-[#6C4AB6]">₹5,000 (Complimentary Pass Included)</span>
-                </div>
-              </div>
+                  <div className="max-w-lg mx-auto bg-slate-50 border border-slate-200/90 rounded-2xl p-6 text-left shadow-sm space-y-3.5">
+                    <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+                      <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Nomination ID</span>
+                      <strong className="text-xl font-mono text-[#6C4AB6]">{submitSuccess.nominationId}</strong>
+                    </div>
 
-              <button 
-                type="button"
-                className="px-10 py-4 rounded-full bg-gradient-to-r from-[#6C4AB6] to-[#e244b7] text-white font-bold text-lg hover:opacity-95 transition-transform shadow-lg shadow-[#e244b7]/30 hover:-translate-y-0.5"
-                onClick={() => alert("Proceeding to Razorpay checkout (mock)")}
-              >
-                Pay ₹5,000 & Submit Nomination
-              </button>
+                    <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+                      <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Payment ID</span>
+                      <strong className="text-sm font-mono text-slate-800">{submitSuccess.paymentId}</strong>
+                    </div>
+
+                    <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+                      <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Award</span>
+                      <span className="text-sm font-semibold text-slate-900">{submitSuccess.awardCategory}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+                      <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Venue</span>
+                      <span className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-[#6C4AB6]" /> New Delhi
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center py-1.5">
+                      <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Status</span>
+                      <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                        Submitted (Pending Verification)
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-500 max-w-md mx-auto">
+                    An official acknowledgement has been sent to your registered email. The GHC Award Jury will review your submission documents and profile.
+                  </p>
+
+                  <div className="pt-4 flex flex-wrap items-center justify-center gap-4">
+                    <a
+                      href="/"
+                      className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#101828] text-white font-bold text-sm hover:bg-slate-800 transition-colors shadow-sm"
+                    >
+                      Return to Conclave Homepage
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {/* Candidate Summary Banner */}
+                  <div className="max-w-2xl mx-auto bg-white p-6 rounded-2xl border border-gray-200 shadow-sm text-left">
+                    <div className="flex items-center justify-between pb-3 mb-3 border-b border-gray-100">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        Application Summary
+                      </span>
+                      <span className="text-xs font-semibold text-[#6C4AB6]">
+                        {awardsList.find((a) => a.id === formData.awardId)?.name}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-xs text-slate-400 block">Candidate Name</span>
+                        <strong className="text-slate-900 font-semibold">{formData.fullName}</strong>
+                      </div>
+                      <div>
+                        <span className="text-xs text-slate-400 block">Organisation / Hospital</span>
+                        <span className="text-slate-800">{formData.orgAffiliation}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-slate-400 block">Designation</span>
+                        <span className="text-slate-800">{formData.designation}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-slate-400 block">Email & Mobile</span>
+                        <span className="text-slate-800">{formData.email} • {formData.mobile}</span>
+                      </div>
+                      <div className="sm:col-span-2 pt-2 border-t border-gray-100 flex items-center gap-1.5 text-xs text-slate-600">
+                        <MapPin className="w-3.5 h-3.5 text-[#6C4AB6] shrink-0" />
+                        <span><strong>Event Venue:</strong> S.E.T Facility, AIIMS New Delhi</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* DEDICATED PAYMENT SECTION (Section 2, 3, 5, 6 requirements) */}
+                  <div className="max-w-2xl mx-auto bg-slate-50 border-2 border-[#6C4AB6]/20 rounded-3xl p-6 sm:p-8 shadow-sm text-left">
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-6 border-b border-slate-200">
+                      <div>
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-100 text-purple-800 mb-2">
+                          <CreditCard className="w-3.5 h-3.5" /> Nomination Fee
+                        </div>
+                        <h3 className="text-4xl font-extrabold text-[#101828] font-mono">
+                          ₹{nominationConfig.fee.toLocaleString("en-IN")}
+                        </h3>
+                      </div>
+                      <div className="text-xs text-slate-500 sm:text-right">
+                        <span>Includes full conclave registration</span>
+                        <br />
+                        <span className="font-semibold text-slate-700">Official Jury Evaluation</span>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-slate-700 mt-4 leading-relaxed">
+                      Complete your nomination payment through CLIRNET. After payment, return to this page and enter your Payment ID to submit your nomination.
+                    </p>
+
+                    {/* PAYMENT INSTRUCTIONS (Section 6 requirement) */}
+                    <div className="my-5 p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-2.5 flex items-center gap-1.5">
+                        <BadgeCheck className="w-4 h-4 text-[#6C4AB6]" /> How to Complete Your Submission:
+                      </h4>
+                      <ol className="text-xs text-slate-600 space-y-1.5 list-decimal list-inside pl-1">
+                        <li>Click <strong>"Pay"</strong> below to open the CLIRNET payment page.</li>
+                        <li>Complete the nomination payment on CLIRNET.</li>
+                        <li>Copy your <strong>Payment ID</strong> from your transaction receipt.</li>
+                        <li>Return to this page (your nomination form data is preserved).</li>
+                        <li>Enter your Payment ID in the field below.</li>
+                        <li>Click <strong>"Submit Nomination"</strong>.</li>
+                      </ol>
+                    </div>
+
+                    {/* PAY BUTTON (Section 3 requirement) */}
+                    <div className="mb-6">
+                      <button
+                        type="button"
+                        onClick={handlePayClick}
+                        disabled={savingDraft}
+                        className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-[#6C4AB6] to-[#e244b7] text-white font-bold text-base hover:opacity-95 shadow-md shadow-[#e244b7]/25 flex items-center justify-center gap-2.5 transition-all active:scale-[0.99] disabled:opacity-60"
+                      >
+                        <ExternalLink className="w-5 h-5" />
+                        {savingDraft ? "Saving Draft & Opening CLIRNET..." : "PAY NOW ON CLIRNET"}
+                      </button>
+                      <p className="text-[11px] text-slate-400 text-center mt-2 flex items-center justify-center gap-1">
+                        <Lock className="w-3 h-3" /> Opens the official CLIRNET external payment gateway in a new tab.
+                      </p>
+                      {clirnetOpened && (
+                        <div className="mt-3 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>CLIRNET payment opened in a new tab. Enter your Payment ID below after completing payment.</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* PAYMENT ID FIELD (Section 5 & 7 requirements) */}
+                    <div className="pt-5 border-t border-slate-200">
+                      <label className="block text-sm font-bold text-slate-900 mb-1">
+                        Payment ID <span className="text-rose-500">*</span>
+                      </label>
+                      <p className="text-xs text-slate-500 mb-2.5">
+                        After completing your payment on CLIRNET, enter the Payment ID provided to you.
+                      </p>
+                      <input
+                        type="text"
+                        value={formData.paymentId}
+                        onChange={(e) => updateForm("paymentId", e.target.value)}
+                        placeholder="Enter your CLIRNET Payment ID"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-300 text-slate-900 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[#6C4AB6] focus:border-transparent bg-white shadow-xs transition-all"
+                      />
+                      {errors.paymentId && (
+                        <p className="text-xs font-semibold text-rose-600 mt-1.5 flex items-center gap-1">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" /> {errors.paymentId}
+                        </p>
+                      )}
+                    </div>
+
+                    {submitError && (
+                      <div className="mt-4 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                        <span>{submitError}</span>
+                      </div>
+                    )}
+
+                    {/* FINAL SUBMIT BUTTON (Section 9 requirement) */}
+                    <div className="mt-6 pt-4 border-t border-slate-200">
+                      <button
+                        type="button"
+                        onClick={handleSubmitNomination}
+                        disabled={submitting}
+                        className="w-full py-4 px-8 rounded-full bg-[#101828] text-white font-extrabold text-base hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {submitting ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" /> Submitting Nomination...
+                          </>
+                        ) : (
+                          <>
+                            <Check className="w-5 h-5 text-emerald-400" /> Submit Nomination
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
 
           {/* Navigation Buttons */}
           <div className="mt-12 pt-8 border-t border-gray-100 flex items-center justify-between">
-            {step > 1 ? (
+            {step > 1 && !submitSuccess ? (
               <button
                 type="button"
                 onClick={handlePrev}
@@ -721,7 +1157,7 @@ export default function Nominations() {
                 onClick={handleNext}
                 className="flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-[#6C4AB6] to-[#e244b7] hover:opacity-95 text-white font-bold transition-all shadow-md shadow-[#e244b7]/25 text-sm"
               >
-                Review Application <ArrowRight className="w-4 h-4" />
+                Proceed to Payment <ArrowRight className="w-4 h-4" />
               </button>
             ) : null}
           </div>

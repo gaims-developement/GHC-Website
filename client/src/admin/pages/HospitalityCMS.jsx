@@ -141,7 +141,7 @@ function HospitalityCMS({ api }) {
                   value={form.name || ""} 
                   onChange={(e) => setForm({...form, name: e.target.value})} 
                   className="w-full bg-[#061528] border border-[#1e3a5f] rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#4FC3F7] transition-colors" 
-                  placeholder={activeTab === "cafe" ? "e.g. SDA Market Cafes" : "e.g. Le Meridien Delhi"} 
+                  placeholder={activeTab === "cafe" ? "e.g. SDA Market Cafes" : "e.g. Central Delhi Hotel"} 
                 />
               </div>
               <div className="space-y-2">

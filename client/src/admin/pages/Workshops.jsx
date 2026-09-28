@@ -54,7 +54,10 @@ function Workshops({ api }) {
   const submitWorkshop = async (form, image) => {
     const formData = new FormData();
     Object.entries(form).forEach(([key, value]) => {
-      if (value !== undefined && value !== null) formData.append(key, value);
+      if (value !== undefined && value !== null) {
+        const valToAppend = typeof value === "object" && !(value instanceof File) ? JSON.stringify(value) : value;
+        formData.append(key, valToAppend);
+      }
     });
     if (image) formData.append("image", image);
 

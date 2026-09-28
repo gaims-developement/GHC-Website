@@ -29,15 +29,16 @@ const adminCommitteeRoutes = require('./adminCommitteeRoutes');
 const visaRoutes = require('./visaRoutes');
 const locationRoutes = require('./locationRoutes');
 const hospitalityRoutes = require('./hospitalityRoutes');
+const judgeRoutes = require('./judgeRoutes');
 const { optionalAuth, requireAuth, requirePermission } = require('../middleware/authMiddleware');
 const { eventContext } = require('../middleware/eventContextMiddleware');
 
-// TODO: Remove temporary SMTP diagnostic endpoint after Railway SMTP connectivity debugging is complete.
+// TODO: Remove temporary email diagnostic endpoint after Resend migration is verified.
 const debugRoutes = require('./debugRoutes');
 
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
-// TODO: Remove temporary SMTP diagnostic endpoint after Railway SMTP connectivity debugging is complete.
+// TODO: Remove temporary email diagnostic endpoint after Resend migration is verified.
 router.use('/debug', debugRoutes);
 router.use(optionalAuth, eventContext);
 
@@ -54,6 +55,8 @@ router.use('/committees', committeeRoutes);
 router.use('/visa-applications', visaRoutes);
 router.use('/locations', locationRoutes);
 router.use('/schedules', scheduleRoutes);
+router.use('/judge', judgeRoutes);
+router.use('/nominations', judgeRoutes);
 router.use('/', hospitalityRoutes);
 router.use('/admin/committees', requireAuth, requirePermission('speakers.manage', 'cms.manage', 'manage_homepage'), adminCommitteeRoutes);
 

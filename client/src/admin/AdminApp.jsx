@@ -4,6 +4,8 @@ import { API_BASE_URL } from "../config/api";
 import DashboardLayout from "./DashboardLayout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import AwardJudgeDashboard from "./pages/judge/AwardJudgeDashboard";
+import AwardNominations from "./pages/judge/AwardNominations";
 import Speakers from "./pages/Speakers";
 import Sessions from "./pages/Sessions";
 import Schedule from "./pages/Schedule";
@@ -11,6 +13,11 @@ import SpeakerDirectories from "./pages/SpeakerDirectories";
 import SpeakerResources from "./pages/SpeakerResources";
 import Cme from "./pages/Cme";
 import Workshops from "./pages/Workshops";
+import WorkshopTeamDashboard from "./pages/workshops/WorkshopTeamDashboard";
+import WorkshopApplications from "./pages/workshops/WorkshopApplications";
+import WorkshopAttendance from "./pages/workshops/WorkshopAttendance";
+import WorkshopCertificates from "./pages/workshops/WorkshopCertificates";
+import WorkshopReports from "./pages/workshops/WorkshopReports";
 import Events from "./pages/Events";
 import EventDirectory from "./pages/EventDirectory";
 import HospitalityCMS from "./pages/HospitalityCMS";
@@ -107,6 +114,10 @@ const pages = {
   cme: Schedule, // Redirected to Schedule
   resources: SpeakerResources,
   workshops: Workshops,
+  "workshop-applications": WorkshopApplications,
+  "workshop-attendance": WorkshopAttendance,
+  "workshop-certificates": WorkshopCertificates,
+  "workshop-reports": WorkshopReports,
   events: Events,
   "event-registrations": (props) => <EventDirectory {...props} type="event-registrations" />,
   "event-payments": (props) => <EventDirectory {...props} type="event-payments" />,
@@ -127,6 +138,8 @@ const pages = {
   posters: Presentations,
   judges: (props) => <CommitteesCMS {...props} initialTab="jury" />,
   awards: (props) => <ScientificDirectory {...props} type="awards" />,
+  "award-nominations": AwardNominations,
+  "judge-nominations": AwardNominations,
   "scientific-reports": ScientificReports,
   registrations: Registrations,
   tickets: AdminTickets,
@@ -224,7 +237,21 @@ const pages = {
 
 const pageFromPath = () => {
   const parts = window.location.pathname.split("/").filter(Boolean);
+  if (parts[0] === "judge") {
+    if (parts[1] === "nominations") return "award-nominations";
+    return "dashboard";
+  }
   if (parts[0] !== "admin") return null;
+  if (parts[1] === "award-nominations" || parts[1] === "judge-nominations") return "award-nominations";
+  if (parts[1] === "judge" && parts[2] === "nominations") return "award-nominations";
+  if (parts[1] === "workshops" && parts[2] === "applications") return "workshop-applications";
+  if (parts[1] === "workshops" && parts[2] === "attendance") return "workshop-attendance";
+  if (parts[1] === "workshops" && parts[2] === "certificates") return "workshop-certificates";
+  if (parts[1] === "workshops" && parts[2] === "reports") return "workshop-reports";
+  if (parts[1] === "workshop-applications") return "workshop-applications";
+  if (parts[1] === "workshop-attendance") return "workshop-attendance";
+  if (parts[1] === "workshop-certificates") return "workshop-certificates";
+  if (parts[1] === "workshop-reports") return "workshop-reports";
   if (parts[1] === "teams" && parts[2] === "create") return "teams-create";
   if (parts[1] === "teams" && parts[2] && parts[3] === "members") return `team-${parts[2]}-members`;
   if (parts[1] === "teams" && parts[2] && parts[3] === "modules") return `team-${parts[2]}-modules`;
@@ -311,6 +338,19 @@ function AdminApp({ initialPage = "dashboard" }) {
         setUser(currentUser);
         const role = (currentUser?.role || "").toUpperCase();
         const isSuper = role === "SUPER_ADMIN" || role === "ADMIN";
+        const isJudge =
+          role === "AWARD_JUDGE" ||
+          role === "JUDGE" ||
+          role === "AWARD_JURY" ||
+          role === "AWARD JUDGE" ||
+          (currentUser?.permissions?.includes("award_nomination_view") && !isSuper);
+
+        if (isJudge && activePage !== "dashboard" && activePage !== "award-nominations" && activePage !== "judge-nominations") {
+          setActivePage("dashboard");
+          window.history.replaceState(null, "", "/admin");
+          return;
+        }
+
         const isScientific =
           role === "SCIENTIFIC_CHAIRPERSON" ||
           role === "CHAIRPERSON" ||
@@ -353,7 +393,7 @@ function AdminApp({ initialPage = "dashboard" }) {
 
   const handleNavigate = (pageId) => {
     setActivePage(pageId);
-    const path = pageId === "dashboard" ? "/admin" : pageId === "teams-create" ? "/admin/teams/create" : pageId === "registrations-create" ? "/admin/registrations/create" : pageId.startsWith("registration-") ? pageId.replace(/^registration-(.+)$/, "/admin/registrations/$1") : pageId === "events-create" ? "/admin/events/create" : pageId.startsWith("event-") ? pageId.replace(/^event-(.+)$/, "/admin/events/$1") : pageId === "sponsors-create" ? "/admin/sponsors/create" : pageId.startsWith("sponsor-") ? pageId.replace(/^sponsor-(.+)$/, "/admin/sponsors/$1") : pageId.startsWith("team-")
+    const path = pageId === "dashboard" ? "/admin" : pageId === "award-nominations" ? "/admin/award-nominations" : pageId === "workshop-applications" ? "/admin/workshop-applications" : pageId === "workshop-attendance" ? "/admin/workshop-attendance" : pageId === "workshop-certificates" ? "/admin/workshop-certificates" : pageId === "workshop-reports" ? "/admin/workshop-reports" : pageId === "teams-create" ? "/admin/teams/create" : pageId === "registrations-create" ? "/admin/registrations/create" : pageId.startsWith("registration-") ? pageId.replace(/^registration-(.+)$/, "/admin/registrations/$1") : pageId === "events-create" ? "/admin/events/create" : pageId.startsWith("event-") ? pageId.replace(/^event-(.+)$/, "/admin/events/$1") : pageId === "sponsors-create" ? "/admin/sponsors/create" : pageId.startsWith("sponsor-") ? pageId.replace(/^sponsor-(.+)$/, "/admin/sponsors/$1") : pageId.startsWith("team-")
       ? pageId.replace(/^team-([^-]+)-members$/, "/admin/teams/$1/members").replace(/^team-([^-]+)-modules$/, "/admin/teams/$1/modules").replace(/^team-([^-]+)$/, "/admin/teams/$1")
       : pageId === "scientific-reports" ? "/admin/scientific/reports"
       : pageId === "sponsorship-reports" ? "/admin/sponsorship/reports"
@@ -405,7 +445,26 @@ function AdminApp({ initialPage = "dashboard" }) {
     return <Login api={api} onLogin={handleLogin} />;
   }
 
-  const Page = pages[activePage] || (activePage.startsWith("team-") ? TeamManagement : activePage.startsWith("registration-") ? Registrations : activePage.startsWith("event-") ? Events : activePage.match(/^form-\d+-submissions$/) ? FormSubmissions : activePage.match(/^form-\d+$/) ? FormBuilder : activePage.startsWith("visa-application-") ? VisaApplicationDetails : null);
+  const userRole = (user?.role || "").toUpperCase();
+  const isSuperUser = userRole === "SUPER_ADMIN" || userRole === "ADMIN";
+  const isAwardJudgeUser =
+    userRole === "AWARD_JUDGE" ||
+    userRole === "JUDGE" ||
+    userRole === "AWARD_JURY" ||
+    userRole === "AWARD JUDGE" ||
+    (user?.permissions?.includes("award_nomination_view") && !isSuperUser);
+  const isWorkshopTeamUser =
+    userRole === "WORKSHOP_TEAM" ||
+    userRole === "WORKSHOP_LEAD" ||
+    userRole === "WORKSHOP" ||
+    (user?.permissions?.includes("workshop_application_view") && !isSuperUser && !isAwardJudgeUser);
+
+  const ResolvedDashboard = isAwardJudgeUser
+    ? AwardJudgeDashboard
+    : isWorkshopTeamUser
+    ? WorkshopTeamDashboard
+    : Dashboard;
+  const Page = activePage === "dashboard" ? ResolvedDashboard : (pages[activePage] || (activePage.startsWith("team-") ? TeamManagement : activePage.startsWith("registration-") ? Registrations : activePage.startsWith("event-") ? Events : activePage.match(/^form-\d+-submissions$/) ? FormSubmissions : activePage.match(/^form-\d+$/) ? FormBuilder : activePage.startsWith("visa-application-") ? VisaApplicationDetails : null));
 
   return (
     <DashboardLayout

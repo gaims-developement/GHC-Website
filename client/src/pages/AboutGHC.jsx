@@ -1,8 +1,31 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight, Globe2, Lightbulb, Target } from 'lucide-react'
+import { ArrowRight, Globe2, Lightbulb, Target, Users } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import axios from 'axios'
+import { apiUrl } from '../config/api'
 import '../home-redesign.css'
+
+const defaultHeads = [
+  {
+    name: "Dr. Shubham Anand",
+    role: "Chairperson",
+    photo: "/assets/OC/Dr shubham Anand.jpg",
+    designation: "Chairperson, GHC 2026 Organising Committee",
+  },
+  {
+    name: "Dr. Abhishek Kashyap",
+    role: "Co Chairperson",
+    photo: "/assets/OC/dr abhishek kashyap.jpg",
+    designation: "Co Chairperson, GHC 2026 Organising Committee",
+  },
+  {
+    name: "Sushmit Morey",
+    role: "Souvenir & IT Committee Head",
+    photo: "/assets/OC/sushmit morey.jpg",
+    designation: "Head of IT & Souvenir Committee",
+  },
+];
 
 const highlights = [
   {
@@ -23,9 +46,30 @@ const highlights = [
 ]
 
 export default function AboutGHC() {
+  const [heads, setHeads] = useState(defaultHeads)
+
   useEffect(() => {
     document.body.classList.add('redesign-active')
     return () => document.body.classList.remove('redesign-active')
+  }, [])
+
+  useEffect(() => {
+    axios.get(apiUrl('/api/committees/organising'))
+      .then(res => {
+        const members = res.data?.members || [];
+        const headsWithPhotos = members.filter(m => m.photoUrl && m.photoUrl.trim() !== "");
+        if (headsWithPhotos.length > 0) {
+          setHeads(headsWithPhotos.map(m => ({
+            name: m.name,
+            role: m.committeeRole || "Committee Head",
+            photo: m.photoUrl,
+            designation: m.designation || m.committeeRole,
+          })));
+        }
+      })
+      .catch(err => {
+        console.warn("Using fallback OC heads", err);
+      });
   }, [])
 
   return (
@@ -149,6 +193,119 @@ export default function AboutGHC() {
         </div>
       </section>
 
+      {/* --- OUR OC (ORGANISING COMMITTEE) SECTION --- */}
+      <section className="bg-soft section-padding" style={{ background: '#F8F9FC', padding: '96px 0' }}>
+        <div className="container" style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '56px', maxWidth: '750px', margin: '0 auto 56px' }}>
+            <div className="text-eyebrow" style={{ marginBottom: '16px', color: '#173B8F' }}>
+              Leadership & Organisation
+            </div>
+            <h2 className="heading-lg" style={{ marginBottom: '16px', color: '#101828' }}>
+              Our <span className="grad-text-premium">OC</span>
+            </h2>
+            <p className="text-body-lg" style={{ color: 'var(--c-text-secondary)', margin: '0 auto' }}>
+              Meet the leadership team and committee heads driving the vision, operations, and academic excellence of the Global Healthcare Conclave 2026.
+            </p>
+          </div>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '32px',
+            justifyContent: 'center',
+            maxWidth: '1040px',
+            margin: '0 auto'
+          }}>
+            {heads.map((head, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1, duration: 0.5 }}
+                className="bg-white rounded-3xl border border-gray-200/90 shadow-sm hover:shadow-xl hover:-translate-y-1.5 transition-all duration-300 overflow-hidden text-center flex flex-col items-center"
+                style={{ padding: '36px 24px' }}
+              >
+                <div style={{
+                  position: 'relative',
+                  width: '150px',
+                  height: '150px',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  marginBottom: '20px',
+                  border: '4px solid #F5F1FA',
+                  boxShadow: '0 8px 24px rgba(108, 74, 182, 0.12)'
+                }}>
+                  <img
+                    src={head.photo}
+                    alt={head.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    loading="lazy"
+                  />
+                </div>
+                
+                <span style={{
+                  display: 'inline-block',
+                  padding: '4px 14px',
+                  borderRadius: '999px',
+                  background: 'rgba(108, 74, 182, 0.08)',
+                  border: '1px solid rgba(108, 74, 182, 0.2)',
+                  color: '#6C4AB6',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  marginBottom: '12px'
+                }}>
+                  {head.role}
+                </span>
+
+                <h3 style={{
+                  fontFamily: "'Outfit', sans-serif",
+                  fontSize: '1.35rem',
+                  fontWeight: 700,
+                  color: '#101828',
+                  marginBottom: '6px',
+                  lineHeight: 1.2
+                }}>
+                  {head.name}
+                </h3>
+
+                {head.designation && (
+                  <p style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: '0.875rem',
+                    color: '#667085',
+                    lineHeight: 1.5,
+                    margin: 0
+                  }}>
+                    {head.designation}
+                  </p>
+                )}
+              </motion.div>
+            ))}
+          </div>
+
+          {/* View Full Team CTA */}
+          <div style={{ textAlign: 'center', marginTop: '56px' }}>
+            <Link
+              to="/committees?type=organising"
+              className="btn-premium"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '14px 36px',
+                fontSize: '1rem',
+                borderRadius: '999px',
+                boxShadow: '0 8px 24px rgba(23, 59, 143, 0.18)'
+              }}
+            >
+              View Full Team <ArrowRight size={18} />
+            </Link>
+          </div>
+        </div>
+      </section>
 
       {/* --- BOTTOM CTA --- */}
       <section className="section-padding">

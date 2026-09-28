@@ -9,6 +9,7 @@ const folderMap = {
   certificates: 'ghc/certificates',
   forms: 'ghc/forms',
   trailer: 'ghc/trailer',
+  documents: 'ghc/documents',
 };
 
 const uploadToCloudinary = async (filePath, folder = 'ghc', options = {}) => {

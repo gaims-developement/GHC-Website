@@ -62,8 +62,8 @@ export const normalizeWorkshop = (workshop) => ({
   title: workshop.title || "",
   category: workshop.category || workshop.workshopType || workshop.workshop_type || "Clinical Skills",
   duration: workshop.duration || "",
-  room: (workshop.room || workshop.venue || "").includes("AIIMS") ? "S.E.T Facility AIIMS Delhi" : (workshop.room || workshop.venue || "S.E.T Facility AIIMS Delhi"),
-  venue: (workshop.venue || workshop.room || "").includes("AIIMS") ? "S.E.T Facility AIIMS Delhi" : (workshop.venue || workshop.room || "S.E.T Facility AIIMS Delhi"),
+  room: (workshop.room || workshop.venue || "").includes("AIIMS") ? "New Delhi" : (workshop.room || workshop.venue || "New Delhi"),
+  venue: (workshop.venue || workshop.room || "").includes("AIIMS") ? "New Delhi" : (workshop.venue || workshop.room || "New Delhi"),
   price: Number(workshop.price || 0),
   image: workshop.image || workshop.imageUrl || workshop.image_url || "",
   imageUrl: workshop.imageUrl || workshop.image_url || workshop.image || "",
@@ -79,6 +79,11 @@ export const normalizeWorkshop = (workshop) => ({
     filled: Number(workshop.seats?.filled ?? workshop.filledSeats ?? workshop.registeredCount ?? workshop.registered_count ?? 0),
     total: Number(workshop.seats?.total ?? workshop.totalSeats ?? workshop.capacity ?? 0),
   },
+  organizer: workshop.organizer || "New Delhi",
+  certificateAvailable: Boolean(workshop.certificateAvailable ?? workshop.certificate_available ?? true),
+  isRegistrationOpen: workshop.isRegistrationOpen !== false && workshop.is_registration_open !== false,
+  fullDescription: workshop.fullDescription || workshop.full_description || workshop.description || "",
+  displayDate: workshop.duration ? `${workshop.duration}, November 2026` : formatWorkshopDate(workshop.date),
   agenda: Array.isArray(workshop.agenda) ? workshop.agenda : [],
   requirements: Array.isArray(workshop.requirements)
     ? workshop.requirements

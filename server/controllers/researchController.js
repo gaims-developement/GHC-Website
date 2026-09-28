@@ -797,7 +797,7 @@ const requestRevision = asyncHandler(async (req, res) => {
   }
   
   await logDecision(req, 'requested_revision', submission.id, { email: authorEmail, emailSent, notes });
-  res.json({ success: true, token, emailSent, recipient: authorEmail });
+  res.json({ success: true, token, link, emailSent, recipient: authorEmail });
 });
 
 const validateRevisionToken = asyncHandler(async (req, res) => {

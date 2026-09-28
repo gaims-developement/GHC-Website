@@ -112,26 +112,26 @@ const DatePicker = ({ label, field, value, onChange, required, error, placeholde
   };
 
   return (
-    <div className="space-y-2 font-['DM_Sans'] relative" ref={containerRef}>
-      <label className="text-sm font-bold text-white/90 uppercase tracking-wider ml-1 flex items-center gap-2">
-        <CalendarIcon className="w-4 h-4 text-blue-400" /> {label} {required && <span className="text-[#ff3d7f]">*</span>}
+    <div className="space-y-1.5 font-['DM_Sans'] relative" ref={containerRef}>
+      <label className="block text-sm font-semibold text-[#344054] mb-2 flex items-center gap-2">
+        <CalendarIcon className="w-4 h-4 text-[#6C4AB6]" /> {label} {required && <span className="text-[#e244b7]">*</span>}
       </label>
       
       <div 
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-full bg-[#051329] text-white border ${isOpen ? 'border-blue-400' : error ? 'border-red-500/50' : 'border-blue-500/20 hover:border-blue-400'} rounded-2xl px-5 py-4 cursor-pointer transition-all flex items-center justify-between outline-none relative z-20 ${isOpen ? 'ring-4 ring-blue-500/10' : ''}`}
+        className={`w-full bg-white text-[#101828] border ${isOpen ? 'border-[#6C4AB6] ring-2 ring-[#6C4AB6]/20' : error ? 'border-red-400' : 'border-gray-300 hover:border-[#6C4AB6]/60'} rounded-xl px-4 py-3 cursor-pointer transition-all flex items-center justify-between outline-none relative z-20 shadow-sm`}
       >
-        <div className="flex items-center gap-4">
-          <CalendarIcon className="w-5 h-5 text-gray-400" />
-          <div className="flex flex-col">
-            <span className="text-xs font-semibold text-blue-400">{placeholder}</span>
-            <span className="text-base font-bold">{selectedDate ? formatDateString(selectedDate) : "Select date"}</span>
+        <div className="flex items-center gap-3">
+          <CalendarIcon className="w-4 h-4 text-gray-400" />
+          <div className="flex flex-col text-left">
+            <span className="text-[11px] font-semibold text-[#6C4AB6]">{placeholder}</span>
+            <span className="text-sm font-semibold text-[#101828]">{selectedDate ? formatDateString(selectedDate) : "Select date"}</span>
           </div>
         </div>
-        {isOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
       </div>
       
-      {error && <p className="text-red-400 text-sm ml-2 font-medium">{error}</p>}
+      {error && <p className="text-red-500 text-sm mt-1 font-medium">{error}</p>}
 
       <AnimatePresence>
         {isOpen && (
@@ -140,34 +140,34 @@ const DatePicker = ({ label, field, value, onChange, required, error, placeholde
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute left-0 right-0 top-full mt-2 bg-white rounded-[2rem] p-6 shadow-2xl z-50 border border-gray-100"
+            className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl p-5 shadow-2xl z-50 border border-gray-200"
           >
             {/* Header */}
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">
+            <div className="flex justify-between items-center mb-5">
+              <h3 className="text-lg font-bold text-[#101828]">
                 {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
               </h3>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5">
                 <button onClick={handlePrevMonth} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600">
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button onClick={handleNextMonth} className="p-2 hover:bg-gray-100 rounded-full transition-colors text-gray-600">
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
             {/* Days of week */}
-            <div className="grid grid-cols-7 mb-4">
+            <div className="grid grid-cols-7 mb-3">
               {dayNames.map((day, i) => (
-                <div key={i} className="text-center text-sm font-bold text-gray-800">
+                <div key={i} className="text-center text-xs font-bold text-gray-500 uppercase tracking-wider">
                   {day}
                 </div>
               ))}
             </div>
 
             {/* Calendar grid */}
-            <div className="grid grid-cols-7 gap-y-2 gap-x-1 mb-6">
+            <div className="grid grid-cols-7 gap-y-1.5 gap-x-1 mb-5">
               {days.map((item, i) => {
                 const dateObj = new Date(currentDate.getFullYear(), currentDate.getMonth() + item.offset, item.day);
                 const isSelected = isSameDate(selectedDate, dateObj);
@@ -176,11 +176,11 @@ const DatePicker = ({ label, field, value, onChange, required, error, placeholde
                   <button
                     key={i}
                     onClick={(e) => { e.preventDefault(); handleDateClick(item.day, item.isCurrentMonth, item.offset); }}
-                    className={`h-10 w-10 mx-auto flex items-center justify-center rounded-full text-sm font-semibold transition-all
+                    className={`h-9 w-9 mx-auto flex items-center justify-center rounded-xl text-xs font-semibold transition-all
                       ${isSelected 
-                        ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/40 scale-110' 
+                        ? 'bg-gradient-to-r from-[#6C4AB6] to-[#e244b7] text-white shadow-md shadow-[#6C4AB6]/30 font-bold scale-105' 
                         : item.isCurrentMonth 
-                          ? 'text-gray-700 hover:bg-blue-50 hover:text-blue-600' 
+                          ? 'text-[#101828] hover:bg-[#6C4AB6]/10 hover:text-[#6C4AB6]' 
                           : 'text-gray-300 hover:bg-gray-50'
                       }
                     `}
@@ -192,16 +192,16 @@ const DatePicker = ({ label, field, value, onChange, required, error, placeholde
             </div>
 
             {/* Actions */}
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button 
                 onClick={handleRemove}
-                className="flex-1 py-3 px-4 bg-gray-400 hover:bg-gray-500 text-white rounded-2xl font-bold transition-colors"
+                className="flex-1 py-2.5 px-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold transition-colors text-xs"
               >
-                Remove
+                Clear
               </button>
               <button 
                 onClick={handleDone}
-                className="flex-1 py-3 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold transition-colors shadow-lg shadow-blue-500/30"
+                className="flex-1 py-2.5 px-3 bg-gradient-to-r from-[#6C4AB6] to-[#e244b7] hover:opacity-95 text-white rounded-xl font-bold transition-all shadow-md shadow-[#6C4AB6]/20 text-xs"
               >
                 Done
               </button>

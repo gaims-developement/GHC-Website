@@ -67,7 +67,7 @@ const dashboard = asyncHandler(async (_req, res) => {
       database: dbPing?.length ? 'healthy' : 'warning',
       api: 'healthy',
       cloudinary: process.env.CLOUDINARY_NAME ? 'configured' : 'not configured',
-      email: Number(emails.failed || 0) ? 'warning' : (process.env.SMTP_HOST ? 'healthy' : 'not configured'),
+      email: Number(emails.failed || 0) ? 'warning' : ((process.env.RESEND_API_KEY || process.env.SMTP_HOST) ? 'healthy' : 'not configured'),
       cloudinaryAssets: Number(cloudinaryAssets?.count || 0),
     },
     emailSummary: emails,
@@ -164,23 +164,30 @@ const testEmail = asyncHandler(async (req, res) => {
   }
 
   try {
-    await sendTemplateEmail('test_email', email);
-    res.json({ success: true, message: 'Test email sent successfully.' });
+    const result = await sendTemplateEmail('test_email', email);
+    res.json({
+      success: true,
+      message: 'Email sent successfully',
+      emailId: result?.id || result?.messageId || null,
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: 'Email failed', error: error.message || String(error) });
+    res.status(500).json({
+      success: false,
+      message: 'Email failed',
+      error: error.message || String(error),
+    });
   }
 });
 
 const verifySmtp = asyncHandler(async (_req, res) => {
   try {
     const result = await verifyConnection();
-    res.json({ success: true, message: 'SMTP connection verified successfully.', details: result });
+    res.json({ success: true, message: 'Email service verified successfully.', details: result });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'SMTP connection verification failed.',
+      message: 'Email service verification failed.',
       error: error.message || String(error),
-      code: error.code || null,
     });
   }
 });
@@ -369,7 +376,9 @@ const settings = asyncHandler(async (_req, res) => {
     config: {
       nodeEnv: process.env.NODE_ENV || 'development',
       appUrl: process.env.APP_URL || null,
-      smtpConfigured: Boolean(process.env.SMTP_HOST),
+      smtpConfigured: Boolean(process.env.RESEND_API_KEY || process.env.SMTP_HOST),
+      emailConfigured: Boolean(process.env.RESEND_API_KEY || process.env.SMTP_HOST),
+      resendConfigured: Boolean(process.env.RESEND_API_KEY),
       cloudinaryConfigured: Boolean(process.env.CLOUDINARY_CLOUD_NAME),
       jwtConfigured: Boolean(process.env.JWT_SECRET),
     },

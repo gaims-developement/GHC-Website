@@ -23,6 +23,7 @@ function Research({ api }) {
   const [revisionModal, setRevisionModal] = useState(null);
   const [revisionNotes, setRevisionNotes] = useState("");
   const [revisionLoading, setRevisionLoading] = useState(false);
+  const [revisionResultModal, setRevisionResultModal] = useState(null);
   
   const fileInputRef = useRef(null);
 
@@ -125,12 +126,20 @@ function Research({ api }) {
         notes: revisionNotes.trim(),
         revisionNotes: revisionNotes.trim(),
       });
-      alert(res.data?.emailSent 
-        ? `Revision request & notification email sent successfully to ${res.data?.recipient || 'the author'}!` 
-        : "Revision status updated successfully.");
+      const link = res.data?.link || `${window.location.origin}/abstract-revision/${res.data?.token}`;
       setRevisionModal(null);
       setRevisionNotes("");
       loadSubmissions();
+
+      if (res.data?.emailSent) {
+        alert(`Revision request & notification email sent successfully to ${res.data?.recipient || 'the author'}!`);
+      } else {
+        setRevisionResultModal({
+          link,
+          recipient: res.data?.recipient || 'the author',
+          token: res.data?.token,
+        });
+      }
     } catch (error) {
       alert(error.response?.data?.message || error.response?.data?.error || "Failed to request revision.");
     } finally {
@@ -362,6 +371,47 @@ function Research({ api }) {
               <button onClick={requestRevision} className="admin-primary-button" disabled={revisionLoading}>
                 {revisionLoading ? "Sending Request..." : "Request Revision"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {revisionResultModal && (
+        <div className="admin-modal-overlay">
+          <div className="admin-modal" style={{ maxWidth: '540px', width: '90%' }}>
+            <header>
+              <h2>Revision Status Updated</h2>
+              <button onClick={() => setRevisionResultModal(null)}><X size={20} /></button>
+            </header>
+            <div style={{ padding: '0.85rem 0' }}>
+              <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', padding: '0.75rem', borderRadius: '8px', marginBottom: '1rem', color: '#92400e', fontSize: '0.85rem' }}>
+                <strong>Notice:</strong> The abstract status is updated to <em>Revision Requested</em> in the database. Automated email delivery timed out because the hosting server's outbound SMTP ports are blocked.
+              </div>
+              <p style={{ fontSize: '0.875rem', color: '#334155', margin: '0 0 0.5rem', fontWeight: 600 }}>
+                Direct Author Submission Link:
+              </p>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  readOnly
+                  value={revisionResultModal.link}
+                  style={{ flex: 1, padding: '0.6rem 0.75rem', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem', background: '#f8fafc' }}
+                  onClick={(e) => e.target.select()}
+                />
+                <button
+                  type="button"
+                  className="admin-primary-button"
+                  style={{ whiteSpace: 'nowrap' }}
+                  onClick={() => {
+                    navigator.clipboard.writeText(revisionResultModal.link);
+                    alert("Revision link copied to clipboard! You can share it directly with the author.");
+                  }}
+                >
+                  Copy Link
+                </button>
+              </div>
+            </div>
+            <div className="admin-form-actions">
+              <button onClick={() => setRevisionResultModal(null)}>Close</button>
             </div>
           </div>
         </div>

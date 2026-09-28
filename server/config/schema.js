@@ -1,7 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { pool } = require('./db');
 
-const roles = ['SUPER_ADMIN', 'SYSTEM_ADMIN', 'ADMIN', 'TEAM_ADMIN', 'FORM_MANAGER', 'EDITOR', 'VIEWER', 'MEDIA', 'RESEARCH', 'VOLUNTEER', 'CHECKIN', 'OPERATIONS'];
+const roles = ['SUPER_ADMIN', 'SYSTEM_ADMIN', 'ADMIN', 'TEAM_ADMIN', 'FORM_MANAGER', 'EDITOR', 'VIEWER', 'MEDIA', 'RESEARCH', 'VOLUNTEER', 'CHECKIN', 'OPERATIONS', 'AWARD_JUDGE', 'JUDGE'];
 
 const permissions = [
   ['dashboard.view', 'View CMS dashboard'],
@@ -116,6 +116,17 @@ const permissions = [
   ['manage_badges', 'Manage registration badges'],
   ['manage_coupons', 'Manage registration coupons'],
   ['export_registration_data', 'Export registration data'],
+  ['award_nomination_view', 'View award nominations and nominee profiles'],
+  ['award_nomination_accept', 'Accept award nominees'],
+  ['award_nomination_reject', 'Reject award nominees'],
+  ['award_nomination_document_view', 'Securely view nominee documents'],
+  ['workshop_application_view', 'View workshop applications and applicant details'],
+  ['workshop_application_verify', 'Verify applicant GHC pass status'],
+  ['workshop_application_confirm', 'Approve and confirm workshop applications'],
+  ['workshop_application_reject', 'Reject workshop applications'],
+  ['workshop_attendance_manage', 'Mark and manage workshop attendance'],
+  ['workshop_certificate_manage', 'Issue and manage workshop certificates'],
+  ['workshop_reports_view', 'View workshop analytics and reports'],
 ];
 
 const modules = [
@@ -128,6 +139,9 @@ const modules = [
   ['cme', 'CME', 'manage_cme', 'cme', 'GraduationCap', 25, true],
   ['resources', 'Resources', 'upload_resources', 'resources', 'FolderUp', 26, true],
   ['workshops', 'Workshops', 'manage_workshops', 'workshops', 'Wrench', 30, true],
+  ['workshop-applications', 'Workshop Applications', 'workshop_application_view', 'workshop-applications', 'ClipboardCheck', 30.1, true],
+  ['workshop-attendance', 'Workshop Attendance', 'workshop_attendance_manage', 'workshop-attendance', 'UserCheck', 30.2, true],
+  ['workshop-reports', 'Workshop Reports', 'workshop_reports_view', 'workshop-reports', 'FileSpreadsheet', 30.3, true],
   ['events', 'Events', 'manage_events', 'events', 'CalendarDays', 31, true],
   ['event-registrations', 'Event Registrations', 'manage_event_registrations', 'event-registrations', 'ClipboardCheck', 32, true],
   ['event-payments', 'Event Payments', 'manage_event_payments', 'event-payments', 'CreditCard', 33, true],
@@ -145,6 +159,7 @@ const modules = [
   ['posters', 'Posters', 'manage_abstracts', 'posters', 'PanelsTopLeft', 46, true],
   ['judges', 'Judges', 'manage_judges', 'judges', 'Scale', 47, true],
   ['awards', 'Awards', 'manage_awards', 'awards', 'Trophy', 48, true],
+  ['award-nominations', 'Award Nominations', 'award_nomination_view', 'judge/nominations', 'Trophy', 49, true],
   ['scientific-reports', 'Scientific Reports', 'publish_scientific_program', 'scientific/reports', 'ChartColumn', 49, true],
   ['registrations', 'Registrations', 'view_registrations', 'registrations', 'QrCode', 50, true],
   ['badges', 'Badges', 'manage_badges', 'badges', 'BadgeCheck', 55, true],
@@ -238,7 +253,11 @@ const modules = [
 const rolePermissionMap = {
   SUPER_ADMIN: permissions.map(([key]) => key),
   SYSTEM_ADMIN: ['dashboard.view', 'manage_system', 'manage_users', 'manage_roles', 'manage_permissions', 'manage_backups', 'manage_security', 'manage_settings', 'view_audit_logs', 'view_system_reports', 'users.manage', 'settings.manage', 'activity.view', 'impersonation.manage', 'manage_core_architecture', 'manage_files', 'manage_tasks', 'manage_approvals', 'view_global_reports'],
-  ADMIN: ['dashboard.view', 'users.manage', 'speakers.manage', 'workshops.manage', 'research.manage', 'partners.manage', 'media.manage', 'settings.manage', 'analytics.view', 'checkin.scan', 'attendance.manage', 'certificates.manage', 'operations.view', 'cms.manage', 'manage_registrations', 'edit_registrations', 'view_registrations', 'manage_payments', 'manage_checkins', 'manage_badges', 'manage_coupons', 'export_registration_data', 'manage_speakers', 'edit_speakers', 'delete_speakers', 'manage_sessions', 'manage_tracks', 'manage_halls', 'manage_venues', 'manage_accommodation', 'manage_transport', 'manage_vendors', 'manage_inventory', 'manage_volunteers', 'manage_recruitment', 'manage_interviews', 'manage_shifts', 'manage_attendance', 'manage_tasks', 'view_volunteer_reports', 'manage_security', 'manage_emergency_contacts', 'manage_cme', 'upload_resources', 'publish_schedule', 'manage_workshops', 'manage_events', 'manage_competitions', 'manage_event_registrations', 'manage_event_payments', 'manage_feedback', 'manage_resources', 'publish_events', 'manage_sponsors', 'manage_sponsor_tiers', 'manage_exhibitors', 'manage_stalls', 'manage_contracts', 'manage_invoices', 'manage_deliverables', 'view_sponsorship_reports', 'manage_announcements', 'manage_news', 'manage_homepage', 'manage_gallery', 'manage_campaigns', 'manage_media_partners', 'manage_notifications', 'manage_seo', 'publish_content', 'manage_abstracts', 'manage_reviewers', 'assign_reviewers', 'review_abstracts', 'manage_awards', 'manage_judges', 'manage_certificates', 'manage_templates', 'generate_certificates', 'revoke_certificates', 'manage_signatures', 'manage_accreditation', 'verify_certificates', 'view_certificate_reports', 'publish_scientific_program', 'manage_mobile_app', 'manage_mobile_users', 'view_mobile_analytics'],
+  ADMIN: ['dashboard.view', 'users.manage', 'speakers.manage', 'workshops.manage', 'research.manage', 'partners.manage', 'media.manage', 'settings.manage', 'analytics.view', 'checkin.scan', 'attendance.manage', 'certificates.manage', 'operations.view', 'cms.manage', 'manage_registrations', 'edit_registrations', 'view_registrations', 'manage_payments', 'manage_checkins', 'manage_badges', 'manage_coupons', 'export_registration_data', 'manage_speakers', 'edit_speakers', 'delete_speakers', 'manage_sessions', 'manage_tracks', 'manage_halls', 'manage_venues', 'manage_accommodation', 'manage_transport', 'manage_vendors', 'manage_inventory', 'manage_volunteers', 'manage_recruitment', 'manage_interviews', 'manage_shifts', 'manage_attendance', 'manage_tasks', 'view_volunteer_reports', 'manage_security', 'manage_emergency_contacts', 'manage_cme', 'upload_resources', 'publish_schedule', 'manage_workshops', 'manage_events', 'manage_competitions', 'manage_event_registrations', 'manage_event_payments', 'manage_feedback', 'manage_resources', 'publish_events', 'manage_sponsors', 'manage_sponsor_tiers', 'manage_exhibitors', 'manage_stalls', 'manage_contracts', 'manage_invoices', 'manage_deliverables', 'view_sponsorship_reports', 'manage_announcements', 'manage_news', 'manage_homepage', 'manage_gallery', 'manage_campaigns', 'manage_media_partners', 'manage_notifications', 'manage_seo', 'publish_content', 'manage_abstracts', 'manage_reviewers', 'assign_reviewers', 'review_abstracts', 'manage_awards', 'manage_judges', 'manage_certificates', 'manage_templates', 'generate_certificates', 'revoke_certificates', 'manage_signatures', 'manage_accreditation', 'verify_certificates', 'view_certificate_reports', 'publish_scientific_program', 'manage_mobile_app', 'manage_mobile_users', 'view_mobile_analytics', 'award_nomination_view', 'award_nomination_accept', 'award_nomination_reject', 'award_nomination_document_view', 'workshop_application_view', 'workshop_application_verify', 'workshop_application_confirm', 'workshop_application_reject', 'workshop_attendance_manage', 'workshop_certificate_manage', 'workshop_reports_view'],
+  WORKSHOP_TEAM: ['dashboard.view', 'manage_workshops', 'workshops.manage', 'workshop_application_view', 'workshop_application_verify', 'workshop_application_confirm', 'workshop_application_reject', 'workshop_attendance_manage', 'workshop_certificate_manage', 'workshop_reports_view'],
+  WORKSHOP_LEAD: ['dashboard.view', 'manage_workshops', 'workshops.manage', 'workshop_application_view', 'workshop_application_verify', 'workshop_application_confirm', 'workshop_application_reject', 'workshop_attendance_manage', 'workshop_certificate_manage', 'workshop_reports_view'],
+  AWARD_JUDGE: ['dashboard.view', 'award_nomination_view', 'award_nomination_accept', 'award_nomination_reject', 'award_nomination_document_view'],
+  JUDGE: ['dashboard.view', 'award_nomination_view', 'award_nomination_accept', 'award_nomination_reject', 'award_nomination_document_view'],
   TEAM_ADMIN: ['dashboard.view', 'view_registrations', 'manage_forms', 'create_forms', 'edit_forms', 'review_submissions'],
   FORM_MANAGER: ['dashboard.view', 'manage_forms', 'create_forms', 'edit_forms', 'publish_forms', 'review_submissions', 'export_submissions', 'manage_form_templates'],
   EDITOR: ['dashboard.view', 'view_registrations'],
@@ -640,6 +659,54 @@ const createWorkshopTables = async () => {
   await addColumnIfMissing('workshops', 'who_should_attend', 'TEXT');
   await addColumnIfMissing('workshops', 'faq', 'JSON');
   await addColumnIfMissing('workshops', 'prerequisites', 'TEXT');
+  await addColumnIfMissing('workshops', 'organizer', "VARCHAR(255) DEFAULT 'New Delhi'");
+  await addColumnIfMissing('workshops', 'certificate_available', 'BOOLEAN DEFAULT TRUE');
+  await addColumnIfMissing('workshops', 'is_registration_open', 'BOOLEAN DEFAULT TRUE');
+  await addColumnIfMissing('workshops', 'start_time', 'TIME NULL');
+  await addColumnIfMissing('workshops', 'end_time', 'TIME NULL');
+  await addColumnIfMissing('workshops', 'registration_deadline', 'DATETIME NULL');
+  await addColumnIfMissing('workshops', 'full_description', 'TEXT NULL');
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS workshop_applications (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      application_id VARCHAR(50) NOT NULL UNIQUE,
+      workshop_id INT NOT NULL,
+      full_name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      mobile VARCHAR(50) NOT NULL,
+      whatsapp VARCHAR(50) NULL,
+      country VARCHAR(100) NOT NULL,
+      state VARCHAR(120) NOT NULL,
+      city VARCHAR(100) NOT NULL,
+      institution VARCHAR(255) NOT NULL,
+      designation VARCHAR(120) NOT NULL,
+      academic_level VARCHAR(80) NOT NULL,
+      application_status ENUM('SUBMITTED', 'UNDER_REVIEW', 'GHC_PASS_VERIFIED', 'CONFIRMED', 'GHC_PASS_NOT_FOUND', 'REJECTED', 'CANCELLED') DEFAULT 'SUBMITTED',
+      ghc_pass_status ENUM('PENDING_VERIFICATION', 'VERIFIED', 'NOT_FOUND') DEFAULT 'PENDING_VERIFICATION',
+      ghc_registration_id VARCHAR(100) NULL,
+      ghc_verification_result TEXT NULL,
+      ghc_verified_at DATETIME NULL,
+      workshop_registration_id VARCHAR(100) NULL UNIQUE,
+      confirmed_at DATETIME NULL,
+      reviewed_by INT NULL,
+      reviewer_name VARCHAR(120) NULL,
+      review_notes TEXT NULL,
+      attended BOOLEAN DEFAULT FALSE,
+      attended_at DATETIME NULL,
+      certificate_id VARCHAR(100) NULL,
+      certificate_issued_at DATETIME NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_wa_workshop (workshop_id),
+      INDEX idx_wa_app_status (application_status),
+      INDEX idx_wa_ghc_status (ghc_pass_status),
+      INDEX idx_wa_email (email),
+      INDEX idx_wa_mobile (mobile),
+      CONSTRAINT fk_wa_workshop FOREIGN KEY (workshop_id) REFERENCES workshops(id) ON DELETE CASCADE,
+      CONSTRAINT uq_wa_workshop_applicant UNIQUE KEY (workshop_id, email, mobile)
+    )
+  `);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS workshop_registrations (
@@ -1849,6 +1916,66 @@ const createResearchTables = async () => {
   `);
 };
 
+const createAwardNominationTables = async () => {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS award_nominations (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      nomination_id VARCHAR(50) NOT NULL UNIQUE,
+      award_id INT NULL,
+      award_category VARCHAR(255) NOT NULL,
+      award_key VARCHAR(100) NULL,
+      age_category VARCHAR(100) NULL,
+      full_name VARCHAR(255) NOT NULL,
+      dob DATE NULL,
+      age INT NULL,
+      sex VARCHAR(50) NULL,
+      medical_college VARCHAR(255) NULL,
+      organisation VARCHAR(255) NOT NULL,
+      designation VARCHAR(255) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      mobile VARCHAR(100) NOT NULL,
+      social_links JSON NULL,
+      nomination_statement TEXT NULL,
+      photo_url TEXT NULL,
+      photo_cloudinary_id VARCHAR(255) NULL,
+      cv_url TEXT NULL,
+      cv_cloudinary_id VARCHAR(255) NULL,
+      supporting_documents JSON NULL,
+      payment_id VARCHAR(255) NULL,
+      payment_status VARCHAR(50) DEFAULT 'PAYMENT_ID_SUBMITTED',
+      payment_provider VARCHAR(50) DEFAULT 'CLIRNET',
+      payment_amount DECIMAL(10,2) DEFAULT 5000.00,
+      payment_submitted_at DATETIME NULL,
+      payment_verified_at DATETIME NULL,
+      draft_id VARCHAR(100) NULL,
+      status ENUM('PENDING', 'ACCEPTED', 'REJECTED') DEFAULT 'PENDING',
+      reviewed_by INT NULL,
+      reviewer_name VARCHAR(255) NULL,
+      reviewed_at DATETIME NULL,
+      decision_notes TEXT NULL,
+      event_id INT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_award_nominations_payment_id (payment_id),
+      CONSTRAINT fk_award_nominations_reviewed_by FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
+      CONSTRAINT fk_award_nominations_award_id FOREIGN KEY (award_id) REFERENCES awards(id) ON DELETE SET NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS nomination_drafts (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      draft_id VARCHAR(100) NOT NULL UNIQUE,
+      email VARCHAR(255) NULL,
+      full_name VARCHAR(255) NULL,
+      award_id VARCHAR(100) NULL,
+      draft_data JSON NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+};
+
 const createRegistrationTables = async () => {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS registration_categories (
@@ -3027,22 +3154,100 @@ const seedSpeakers = async () => {
 };
 
 const seedWorkshops = async () => {
-  const [rows] = await pool.query('SELECT COUNT(*) AS count FROM workshops');
-  if (rows[0].count > 0) return;
-
-  const workshops = [
-    ['BLS', 'SET Facility AIIMS Delhi', 'Certificates will be provided.', 'Clinical Skills', 50, 0, '22nd and 23rd', 'AIIMS Delhi', '2026-09-22 09:00:00', 1500, null, true, 'published', 1],
-    ['Suturing and laproscopic', 'SET Facility AIIMS Delhi', 'Certificates will be provided.', 'Clinical Skills', 30, 0, '22nd and 23rd', 'AIIMS Delhi', '2026-09-22 13:00:00', 1500, null, true, 'published', 2],
-    ['Lumbar puncture and sites of injection', 'SET Facility AIIMS Delhi', 'Certificates will be provided.', 'Clinical Skills', 30, 0, '22nd and 23rd', 'AIIMS Delhi', '2026-09-22 15:00:00', 1500, null, true, 'published', 3]
+  // Ensure the 3 required workshops exist and have correct titles, capacities, and venue
+  const defaultWorkshops = [
+    {
+      title: 'BLS',
+      faculty: 'New Delhi Faculty',
+      organizer: 'New Delhi',
+      description: 'Hands-on Basic Life Support training with adult, child and infant CPR, AED usage and airway management.',
+      fullDescription: 'Comprehensive Basic Life Support (BLS) training certified by experienced instructors in New Delhi. Hands-on high-fidelity simulation and automated external defibrillator (AED) operation.',
+      workshopType: 'Clinical Skills',
+      capacity: 50,
+      duration: '22nd & 23rd',
+      venue: 'New Delhi',
+      date: '2026-09-22 09:00:00',
+      price: 0,
+      certificateAvailable: true,
+      isRegistrationOpen: true,
+      status: 'published',
+      displayOrder: 1,
+    },
+    {
+      title: 'Suturing & Laparoscopic',
+      faculty: 'New Delhi Faculty',
+      organizer: 'New Delhi',
+      description: 'Advanced surgical knot tying, continuous and interrupted suturing techniques and laparoscopic simulation.',
+      fullDescription: 'Intensive surgical skills workshop covering essential knot tying, deep dermal suturing, mattress sutures, instrument handling, and laparoscopic box trainer simulations with expert surgeons.',
+      workshopType: 'Clinical Skills',
+      capacity: 30,
+      duration: '22nd & 23rd',
+      venue: 'New Delhi',
+      date: '2026-09-22 13:00:00',
+      price: 0,
+      certificateAvailable: true,
+      isRegistrationOpen: true,
+      status: 'published',
+      displayOrder: 2,
+    },
+    {
+      title: 'Lumbar Puncture & Sites of Injection',
+      faculty: 'New Delhi Faculty',
+      organizer: 'New Delhi',
+      description: 'Procedural masterclass on lumbar puncture landmarks, aseptic technique and safe systemic injection sites.',
+      fullDescription: 'Master the anatomy, patient positioning, CSF pressure measurement and sterile technique for diagnostic and therapeutic lumbar puncture, alongside intra-articular and parenteral injection sites.',
+      workshopType: 'Clinical Skills',
+      capacity: 30,
+      duration: '22nd & 23rd',
+      venue: 'New Delhi',
+      date: '2026-09-22 15:00:00',
+      price: 0,
+      certificateAvailable: true,
+      isRegistrationOpen: true,
+      status: 'published',
+      displayOrder: 3,
+    },
   ];
 
+  for (const w of defaultWorkshops) {
+    const [existing] = await pool.query(
+      'SELECT id FROM workshops WHERE title = ? OR title LIKE ? LIMIT 1',
+      [w.title, `%${w.title.split(' ')[0]}%`]
+    );
+
+    if (existing.length > 0) {
+      await pool.query(
+        `UPDATE workshops SET
+          title = ?, faculty = ?, organizer = ?, description = ?, full_description = ?,
+          workshop_type = ?, capacity = ?, duration = ?, venue = ?, date = ?, price = ?,
+          certificate_available = ?, is_registration_open = ?, status = 'published', display_order = ?
+         WHERE id = ?`,
+        [
+          w.title, w.faculty, w.organizer, w.description, w.fullDescription,
+          w.workshopType, w.capacity, w.duration, w.venue, w.date, w.price,
+          w.certificateAvailable, w.isRegistrationOpen, w.displayOrder, existing[0].id
+        ]
+      );
+    } else {
+      await pool.query(
+        `INSERT INTO workshops
+          (title, faculty, organizer, description, full_description, workshop_type, capacity, registered_count, duration, venue, date, price, certificate_available, is_registration_open, featured, status, display_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, 1, 'published', ?)`,
+        [
+          w.title, w.faculty, w.organizer, w.description, w.fullDescription,
+          w.workshopType, w.capacity, w.duration, w.venue, w.date, w.price,
+          w.certificateAvailable, w.isRegistrationOpen, w.displayOrder
+        ]
+      );
+    }
+  }
 
   await pool.query(
-    `INSERT INTO workshops
-      (title, faculty, description, workshop_type, capacity, registered_count, duration, venue, date, price, image_url, featured, status, display_order)
-     VALUES ?`,
-    [workshops]
-  );
+    "UPDATE workshops SET venue = 'New Delhi' WHERE venue LIKE '%AIIMS%' OR venue LIKE '%SET Facility%'"
+  ).catch(() => {});
+  await pool.query(
+    "UPDATE workshops SET organizer = 'New Delhi' WHERE organizer LIKE '%AIIMS%' OR organizer LIKE '%SET Facility%'"
+  ).catch(() => {});
 };
 
 const seedResearch = async () => {
@@ -3204,6 +3409,418 @@ const createNewsletterTables = async () => {
   `);
 };
 
+const seedAwardNominationData = async () => {
+  // Ensure default award categories exist in awards table
+  const [existingAwards] = await pool.query('SELECT COUNT(*) AS count FROM awards');
+  if (existingAwards[0].count === 0) {
+    const awardsList = [
+      ['Young Entrepreneur Award', 'For innovative healthcare startups and leaders.', 'Healthcare Leadership', 'Trophy & Certificate'],
+      ['Women in Healthcare Award', 'Celebrating female excellence and leadership.', 'Healthcare Excellence', 'Trophy & Certificate'],
+      ['Medical Educator Award', 'For outstanding contribution to medical teaching.', 'Medical Education', 'Trophy & Certificate'],
+      ['Young Researcher Award', 'Recognising breakthrough student research.', 'Research & Innovation', 'Trophy & Certificate'],
+      ['Community Service Award', 'For impactful public health initiatives.', 'Public Health', 'Trophy & Certificate'],
+      ['Medical NGO Award', 'Honouring organizational impact in healthcare.', 'Social Impact', 'Trophy & Certificate'],
+      ['Medical Leadership Award', 'For exceptional visionary leadership across age categories (Under 20, Under 30, Under 40).', 'Healthcare Leadership', 'Trophy & Certificate'],
+      ['Influencer Award', 'For driving positive health communication.', 'Media & Communication', 'Trophy & Certificate'],
+      ['Academic Award', 'For consistent academic brilliance.', 'Academics', 'Trophy & Certificate'],
+    ];
+    await pool.query('INSERT INTO awards (name, description, category, prize) VALUES ?', [awardsList]);
+  }
+
+  // Ensure acceptance email template exists in email_templates table
+  const [existingTpl] = await pool.query('SELECT id FROM email_templates WHERE template_key = ?', ['award_nominee_accepted']);
+  if (existingTpl.length === 0) {
+    await pool.query(
+      `INSERT INTO email_templates (template_key, subject, body, is_active)
+       VALUES (?, ?, ?, ?)`,
+      [
+        'award_nominee_accepted',
+        'Congratulations — Your GHC Award Nomination Has Been Accepted',
+        `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b; line-height: 1.6;">
+  <div style="background: linear-gradient(135deg, #173B8F, #e244b7); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+    <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Global Healthcare Conclave</h1>
+    <p style="color: rgba(255,255,255,0.9); margin: 6px 0 0 0; font-size: 14px;">GHC Awards 2026</p>
+  </div>
+  <div style="padding: 30px; background: #ffffff; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 12px 12px;">
+    <p>Dear <strong>{{name}}</strong>,</p>
+    <p>We are delighted to inform you that your nomination for the <strong>{{award_category}}</strong> at the <strong>{{event_name}}</strong> has been formally evaluated by our Award Jury and <strong>ACCEPTED</strong>.</p>
+    <div style="background: #f8fafc; border-left: 4px solid #10b981; padding: 16px; margin: 20px 0; border-radius: 4px;">
+      <p style="margin: 0 0 8px 0; font-weight: bold; color: #0f172a;">Event Information:</p>
+      <p style="margin: 4px 0;"><strong>Event:</strong> {{event_name}}</p>
+      <p style="margin: 4px 0;"><strong>Date:</strong> {{event_date}}</p>
+      <p style="margin: 4px 0;"><strong>Venue:</strong> {{event_venue}}</p>
+    </div>
+    <p>Further details regarding the felicitation ceremony, stage schedule, and delegate coordination will be communicated with you shortly.</p>
+    <p>Congratulations once again on this prestigious recognition!</p>
+    <br/>
+    <p style="margin: 0; color: #64748b; font-size: 13px;">Warm regards,</p>
+    <p style="margin: 4px 0 0 0; font-weight: bold; color: #1e293b;">Award Jury & Organizing Committee</p>
+    <p style="margin: 2px 0 0 0; color: #64748b; font-size: 13px;">{{event_name}}</p>
+  </div>
+</div>`,
+        1
+      ]
+    );
+  }
+
+  // Ensure role permissions are seeded for judge roles
+  const judgeRoles = ['AWARD_JUDGE', 'JUDGE'];
+  const judgePerms = ['award_nomination_view', 'award_nomination_accept', 'award_nomination_reject', 'award_nomination_document_view', 'dashboard.view'];
+  for (const rName of judgeRoles) {
+    const [[r]] = await pool.query('SELECT id FROM roles WHERE name = ?', [rName]);
+    if (r) {
+      for (const pKey of judgePerms) {
+        const [[p]] = await pool.query('SELECT id FROM permissions WHERE `key` = ?', [pKey]);
+        if (p) {
+          await pool.query('INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)', [r.id, p.id]);
+        }
+      }
+    }
+  }
+
+  // Ensure role permissions are seeded for workshop team roles
+  const workshopRoles = ['WORKSHOP_TEAM', 'WORKSHOP_LEAD'];
+  const workshopPerms = [
+    'dashboard.view',
+    'manage_workshops',
+    'workshops.manage',
+    'workshop_application_view',
+    'workshop_application_verify',
+    'workshop_application_confirm',
+    'workshop_application_reject',
+    'workshop_attendance_manage',
+    'workshop_certificate_manage',
+    'workshop_reports_view',
+  ];
+  for (const rName of workshopRoles) {
+    await pool.query('INSERT IGNORE INTO roles (name) VALUES (?)', [rName]);
+    const [[r]] = await pool.query('SELECT id FROM roles WHERE name = ?', [rName]);
+    if (r) {
+      for (const pKey of workshopPerms) {
+        const [[p]] = await pool.query('SELECT id FROM permissions WHERE `key` = ?', [pKey]);
+        if (p) {
+          await pool.query('INSERT IGNORE INTO role_permissions (role_id, permission_id) VALUES (?, ?)', [r.id, p.id]);
+        }
+      }
+    }
+  }
+
+  // Seed workshop email templates
+  await pool.query(
+    `INSERT INTO email_templates (template_key, subject, body, is_active)
+     VALUES (?, ?, ?, 1)
+     ON DUPLICATE KEY UPDATE subject = VALUES(subject), body = VALUES(body), is_active = 1`,
+    [
+      'workshop_registration_confirmation',
+      'Your GHC Workshop Registration is Confirmed — {{workshopName}}',
+      `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workshop Registration Confirmed</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #1e293b;">
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 32px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Container -->
+        <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04); border: 1px solid #e2e8f0;">
+          
+          <!-- Gradient Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #081B33 0%, #173B8F 60%, #00A6A6 100%); padding: 36px 32px; text-align: center; color: #ffffff;">
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <span style="display: inline-block; background-color: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 9999px; padding: 4px 14px; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #ffffff; margin-bottom: 12px;">
+                      AIIMS New Delhi • GHC 2026
+                    </span>
+                    <h1 style="margin: 8px 0 4px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; color: #ffffff; line-height: 1.2;">
+                      GLOBAL HEALTHCARE CONCLAVE
+                    </h1>
+                    <p style="margin: 0; font-size: 14px; color: #99f6e4; font-weight: 500;">
+                      Hands-on Clinical & Surgical Skill Workshops
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Confirmation Hero Badge -->
+          <tr>
+            <td style="padding: 32px 32px 16px 32px; text-align: center;">
+              <table role="presentation" align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto 14px auto;">
+                <tr>
+                  <td style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 9999px; padding: 6px 18px; text-align: center;">
+                    <span style="color: #059669; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">
+                      ✓ Registration Confirmed & Seat Allocated
+                    </span>
+                  </td>
+                </tr>
+              </table>
+              <h2 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1.3;">
+                Welcome, {{fullName}}!
+              </h2>
+              <p style="margin: 0; font-size: 15px; color: #475569; line-height: 1.5;">
+                Congratulations! Your workshop registration for <strong>{{workshopName}}</strong> at the Global Healthcare Conclave 2026 has been approved and confirmed.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Digital Workshop Pass Card -->
+          <tr>
+            <td style="padding: 16px 32px;">
+              <div style="background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); border: 2px dashed #94a3b8; border-radius: 16px; padding: 24px; text-align: center;">
+                <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b;">
+                  Workshop Registration ID
+                </p>
+                <div style="background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px 20px; display: inline-block; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                  <span style="font-family: 'Courier New', Courier, monospace; font-size: 22px; font-weight: 900; color: #173B8F; letter-spacing: 2px;">
+                    {{registrationId}}
+                  </span>
+                </div>
+
+                <!-- Detail Key-Values -->
+                <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="text-align: left; font-size: 13px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b; font-weight: 600; width: 35%;">Workshop:</td>
+                    <td style="padding: 6px 0; color: #0f172a; font-weight: 700;">{{workshopName}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Date:</td>
+                    <td style="padding: 6px 0; color: #0f172a; font-weight: 700;">{{workshopDate}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Venue:</td>
+                    <td style="padding: 6px 0; color: #0f172a; font-weight: 700;">{{workshopVenue}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Organizer:</td>
+                    <td style="padding: 6px 0; color: #0f172a; font-weight: 700;">{{workshopOrganizer}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Delegate Name:</td>
+                    <td style="padding: 6px 0; color: #0f172a; font-weight: 700;">{{fullName}}</td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Important Delegate Instructions -->
+          <tr>
+            <td style="padding: 16px 32px;">
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px;">
+                <h3 style="margin: 0 0 12px 0; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">
+                  📌 Important Delegate Guidelines
+                </h3>
+                <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size: 13px; color: #334155; line-height: 1.6;">
+                  <tr>
+                    <td style="padding: 4px 0; vertical-align: top; width: 22px; color: #059669; font-weight: bold;">✓</td>
+                    <td style="padding: 4px 0;"><strong>Digital Entry Pass:</strong> Present this Workshop Registration ID or confirmation email at the Workshop Desk upon arrival.</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; vertical-align: top; width: 22px; color: #059669; font-weight: bold;">✓</td>
+                    <td style="padding: 4px 0;"><strong>Identification:</strong> Please carry your GHC delegate pass badge and a valid institutional photo ID.</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; vertical-align: top; width: 22px; color: #059669; font-weight: bold;">✓</td>
+                    <td style="padding: 4px 0;"><strong>Reporting Time:</strong> Please arrive at the venue at least 15 minutes before the scheduled start time.</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0; vertical-align: top; width: 22px; color: #059669; font-weight: bold;">✓</td>
+                    <td style="padding: 4px 0;"><strong>Certification:</strong> Official Certificate of Completion will be issued post-session upon verified attendance.</td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Location Details Box -->
+          <tr>
+            <td style="padding: 8px 32px 24px 32px;">
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px;">
+                <tr>
+                  <td>
+                    <p style="margin: 0 0 4px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; color: #1e40af;">
+                      📍 Workshop Venue Location
+                    </p>
+                    <p style="margin: 0; font-size: 13px; color: #1e3a8a; line-height: 1.5;">
+                      <strong>Skills, E-Learning & Telemedicine (SET) Facility</strong><br>
+                      All India Institute of Medical Sciences (AIIMS), Ansari Nagar, New Delhi - 110029
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #081B33; padding: 24px 32px; text-align: center; color: #94a3b8; font-size: 12px; line-height: 1.6;">
+              <p style="margin: 0 0 6px 0; font-weight: 700; color: #ffffff; font-size: 13px;">
+                Global Healthcare Conclave 2026
+              </p>
+              <p style="margin: 0 0 8px 0; color: #cbd5e1;">
+                GAIMS National Healthcare Initiative • Advancing Medicine Through Hands-On Excellence
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #64748b;">
+                This is an automated confirmation sent to {{fullName}}. If you need assistance, please email <a href="mailto:workshops@ghc2026.org" style="color: #38bdf8; text-decoration: none;">workshops@ghc2026.org</a>.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+    ]
+  );
+
+  await pool.query(
+    `INSERT INTO email_templates (template_key, subject, body, is_active)
+     VALUES (?, ?, ?, 1)
+     ON DUPLICATE KEY UPDATE subject = VALUES(subject), body = VALUES(body), is_active = 1`,
+    [
+      'workshop_application_received',
+      'Your GHC Workshop Application Has Been Received — {{applicationId}}',
+      `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workshop Application Received</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #1e293b;">
+  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f1f5f9; padding: 32px 16px;">
+    <tr>
+      <td align="center">
+        <!-- Main Container -->
+        <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 600px; background-color: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04); border: 1px solid #e2e8f0;">
+          
+          <!-- Gradient Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #081B33 0%, #173B8F 60%, #00A6A6 100%); padding: 36px 32px; text-align: center; color: #ffffff;">
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="center">
+                    <span style="display: inline-block; background-color: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 9999px; padding: 4px 14px; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #ffffff; margin-bottom: 12px;">
+                      AIIMS New Delhi • GHC 2026
+                    </span>
+                    <h1 style="margin: 8px 0 4px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; color: #ffffff; line-height: 1.2;">
+                      GLOBAL HEALTHCARE CONCLAVE
+                    </h1>
+                    <p style="margin: 0; font-size: 14px; color: #99f6e4; font-weight: 500;">
+                      Hands-on Clinical & Surgical Skill Workshops
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Application Received Hero Badge -->
+          <tr>
+            <td style="padding: 32px 32px 16px 32px; text-align: center;">
+              <table role="presentation" align="center" border="0" cellspacing="0" cellpadding="0" style="margin: 0 auto 14px auto;">
+                <tr>
+                  <td style="background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 9999px; padding: 6px 18px; text-align: center;">
+                    <span style="color: #b45309; font-size: 12px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">
+                      ⏳ Application Received • Under Review
+                    </span>
+                  </td>
+                </tr>
+              </table>
+              <h2 style="margin: 0 0 8px 0; font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1.3;">
+                Thank You, {{fullName}}!
+              </h2>
+              <p style="margin: 0; font-size: 15px; color: #475569; line-height: 1.5;">
+                We have received your workshop application for <strong>{{workshopName}}</strong>.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Application Details Card -->
+          <tr>
+            <td style="padding: 16px 32px;">
+              <div style="background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%); border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px; text-align: center;">
+                <p style="margin: 0 0 6px 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #64748b;">
+                  Your Application ID
+                </p>
+                <div style="background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 12px 20px; display: inline-block; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.03);">
+                  <span style="font-family: 'Courier New', Courier, monospace; font-size: 22px; font-weight: 900; color: #173B8F; letter-spacing: 2px;">
+                    {{applicationId}}
+                  </span>
+                </div>
+
+                <!-- Key Details -->
+                <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="text-align: left; font-size: 13px; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b; font-weight: 600; width: 35%;">Workshop:</td>
+                    <td style="padding: 6px 0; color: #0f172a; font-weight: 700;">{{workshopName}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Venue:</td>
+                    <td style="padding: 6px 0; color: #0f172a; font-weight: 700;">{{workshopVenue}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Applicant:</td>
+                    <td style="padding: 6px 0; color: #0f172a; font-weight: 700;">{{fullName}}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 6px 0; color: #64748b; font-weight: 600;">Current Status:</td>
+                    <td style="padding: 6px 0; color: #b45309; font-weight: 700;">Under Review (GHC Pass Verification)</td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Next Steps Box -->
+          <tr>
+            <td style="padding: 16px 32px;">
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px;">
+                <h3 style="margin: 0 0 10px 0; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">
+                  What Happens Next?
+                </h3>
+                <p style="margin: 0 0 10px 0; font-size: 13px; color: #475569; line-height: 1.6;">
+                  1. Our team will review your application and verify your GHC registration / transaction status.<br>
+                  2. If you have already registered for GHC, our team will confirm your seat and email you your official <strong>Workshop Registration ID</strong>.<br>
+                  3. If you have not registered for the main conclave yet, please ensure you complete your GHC pass registration to secure workshop eligibility.
+                </p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #081B33; padding: 24px 32px; text-align: center; color: #94a3b8; font-size: 12px; line-height: 1.6;">
+              <p style="margin: 0 0 6px 0; font-weight: 700; color: #ffffff; font-size: 13px;">
+                Global Healthcare Conclave 2026
+              </p>
+              <p style="margin: 0 0 8px 0; color: #cbd5e1;">
+                GAIMS National Healthcare Initiative • Advancing Medicine Through Hands-On Excellence
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #64748b;">
+                This is an automated acknowledgment sent to {{fullName}}. For inquiries, please email <a href="mailto:workshops@ghc2026.org" style="color: #38bdf8; text-decoration: none;">workshops@ghc2026.org</a>.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`,
+    ]
+  );
+};
+
 const initializeDatabase = async () => {
   try {
     await createAuthTables();
@@ -3216,6 +3833,7 @@ const initializeDatabase = async () => {
     await createLogisticsTables();
     await createVolunteerTables();
     await createResearchTables();
+    await createAwardNominationTables();
     await createRegistrationTables();
     await createPaymentTables();
     await createOperationsTables();
@@ -3229,10 +3847,11 @@ const initializeDatabase = async () => {
     await seedSpeakers();
     await seedWorkshops();
     await seedResearch();
+    await seedAwardNominationData();
     await seedTickets();
     await seedCoupons();
     await seedSeoPages();
-    console.log('Auth, speaker, workshop, partner, media, settings, research, registration and payment schema ready; default data seeded');
+    console.log('Auth, speaker, workshop, partner, media, settings, research, award nominations, registration and payment schema ready; default data seeded');
   } catch (error) {
     console.warn(`Auth schema setup skipped: ${error.message}`);
   }
@@ -3250,6 +3869,7 @@ module.exports = {
   createLogisticsTables,
   createVolunteerTables,
   createResearchTables,
+  createAwardNominationTables,
   createRegistrationTables,
   createPaymentTables,
   createOperationsTables,
@@ -3264,6 +3884,7 @@ module.exports = {
   seedSpeakers,
   seedWorkshops,
   seedResearch,
+  seedAwardNominationData,
   seedTickets,
   createCommitteeTables,
   createNewsletterTables,

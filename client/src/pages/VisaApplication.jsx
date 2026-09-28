@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import DatePicker from "../components/DatePicker";
 import axios from "axios";
@@ -9,22 +9,24 @@ import {
   BriefcaseMedical, 
   CheckCircle2, 
   ChevronRight, 
-  ChevronLeft,
-  Upload,
-  Calendar,
-  Building2,
-  Globe2,
-  Phone,
-  Mail,
-  FileText
+  Upload, 
+  Calendar, 
+  Building2, 
+  Globe2, 
+  Phone, 
+  Mail, 
+  FileText, 
+  Check, 
+  MapPin, 
+  AlertCircle,
+  ArrowLeft
 } from "lucide-react";
 import { apiUrl } from "../config/api";
-import "../premium.css";
 
 const steps = [
   { id: 1, title: "Personal Details", icon: User },
   { id: 2, title: "Passport Info", icon: Book },
-  { id: 3, title: "Professional", icon: BriefcaseMedical },
+  { id: 3, title: "Professional Details", icon: BriefcaseMedical },
   { id: 4, title: "Travel & Consent", icon: PlaneTakeoff },
 ];
 
@@ -38,29 +40,33 @@ const InputField = ({ label, field, type = "text", icon: Icon, placeholder, requ
         onChange={updateForm}
         required={required}
         error={errors[field]}
+        placeholder="Select date"
       />
     );
   }
 
   return (
-    <div className="space-y-2 font-['DM_Sans']">
-      <label className="text-sm font-bold text-white/90 uppercase tracking-wider ml-1 flex items-center gap-2">
-        {Icon && <Icon className="w-4 h-4 text-blue-400" />} {label} {required && <span className="text-[#ff3d7f]">*</span>}
+    <div className="space-y-1.5" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <label className="block text-sm font-semibold text-[#344054] mb-2 flex items-center gap-2">
+        {Icon && <Icon className="w-4 h-4 text-[#6C4AB6]" />} {label} {required && <span className="text-[#e244b7]">*</span>}
       </label>
       <input
         type={type}
         value={form[field]}
         onChange={(e) => updateForm(field, e.target.value)}
         placeholder={placeholder}
-        className={`w-full bg-[#051329] border ${errors[field] ? 'border-red-500/50 focus:border-red-500' : 'border-blue-500/20 focus:border-blue-400'} rounded-2xl px-5 py-4 text-white placeholder-white/20 transition-all outline-none focus:ring-4 ${errors[field] ? 'focus:ring-red-500/10' : 'focus:ring-blue-500/10'}`}
+        className={`w-full bg-white border ${errors[field] ? 'border-red-400 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300 focus:border-[#6C4AB6] focus:ring-[#6C4AB6]/20'} rounded-xl px-4 py-3 text-[#101828] placeholder-gray-400 transition-all outline-none focus:ring-2 shadow-sm text-sm`}
+        style={{ fontFamily: "'Inter', sans-serif" }}
       />
-      {errors[field] && <p className="text-red-400 text-sm ml-2 font-medium">{errors[field]}</p>}
+      {errors[field] && <p className="text-red-500 text-sm mt-1 font-medium">{errors[field]}</p>}
     </div>
   );
 };
 
 const VisaApplication = () => {
   const [currentStep, setCurrentStep] = useState(1);
+  const formTopRef = useRef(null);
+
   const [form, setForm] = useState({
     full_name: "",
     date_of_birth: "",
@@ -89,6 +95,15 @@ const VisaApplication = () => {
   const [passportDocument, setPassportDocument] = useState(null);
   const [errors, setErrors] = useState({});
   const [submissionState, setSubmissionState] = useState({ status: "idle", message: "" });
+
+  useEffect(() => {
+    document.body.classList.add('redesign-active');
+    document.documentElement.classList.add('redesign-active');
+    return () => {
+      document.body.classList.remove('redesign-active');
+      document.documentElement.classList.remove('redesign-active');
+    };
+  }, []);
 
   const updateForm = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -140,16 +155,24 @@ const VisaApplication = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const scrollToFormTop = () => {
+    if (formTopRef.current) {
+      formTopRef.current.scrollIntoView({ behavior: "smooth" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   const nextStep = () => {
     if (validateStep(currentStep)) {
       setCurrentStep(prev => Math.min(prev + 1, steps.length));
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      scrollToFormTop();
     }
   };
 
   const prevStep = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    scrollToFormTop();
   };
 
   const submitApplication = async () => {
@@ -177,68 +200,140 @@ const VisaApplication = () => {
 
   if (submissionState.status === "success") {
     return (
-      <div className="min-h-screen bg-[#081B33] flex items-center justify-center p-6 font-['Syne']">
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-[#0A2240] p-10 md:p-16 rounded-[3rem] text-center max-w-2xl border border-blue-500/20 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#ff6b9d] to-[#ff3d7f]" />
-          <div className="w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-8 border border-emerald-500/20 shadow-[0_0_50px_rgba(16,185,129,0.1)]">
-            <CheckCircle2 className="w-12 h-12 text-emerald-400" />
+      <div className="bg-white min-h-screen font-['Outfit'] text-[#101828] py-20 px-4">
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="max-w-xl mx-auto bg-white p-8 sm:p-12 rounded-3xl border border-gray-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.04)] text-center"
+        >
+          <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 border border-emerald-200 shadow-sm">
+            <CheckCircle2 className="w-10 h-10" />
           </div>
-          <h2 className="text-4xl md:text-5xl font-extrabold text-white mb-6 tracking-tight">Application Submitted</h2>
-          <p className="text-xl text-white/80 leading-relaxed font-['DM_Sans'] mb-4">{submissionState.message}</p>
-          
-          <div className="bg-blue-500/10 border border-blue-500/20 p-6 rounded-2xl mb-8">
-            <p className="text-white/90 font-['DM_Sans'] font-medium">
-              Your application is under review. Once approved by our team, your Visa Invitation Letter will be generated and automatically sent to your registered email address.
-            </p>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-[#101828] mb-3">
+            Application Submitted
+          </h2>
+          <p className="text-[#475467] text-base mb-6 leading-relaxed">
+            {submissionState.message}
+          </p>
+
+          <div className="bg-slate-50 border border-slate-200/90 rounded-2xl p-6 text-left shadow-sm mb-8 space-y-3">
+            <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+              <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Applicant</span>
+              <strong className="text-sm font-semibold text-[#101828]">{form.full_name}</strong>
+            </div>
+            <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+              <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Nationality</span>
+              <span className="text-sm font-semibold text-slate-800">{form.nationality}</span>
+            </div>
+            <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+              <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">GHC Registration ID</span>
+              <strong className="text-sm font-mono text-[#6C4AB6]">{form.ghc_registration_id}</strong>
+            </div>
+            <div className="flex justify-between items-center py-1.5 border-b border-slate-200">
+              <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Venue</span>
+              <span className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-[#6C4AB6]" /> New Delhi
+              </span>
+            </div>
+            <div className="flex justify-between items-center py-1.5">
+              <span className="text-xs uppercase font-bold text-slate-500 tracking-wider">Status</span>
+              <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                Under Review
+              </span>
+            </div>
           </div>
-          
-          <a href="/" className="inline-flex items-center gap-2 px-8 py-4 bg-white text-[#081B33] rounded-full font-extrabold hover:bg-blue-50 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-white/10">
-            Back to Homepage
+
+          <p className="text-xs text-slate-500 mb-8 max-w-md mx-auto leading-relaxed">
+            Your application is under review by the GHC International Delegation Desk. Once approved, your official Visa Facilitation & Invitation Letter will be issued and emailed to <strong className="text-slate-700">{form.email}</strong>.
+          </p>
+
+          <a
+            href="/"
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-[#6C4AB6] to-[#e244b7] text-white font-bold text-sm hover:shadow-lg hover:shadow-[#6C4AB6]/25 hover:opacity-95 transition-all shadow-md"
+          >
+            Return to Conclave Homepage
           </a>
         </motion.div>
       </div>
     );
   }
 
-
   return (
-    <div className="min-h-screen bg-[#081B33] pt-28 pb-20 relative overflow-hidden">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-blue-500/10 rounded-full blur-[120px] opacity-50 pointer-events-none" />
-      
-      <div className="container mx-auto px-4 max-w-4xl relative z-10">
-        <div className="text-center mb-12">
-          <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-300 font-semibold text-sm mb-6 uppercase tracking-widest font-['DM_Sans']">
-            <PlaneTakeoff className="w-4 h-4" /> Visa Services
+    <div className="bg-white min-h-screen font-['Outfit'] text-[#101828]">
+      {/* Top spacing matching Nominations */}
+      <div className="h-28 md:h-32" />
+
+      {/* Back to Home link */}
+      <div className="max-w-5xl mx-auto px-6 pt-2">
+        <a href="/" className="inline-flex items-center gap-2 text-[#475467] hover:text-[#101828] font-medium text-sm transition-colors">
+          <ArrowLeft className="w-4 h-4 text-[#6C4AB6]" /> Back to Home
+        </a>
+      </div>
+
+      {/* Hero Section */}
+      <section className="relative px-6 py-10 md:py-14 overflow-hidden text-center max-w-5xl mx-auto bg-white">
+        <div className="flex flex-wrap items-center justify-center gap-2.5 mb-6">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#e244b7]/10 border border-[#e244b7]/25 text-[#e244b7] text-xs font-bold tracking-widest uppercase"
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            <PlaneTakeoff className="w-4 h-4 text-[#e244b7]" /> Visa Services
           </motion.div>
-          <h1 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70 mb-4 font-['Syne'] tracking-tight">Visa Invitation Letter</h1>
-          <p className="text-xl text-white/60 font-medium font-['DM_Sans'] max-w-2xl mx-auto">International participants requiring a visa invitation letter may submit their details through this form.</p>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.05 }}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#6C4AB6]/10 border border-[#6C4AB6]/25 text-[#6C4AB6] text-xs font-bold tracking-wider uppercase"
+            style={{ fontFamily: "'Inter', sans-serif" }}
+          >
+            <MapPin className="w-3.5 h-3.5 text-[#6C4AB6]" /> Venue: New Delhi
+          </motion.div>
         </div>
 
-        <div className="mb-12">
-          <div className="flex justify-between items-center relative z-10 px-4 md:px-8">
-            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-white/5 -z-10 rounded-full" />
-            <div 
-              className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-gradient-to-r from-[#ff6b9d] to-[#ff3d7f] -z-10 rounded-full transition-all duration-500 ease-out" 
-              style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }}
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-[#101828] mb-6 leading-tight"
+          style={{ fontFamily: "'Outfit', sans-serif" }}
+        >
+          Visa Invitation <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#6C4AB6] to-[#e244b7]">Letter</span>
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-base sm:text-lg text-[#475467] max-w-2xl mx-auto mb-6 leading-relaxed"
+          style={{ fontFamily: "'Inter', sans-serif" }}
+        >
+          International delegates, faculty, and research presenters requiring an official Indian visa facilitation letter may submit their details below.
+        </motion.p>
+      </section>
+
+      {/* Main Form Container */}
+      <div ref={formTopRef} className="max-w-4xl mx-auto px-4 pb-24 scroll-mt-24">
+        
+        {/* Progress Indicator - EXACTLY like Nominations */}
+        <div className="mb-10 sticky top-24 z-40 bg-white/95 backdrop-blur-md py-4 border-b border-gray-100" style={{ fontFamily: "'Inter', sans-serif" }}>
+          <div className="flex justify-between items-center text-xs font-semibold uppercase tracking-wider text-[#475467] mb-2.5">
+            <span className="text-[#6C4AB6] font-bold">Step {currentStep} of {steps.length} — {steps[currentStep - 1].title}</span>
+            <span>{Math.min(100, Math.round((currentStep / steps.length) * 100))}% Completed</span>
+          </div>
+          <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-[#6C4AB6] to-[#e244b7]"
+              initial={{ width: 0 }}
+              animate={{ width: `${Math.min(100, (currentStep / steps.length) * 100)}%` }}
+              transition={{ duration: 0.3 }}
             />
-            {steps.map((step) => {
-              const Icon = step.icon;
-              const isActive = step.id === currentStep;
-              const isPast = step.id < currentStep;
-              
-              return (
-                <div key={step.id} className="flex flex-col items-center gap-3">
-                  <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-all duration-500 font-bold text-lg shadow-xl ${isActive ? 'bg-gradient-to-br from-[#ff6b9d] to-[#ff3d7f] text-white scale-110 shadow-[#ff3d7f]/30' : isPast ? 'bg-[#ff3d7f]/20 text-[#ff3d7f] border border-[#ff3d7f]/30' : 'bg-[#051329] text-white/30 border border-white/5'}`}>
-                    {isPast ? <CheckCircle2 className="w-6 h-6 md:w-7 md:h-7" /> : <Icon className="w-6 h-6 md:w-7 md:h-7" />}
-                  </div>
-                  <span className={`text-xs md:text-sm font-bold uppercase tracking-wider hidden md:block ${isActive ? 'text-[#ff3d7f]' : isPast ? 'text-white/80' : 'text-white/30'}`}>{step.title}</span>
-                </div>
-              );
-            })}
           </div>
         </div>
 
-        <div className="bg-[#0A2240] p-8 md:p-12 rounded-[2rem] md:rounded-[3rem] border border-blue-500/20 shadow-2xl relative">
+        {/* Main Form Card */}
+        <div className="bg-white border border-gray-200/80 rounded-3xl p-6 sm:p-10 shadow-[0_8px_30px_rgba(0,0,0,0.03)]">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
@@ -246,26 +341,34 @@ const VisaApplication = () => {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: -20, opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="font-['DM_Sans']"
+              className="font-['Outfit']"
             >
+              {/* STEP 1: Personal Details */}
               {currentStep === 1 && (
-                <div className="space-y-8">
-                  <div>
-                    <h2 className="text-3xl font-extrabold text-white font-['Syne']">Section A: Personal Details</h2>
-                    <p className="text-white/50 text-sm mt-2">Please enter your information exactly as it appears on your passport.</p>
+                <div className="space-y-6">
+                  <div className="mb-8 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#6C4AB6]/10 text-[#6C4AB6] flex items-center justify-center shrink-0">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold text-[#101828]" style={{ fontFamily: "'Outfit', sans-serif" }}>Personal Details</h2>
+                      <p className="text-sm text-[#475467]" style={{ fontFamily: "'Inter', sans-serif" }}>Please enter your identity details exactly as they appear on your passport.</p>
+                    </div>
                   </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputField form={form} updateForm={updateForm} errors={errors} label="Full Name" field="full_name" icon={User} required placeholder="As on passport" />
+                    <InputField form={form} updateForm={updateForm} errors={errors} label="Full Name" field="full_name" icon={User} required placeholder="As shown on passport" />
                     <InputField form={form} updateForm={updateForm} errors={errors} label="Date of Birth" field="date_of_birth" type="date" icon={Calendar} required />
                     
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-white/90 uppercase tracking-wider ml-1 flex items-center gap-2">
-                        <User className="w-4 h-4 text-blue-400" /> Gender
+                    <div className="space-y-1.5" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      <label className="block text-sm font-semibold text-[#344054] mb-2 flex items-center gap-2">
+                        <User className="w-4 h-4 text-[#6C4AB6]" /> Gender
                       </label>
                       <select
                         value={form.gender}
                         onChange={(e) => updateForm("gender", e.target.value)}
-                        className="w-full bg-[#051329] border border-blue-500/20 rounded-2xl px-5 py-4 text-white appearance-none outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 transition-all"
+                        className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-[#101828] focus:outline-none focus:border-[#6C4AB6] focus:ring-2 focus:ring-[#6C4AB6]/20 shadow-sm transition-all text-sm"
+                        style={{ fontFamily: "'Inter', sans-serif" }}
                       >
                         <option value="">Select Gender</option>
                         <option value="Male">Male</option>
@@ -274,69 +377,93 @@ const VisaApplication = () => {
                       </select>
                     </div>
 
-                    <InputField form={form} updateForm={updateForm} errors={errors} label="Nationality" field="nationality" icon={Globe2} required placeholder="e.g. British" />
-                    <InputField form={form} updateForm={updateForm} errors={errors} label="Email Address" field="email" type="email" icon={Mail} required placeholder="your@email.com" />
+                    <InputField form={form} updateForm={updateForm} errors={errors} label="Nationality" field="nationality" icon={Globe2} required placeholder="e.g. British, American, German" />
+                    <InputField form={form} updateForm={updateForm} errors={errors} label="Email Address" field="email" type="email" icon={Mail} required placeholder="your.name@institution.org" />
                     <InputField form={form} updateForm={updateForm} errors={errors} label="WhatsApp / Mobile Number" field="mobile" icon={Phone} required placeholder="+44 7700 900077" />
                   </div>
                 </div>
               )}
 
+              {/* STEP 2: Passport Info */}
               {currentStep === 2 && (
-                <div className="space-y-8">
-                  <div>
-                    <h2 className="text-3xl font-extrabold text-white font-['Syne']">Section B: Passport Details</h2>
-                    <p className="text-white/50 text-sm mt-2">Information required for processing your visa invitation.</p>
+                <div className="space-y-6">
+                  <div className="mb-8 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#6C4AB6]/10 text-[#6C4AB6] flex items-center justify-center shrink-0">
+                      <Book className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold text-[#101828]" style={{ fontFamily: "'Outfit', sans-serif" }}>Passport & Travel Document Details</h2>
+                      <p className="text-sm text-[#475467]" style={{ fontFamily: "'Inter', sans-serif" }}>Official passport information required for consular facilitation letter issuance.</p>
+                    </div>
                   </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InputField form={form} updateForm={updateForm} errors={errors} label="Passport Number" field="passport_number" icon={Book} required placeholder="e.g. A1234567" />
                     <InputField form={form} updateForm={updateForm} errors={errors} label="Passport Issuing Country" field="passport_issuing_country" icon={Globe2} placeholder="e.g. United Kingdom" />
                     <InputField form={form} updateForm={updateForm} errors={errors} label="Passport Issue Date" field="passport_issue_date" type="date" icon={Calendar} />
                     <InputField form={form} updateForm={updateForm} errors={errors} label="Passport Expiry Date" field="passport_expiry_date" type="date" icon={Calendar} required />
                   </div>
-                  <div className="mt-8 space-y-4">
-                    <label className="text-sm font-bold text-white/90 uppercase tracking-wider flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-blue-400" /> Upload Passport Copy <span className="text-[#ff3d7f]">*</span>
+
+                  <div className="mt-8 space-y-2" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    <label className="block text-sm font-semibold text-[#344054] mb-2 flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-[#6C4AB6]" /> Upload Passport Copy (Bio Page) <span className="text-[#e244b7]">*</span>
                     </label>
-                    <label className={`block w-full border-2 border-dashed ${errors.passport_document ? 'border-red-500/50 bg-red-500/5' : passportDocument ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-blue-500/30 bg-blue-500/5 hover:border-blue-500/60 hover:bg-blue-500/10'} rounded-[2rem] p-10 cursor-pointer transition-all text-center group`}>
-                      <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png" onChange={handleFileChange} />
-                      <div className="flex flex-col items-center justify-center gap-4">
-                        <div className={`p-4 rounded-full ${passportDocument ? 'bg-emerald-500/20 text-emerald-400' : 'bg-blue-500/20 text-blue-400 group-hover:scale-110 transition-transform'}`}>
-                          {passportDocument ? <CheckCircle2 className="w-8 h-8" /> : <Upload className="w-8 h-8" />}
+                    <div className={`border-2 border-dashed ${errors.passport_document ? 'border-red-400 bg-red-50/30' : passportDocument ? 'border-emerald-400 bg-emerald-50/30' : 'border-gray-300 hover:border-[#6C4AB6] bg-gray-50/50 hover:bg-[#6C4AB6]/5'} rounded-2xl p-8 text-center transition-all group relative shadow-sm cursor-pointer`}>
+                      <input
+                        type="file"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        onChange={handleFileChange}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <div className="pointer-events-none flex flex-col items-center justify-center gap-3">
+                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all ${passportDocument ? 'bg-emerald-100 text-emerald-700' : 'bg-[#6C4AB6]/10 text-[#6C4AB6] group-hover:scale-105'}`}>
+                          {passportDocument ? <CheckCircle2 className="w-7 h-7" /> : <Upload className="w-7 h-7" />}
                         </div>
                         <div>
-                          <p className={`font-bold text-lg mb-1 ${passportDocument ? 'text-emerald-400' : 'text-white'}`}>
-                            {passportDocument ? passportDocument.name : 'Click or drag to upload'}
+                          <p className={`font-bold text-base mb-1 ${passportDocument ? 'text-emerald-800' : 'text-[#101828]'}`}>
+                            {passportDocument ? passportDocument.name : 'Click or drag to upload passport copy'}
                           </p>
-                          <p className="text-white/40 text-sm">PDF, JPG or PNG (Max. 5MB)</p>
+                          <p className="text-gray-400 text-xs">PDF, JPG, JPEG or PNG (Max. 5MB)</p>
                         </div>
+                        {passportDocument && (
+                          <span className="text-xs font-bold text-[#6C4AB6] hover:underline">Change File</span>
+                        )}
                       </div>
-                    </label>
-                    {errors.passport_document && <p className="text-red-400 text-sm font-medium text-center">{errors.passport_document}</p>}
+                    </div>
+                    {errors.passport_document && <p className="text-red-500 text-sm mt-1 font-medium">{errors.passport_document}</p>}
                   </div>
                 </div>
               )}
 
+              {/* STEP 3: Professional Details */}
               {currentStep === 3 && (
-                <div className="space-y-8">
-                  <div>
-                    <h2 className="text-3xl font-extrabold text-white font-['Syne']">Section C & D: Professional & GHC Participation</h2>
-                    <p className="text-white/50 text-sm mt-2">Details about your organisation and GHC registration.</p>
+                <div className="space-y-6">
+                  <div className="mb-8 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#6C4AB6]/10 text-[#6C4AB6] flex items-center justify-center shrink-0">
+                      <BriefcaseMedical className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold text-[#101828]" style={{ fontFamily: "'Outfit', sans-serif" }}>Professional & Participation Details</h2>
+                      <p className="text-sm text-[#475467]" style={{ fontFamily: "'Inter', sans-serif" }}>Details about your institutional affiliation and GHC registration confirmation.</p>
+                    </div>
                   </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <InputField form={form} updateForm={updateForm} errors={errors} label="Organisation / Institution" field="organisation" icon={Building2} required placeholder="e.g. WHO" />
-                    <InputField form={form} updateForm={updateForm} errors={errors} label="Designation" field="designation" icon={User} placeholder="e.g. Chief Medical Officer" />
+                    <InputField form={form} updateForm={updateForm} errors={errors} label="Organisation / Institution" field="organisation" icon={Building2} required placeholder="e.g. World Health Organization" />
+                    <InputField form={form} updateForm={updateForm} errors={errors} label="Designation" field="designation" icon={User} placeholder="e.g. Professor / Medical Officer" />
                     <InputField form={form} updateForm={updateForm} errors={errors} label="Medical College / Hospital" field="medical_college_hospital" icon={Building2} placeholder="Optional" />
-                    <InputField form={form} updateForm={updateForm} errors={errors} label="Country of Residence" field="country_of_residence" icon={Globe2} placeholder="e.g. Switzerland" />
+                    <InputField form={form} updateForm={updateForm} errors={errors} label="Country of Residence" field="country_of_residence" icon={Globe2} placeholder="e.g. United Kingdom" />
                     <InputField form={form} updateForm={updateForm} errors={errors} label="GHC Registration ID" field="ghc_registration_id" icon={FileText} required placeholder="e.g. GHC-2026-102" />
                     
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-white/90 uppercase tracking-wider ml-1 flex items-center gap-2">
-                        <BriefcaseMedical className="w-4 h-4 text-blue-400" /> Participant Category <span className="text-[#ff3d7f]">*</span>
+                    <div className="space-y-1.5" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      <label className="block text-sm font-semibold text-[#344054] mb-2 flex items-center gap-2">
+                        <BriefcaseMedical className="w-4 h-4 text-[#6C4AB6]" /> Participant Category <span className="text-[#e244b7]">*</span>
                       </label>
                       <select
                         value={form.participant_category}
                         onChange={(e) => updateForm("participant_category", e.target.value)}
-                        className="w-full bg-[#051329] border border-blue-500/20 rounded-2xl px-5 py-4 text-white appearance-none outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400 transition-all"
+                        className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-[#101828] focus:outline-none focus:border-[#6C4AB6] focus:ring-2 focus:ring-[#6C4AB6]/20 shadow-sm transition-all text-sm"
+                        style={{ fontFamily: "'Inter', sans-serif" }}
                       >
                         <option value="Delegate">Delegate</option>
                         <option value="Speaker">Speaker</option>
@@ -347,71 +474,109 @@ const VisaApplication = () => {
                     </div>
 
                     {form.participant_category === "Other" && (
-                      <InputField form={form} updateForm={updateForm} errors={errors} label="Specify Category" field="participant_category_other" required placeholder="Please specify" />
+                      <InputField form={form} updateForm={updateForm} errors={errors} label="Specify Category" field="participant_category_other" required placeholder="Please specify your participation category" />
                     )}
                   </div>
                 </div>
               )}
 
+              {/* STEP 4: Travel & Consent */}
               {currentStep === 4 && (
-                <div className="space-y-8">
-                  <div>
-                    <h2 className="text-3xl font-extrabold text-white font-['Syne']">Section E: Travel Details & Declaration</h2>
-                    <p className="text-white/50 text-sm mt-2">Final details and confirmation.</p>
+                <div className="space-y-6">
+                  <div className="mb-8 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#6C4AB6]/10 text-[#6C4AB6] flex items-center justify-center shrink-0">
+                      <PlaneTakeoff className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl sm:text-3xl font-extrabold text-[#101828]" style={{ fontFamily: "'Outfit', sans-serif" }}>Travel Details & Declaration</h2>
+                      <p className="text-sm text-[#475467]" style={{ fontFamily: "'Inter', sans-serif" }}>Provide your itinerary dates and accept the official invitation declaration.</p>
+                    </div>
                   </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <InputField form={form} updateForm={updateForm} errors={errors} label="Arrival Date in India" field="arrival_date" type="date" icon={Calendar} required />
                     <InputField form={form} updateForm={updateForm} errors={errors} label="Departure Date from India" field="departure_date" type="date" icon={Calendar} required />
                     
-                    <div className="col-span-1 md:col-span-2 space-y-2">
-                      <label className="text-sm font-bold text-white/90 uppercase tracking-wider ml-1 flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-blue-400" /> Accommodation Details
+                    <div className="col-span-1 md:col-span-2 space-y-1.5" style={{ fontFamily: "'Inter', sans-serif" }}>
+                      <label className="block text-sm font-semibold text-[#344054] mb-2 flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-[#6C4AB6]" /> Accommodation Details in India
                       </label>
                       <textarea
                         value={form.accommodation_details}
                         onChange={(e) => updateForm("accommodation_details", e.target.value)}
-                        placeholder="Hotel name, address, etc."
-                        rows="2"
-                        className="w-full bg-[#051329] border border-blue-500/20 rounded-2xl px-5 py-4 text-white placeholder-white/20 transition-all outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-400"
+                        placeholder="Hotel name, booked stay address, or host details in New Delhi..."
+                        rows="3"
+                        className="w-full bg-white border border-gray-300 rounded-xl px-4 py-3 text-[#101828] placeholder-gray-400 focus:outline-none focus:border-[#6C4AB6] focus:ring-2 focus:ring-[#6C4AB6]/20 shadow-sm transition-all text-sm"
+                        style={{ fontFamily: "'Inter', sans-serif" }}
                       />
                     </div>
                   </div>
 
-                  <div className="mt-8 pt-8 border-t border-white/10">
-                    <label className={`flex items-start gap-5 p-6 rounded-3xl border-2 transition-all cursor-pointer ${form.declaration_accepted ? 'bg-[#ff3d7f]/10 border-[#ff3d7f]/50' : 'bg-[#051329] border-blue-500/20 hover:border-blue-500/40'}`}>
-                      <div className={`w-8 h-8 shrink-0 rounded-full border-2 flex items-center justify-center transition-colors mt-1 ${form.declaration_accepted ? 'bg-[#ff3d7f] border-[#ff3d7f]' : 'border-white/30'}`}>
-                        {form.declaration_accepted && <CheckCircle2 className="w-5 h-5 text-white" />}
+                  <div className="mt-8 pt-6 border-t border-gray-200" style={{ fontFamily: "'Inter', sans-serif" }}>
+                    <label className={`flex items-start gap-4 p-5 rounded-2xl border transition-all cursor-pointer ${form.declaration_accepted ? 'bg-[#6C4AB6]/5 border-[#6C4AB6] shadow-sm' : 'bg-gray-50/50 border-gray-200 hover:border-gray-300'}`}>
+                      <div className={`w-6 h-6 shrink-0 rounded-lg border-2 flex items-center justify-center transition-colors mt-0.5 ${form.declaration_accepted ? 'bg-gradient-to-r from-[#6C4AB6] to-[#e244b7] border-transparent' : 'border-gray-300 bg-white'}`}>
+                        {form.declaration_accepted && <Check className="w-4 h-4 text-white" />}
                         <input type="checkbox" className="hidden" checked={form.declaration_accepted} onChange={(e) => updateForm("declaration_accepted", e.target.checked)} />
                       </div>
-                      <p className={`text-lg leading-relaxed transition-colors ${form.declaration_accepted ? 'text-white' : 'text-white/70'}`}>
-                        I confirm that the information provided by me is accurate and that the details submitted may be used for processing my visa invitation letter.
+                      <p className={`text-sm leading-relaxed ${form.declaration_accepted ? 'text-[#101828] font-medium' : 'text-[#475467]'}`}>
+                        I confirm that the information provided is accurate and authentic. I understand that the GHC Organising Secretariat will issue an official Visa Facilitation & Invitation Letter solely for the purpose of attending the Global Health Conclave in New Delhi.
                       </p>
                     </label>
-                    {errors.declaration_accepted && <p className="text-red-400 mt-4 font-semibold text-sm ml-14">{errors.declaration_accepted}</p>}
+                    {errors.declaration_accepted && <p className="text-red-500 mt-2 font-semibold text-sm ml-1">{errors.declaration_accepted}</p>}
                   </div>
                 </div>
               )}
             </motion.div>
           </AnimatePresence>
 
-          <div className="mt-12 flex items-center justify-between font-['Syne']">
+          {/* Submission Error Banner */}
+          {submissionState.status === "error" && (
+            <div className="mt-6 p-4 rounded-xl bg-red-50 border border-red-200 flex items-center gap-3 text-red-700 text-sm font-medium">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <span>{submissionState.message}</span>
+            </div>
+          )}
+
+          {/* Navigation Controls */}
+          <div className="mt-10 pt-6 border-t border-gray-100 flex items-center justify-between">
             {currentStep > 1 ? (
-              <button onClick={prevStep} className="flex items-center gap-2 px-6 py-4 rounded-full font-bold text-white/60 hover:text-white hover:bg-white/5 transition-all">
-                <ChevronLeft className="w-5 h-5" /> Back
+              <button
+                type="button"
+                onClick={prevStep}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-gray-300 text-[#475467] font-semibold text-sm hover:bg-gray-50 hover:text-[#101828] transition-colors"
+                style={{ fontFamily: "'Outfit', sans-serif" }}
+              >
+                <ArrowLeft className="w-4 h-4" /> Previous Step
               </button>
             ) : <div />}
 
             {currentStep < steps.length ? (
-              <button onClick={nextStep} className="flex items-center gap-2 px-10 py-4 bg-white text-[#081B33] rounded-full font-extrabold hover:bg-blue-50 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-white/10">
-                Continue <ChevronRight className="w-5 h-5" />
+              <button
+                type="button"
+                onClick={nextStep}
+                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-gradient-to-r from-[#6C4AB6] to-[#e244b7] text-white font-bold text-sm hover:shadow-lg hover:shadow-[#6C4AB6]/25 hover:opacity-95 transition-all shadow-md active:scale-95"
+                style={{ fontFamily: "'Outfit', sans-serif" }}
+              >
+                Next Step <ChevronRight className="w-4 h-4" />
               </button>
             ) : (
-              <button onClick={submitApplication} disabled={submissionState.status === "loading" || !form.declaration_accepted} className={`flex items-center gap-2 px-10 py-4 rounded-full font-extrabold transition-all shadow-lg ${submissionState.status === "loading" || !form.declaration_accepted ? "bg-white/20 text-white/30 cursor-not-allowed" : "bg-gradient-to-r from-[#ff6b9d] to-[#ff3d7f] text-white hover:scale-105 active:scale-95 shadow-[#ff3d7f]/20"}`}>
-                {submissionState.status === "loading" ? "Submitting..." : "Submit Application"}
+              <button
+                type="button"
+                onClick={submitApplication}
+                disabled={submissionState.status === "loading" || !form.declaration_accepted}
+                className={`inline-flex items-center gap-2 px-9 py-3.5 rounded-full font-bold text-sm transition-all shadow-md ${
+                  submissionState.status === "loading" || !form.declaration_accepted
+                    ? "bg-gray-200 text-gray-400 cursor-not-allowed"
+                    : "bg-gradient-to-r from-[#6C4AB6] to-[#e244b7] text-white hover:shadow-lg hover:shadow-[#6C4AB6]/25 hover:opacity-95 active:scale-95"
+                }`}
+                style={{ fontFamily: "'Outfit', sans-serif" }}
+              >
+                {submissionState.status === "loading" ? "Submitting Application..." : "Submit Visa Application"}
               </button>
             )}
           </div>
         </div>
+
       </div>
     </div>
   );
