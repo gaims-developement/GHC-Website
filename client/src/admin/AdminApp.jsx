@@ -218,7 +218,7 @@ const pages = {
 
   // Visa Applications
   "visa-applications": (props) => <VisaApplications {...props} />,
-  "visa-settings": (props) => <VisaSettings {...props} />,
+  "visa-settings": (props) => <VisaSettings {...props} onBack={() => props.onNavigate("visa-applications")} />,
 
   "system-audit-logs": (props) => <SystemDirectory {...props} type="audit-logs" />,
   "system-users": (props) => <Users {...props} initialTab="users" />,
@@ -274,7 +274,9 @@ const pageFromPath = () => {
   if (parts[1] === "forms" && parts[2]) return `form-${parts[2]}`;
   if (parts[1] === "mobile" && parts[2]) return `mobile-${parts[2]}`;
   if (parts[1] === "core" && parts[2]) return `core-${parts[2]}`;
-  if (parts[1] === "visa-applications" && parts[2] && parts[2] !== "settings") return `visa-application-${parts[2]}`;
+  if (parts[1] === "visa-applications" && parts[2] === "settings") return "visa-settings";
+  if (parts[1] === "visa-applications" && parts[2]) return `visa-application-${parts[2]}`;
+  if (parts[1] === "visa-settings") return "visa-settings";
   return parts[1] || null;
 };
 
@@ -406,6 +408,7 @@ function AdminApp({ initialPage = "dashboard" }) {
       : pageId.startsWith("form-") ? pageId.replace(/^form-(\d+)-submissions$/, "/admin/forms/$1/submissions").replace(/^form-(\d+)$/, "/admin/forms/$1")
       : pageId.startsWith("mobile-") ? pageId.replace(/^mobile-(.+)$/, "/admin/mobile/$1")
       : pageId.startsWith("core-") ? pageId.replace(/^core-(.+)$/, "/admin/core/$1")
+      : pageId === "visa-settings" ? "/admin/visa-applications/settings"
       : pageId.startsWith("visa-application-") ? pageId.replace(/^visa-application-(.+)$/, "/admin/visa-applications/$1")
       : `/admin/${pageId}`;
     window.history.pushState({}, "", path);

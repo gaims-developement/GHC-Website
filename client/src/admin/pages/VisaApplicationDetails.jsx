@@ -61,170 +61,170 @@ export default function VisaApplicationDetails({ activePage, onNavigate, api }) 
     }
   };
 
-  if (loading) return <div className="p-10 text-white/50 text-center">Loading details...</div>;
-  if (!app) return <div className="p-10 text-red-500 text-center">Application not found.</div>;
+  if (loading) return <div className="p-10 text-black text-center font-medium">Loading details...</div>;
+  if (!app) return <div className="p-10 text-red-600 text-center font-bold">Application not found.</div>;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-6 max-w-6xl mx-auto space-y-6 text-black">
       <div className="flex items-center gap-4">
-        <button onClick={() => onNavigate('visa-applications')} className="p-2 hover:bg-white/10 rounded-full text-white/50 hover:text-white transition-colors">
-          <ArrowLeft />
+        <button onClick={() => onNavigate('visa-applications')} className="p-2 hover:bg-gray-100 rounded-full text-black transition-colors" title="Back to Visa Applications">
+          <ArrowLeft className="text-black" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
-            Application {app.application_id}
-            <span className="text-sm px-3 py-1 bg-white/10 rounded-full font-normal">
+          <h1 className="text-2xl font-bold text-black flex items-center gap-3">
+            <span>Application {app.application_id}</span>
+            <span className="text-sm px-3 py-1 bg-gray-100 border border-gray-200 text-gray-800 rounded-full font-semibold">
               {app.status}
             </span>
           </h1>
-          <p className="text-white/50 text-sm">Submitted on {new Date(app.created_at).toLocaleString()}</p>
+          <p className="text-gray-600 text-sm font-medium">Submitted on {new Date(app.created_at).toLocaleString()}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-[#1a2234] border border-white/10 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><User className="text-blue-400"/> Personal Details</h2>
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm text-black">
+            <h2 className="text-xl font-bold text-black mb-4 flex items-center gap-2"><User className="text-blue-600"/> Personal Details</h2>
             <div className="grid grid-cols-2 gap-y-4 text-sm">
               <div>
-                <p className="text-white/50">Full Name</p>
-                <p className="text-white font-medium">{app.full_name}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Full Name</p>
+                <p className="text-black font-semibold mt-0.5">{app.full_name}</p>
               </div>
               <div>
-                <p className="text-white/50">Date of Birth</p>
-                <p className="text-white font-medium">{new Date(app.date_of_birth).toLocaleDateString()}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Date of Birth</p>
+                <p className="text-black font-semibold mt-0.5">{new Date(app.date_of_birth).toLocaleDateString()}</p>
               </div>
               <div>
-                <p className="text-white/50">Gender</p>
-                <p className="text-white font-medium">{app.gender || '-'}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Gender</p>
+                <p className="text-black font-semibold mt-0.5">{app.gender || '-'}</p>
               </div>
               <div>
-                <p className="text-white/50">Nationality</p>
-                <p className="text-white font-medium">{app.nationality}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Nationality</p>
+                <p className="text-black font-semibold mt-0.5">{app.nationality}</p>
               </div>
               <div>
-                <p className="text-white/50">Email</p>
-                <p className="text-white font-medium">{app.email}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Email</p>
+                <p className="text-black font-semibold mt-0.5">{app.email}</p>
               </div>
               <div>
-                <p className="text-white/50">Mobile</p>
-                <p className="text-white font-medium">{app.mobile}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Mobile</p>
+                <p className="text-black font-semibold mt-0.5">{app.mobile}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-[#1a2234] border border-white/10 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><Book className="text-blue-400"/> Passport Details</h2>
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm text-black">
+            <h2 className="text-xl font-bold text-black mb-4 flex items-center gap-2"><Book className="text-blue-600"/> Passport Details</h2>
             <div className="grid grid-cols-2 gap-y-4 text-sm mb-6">
               <div>
-                <p className="text-white/50">Passport Number</p>
-                <p className="text-white font-medium">{app.passport_number}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Passport Number</p>
+                <p className="text-black font-mono font-bold mt-0.5">{app.passport_number}</p>
               </div>
               <div>
-                <p className="text-white/50">Issuing Country</p>
-                <p className="text-white font-medium">{app.passport_issuing_country}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Issuing Country</p>
+                <p className="text-black font-semibold mt-0.5">{app.passport_issuing_country}</p>
               </div>
               <div>
-                <p className="text-white/50">Issue Date</p>
-                <p className="text-white font-medium">{app.passport_issue_date ? new Date(app.passport_issue_date).toLocaleDateString() : '-'}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Issue Date</p>
+                <p className="text-black font-semibold mt-0.5">{app.passport_issue_date ? new Date(app.passport_issue_date).toLocaleDateString() : '-'}</p>
               </div>
               <div>
-                <p className="text-white/50">Expiry Date</p>
-                <p className="text-white font-medium">{new Date(app.passport_expiry_date).toLocaleDateString()}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Expiry Date</p>
+                <p className="text-black font-semibold mt-0.5">{new Date(app.passport_expiry_date).toLocaleDateString()}</p>
               </div>
             </div>
             <a 
               href={app.passport_document} 
               target="_blank" 
               rel="noreferrer"
-              className="inline-flex items-center gap-2 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 px-4 py-2 rounded-lg font-medium transition-colors"
+              className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 px-4 py-2 rounded-lg font-semibold transition-colors"
             >
               <FileText className="w-4 h-4" /> View Passport Document
             </a>
           </div>
 
-          <div className="bg-[#1a2234] border border-white/10 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><BriefcaseMedical className="text-blue-400"/> Professional & GHC Info</h2>
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm text-black">
+            <h2 className="text-xl font-bold text-black mb-4 flex items-center gap-2"><BriefcaseMedical className="text-blue-600"/> Professional & GHC Info</h2>
             <div className="grid grid-cols-2 gap-y-4 text-sm">
               <div>
-                <p className="text-white/50">Organisation</p>
-                <p className="text-white font-medium">{app.organisation}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Organisation</p>
+                <p className="text-black font-semibold mt-0.5">{app.organisation}</p>
               </div>
               <div>
-                <p className="text-white/50">Designation</p>
-                <p className="text-white font-medium">{app.designation || '-'}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Designation</p>
+                <p className="text-black font-semibold mt-0.5">{app.designation || '-'}</p>
               </div>
               <div>
-                <p className="text-white/50">Country of Residence</p>
-                <p className="text-white font-medium">{app.country_of_residence || '-'}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Country of Residence</p>
+                <p className="text-black font-semibold mt-0.5">{app.country_of_residence || '-'}</p>
               </div>
               <div>
-                <p className="text-white/50">Participant Category</p>
-                <p className="text-white font-medium">
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Participant Category</p>
+                <p className="text-black font-semibold mt-0.5">
                   {app.participant_category} 
                   {app.participant_category_other ? ` (${app.participant_category_other})` : ''}
                 </p>
               </div>
               <div className="col-span-2">
-                <p className="text-white/50">GHC Registration ID</p>
-                <p className="text-white font-mono font-medium bg-white/5 inline-block px-2 py-1 rounded mt-1">{app.ghc_registration_id}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">GHC Registration ID</p>
+                <p className="text-black font-mono font-bold bg-gray-100 border border-gray-200 inline-block px-2.5 py-1 rounded mt-1">{app.ghc_registration_id}</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-[#1a2234] border border-white/10 rounded-xl p-6">
-            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><PlaneTakeoff className="text-blue-400"/> Travel Details</h2>
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm text-black">
+            <h2 className="text-xl font-bold text-black mb-4 flex items-center gap-2"><PlaneTakeoff className="text-blue-600"/> Travel Details</h2>
             <div className="grid grid-cols-2 gap-y-4 text-sm">
               <div>
-                <p className="text-white/50">Arrival Date</p>
-                <p className="text-white font-medium">{new Date(app.arrival_date).toLocaleDateString()}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Arrival Date</p>
+                <p className="text-black font-semibold mt-0.5">{new Date(app.arrival_date).toLocaleDateString()}</p>
               </div>
               <div>
-                <p className="text-white/50">Departure Date</p>
-                <p className="text-white font-medium">{new Date(app.departure_date).toLocaleDateString()}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Departure Date</p>
+                <p className="text-black font-semibold mt-0.5">{new Date(app.departure_date).toLocaleDateString()}</p>
               </div>
               <div className="col-span-2">
-                <p className="text-white/50">Accommodation Details</p>
-                <p className="text-white font-medium mt-1">{app.accommodation_details || 'Not provided'}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Accommodation Details</p>
+                <p className="text-black font-semibold mt-0.5">{app.accommodation_details || 'Not provided'}</p>
               </div>
               <div className="col-span-2">
-                <p className="text-white/50">Purpose of Visit</p>
-                <p className="text-white font-medium mt-1">{app.purpose_of_visit}</p>
+                <p className="text-gray-500 text-xs font-semibold uppercase tracking-wide">Purpose of Visit</p>
+                <p className="text-black font-semibold mt-0.5">{app.purpose_of_visit}</p>
               </div>
             </div>
           </div>
         </div>
 
         <div className="space-y-6">
-          <div className="bg-[#1a2234] border border-white/10 rounded-xl p-6">
-            <h2 className="text-lg font-bold text-white mb-4">Admin Actions</h2>
+          <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm text-black">
+            <h2 className="text-lg font-bold text-black mb-4">Admin Actions</h2>
             
             <div className="space-y-3 mb-6">
-              <label className="text-sm font-bold text-white/70">Admin Notes</label>
+              <label className="text-sm font-bold text-black">Admin Notes</label>
               <textarea 
                 value={adminNotes}
                 onChange={(e) => setAdminNotes(e.target.value)}
                 placeholder="Internal notes..."
-                className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white text-sm outline-none focus:border-blue-500"
+                className="w-full bg-white border border-gray-300 rounded-lg p-3 text-black text-sm outline-none focus:border-blue-600 focus:ring-1 focus:ring-blue-600"
                 rows="3"
               />
               <button 
                 onClick={() => updateStatus(app.status, adminNotes)}
                 disabled={actionLoading || adminNotes === (app.admin_notes || '')}
-                className="w-full bg-white/10 hover:bg-white/20 text-white text-sm py-2 rounded-lg font-medium transition-colors disabled:opacity-50"
+                className="w-full bg-gray-100 hover:bg-gray-200 border border-gray-300 text-black text-sm py-2 rounded-lg font-bold transition-colors disabled:opacity-50"
               >
                 Save Notes
               </button>
             </div>
 
-            <hr className="border-white/10 mb-6" />
+            <hr className="border-gray-200 mb-6" />
 
             <div className="space-y-3">
               {app.status === 'Pending' && (
                 <button 
                   onClick={() => updateStatus('Under Review')}
                   disabled={actionLoading}
-                  className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-bold transition-colors"
+                  className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-bold transition-colors shadow-sm"
                 >
                   <Eye className="w-4 h-4" /> Mark Under Review
                 </button>
@@ -235,14 +235,14 @@ export default function VisaApplicationDetails({ activePage, onNavigate, api }) 
                   <button 
                     onClick={() => updateStatus('Approved')}
                     disabled={actionLoading}
-                    className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-lg font-bold transition-colors"
+                    className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-lg font-bold transition-colors shadow-sm"
                   >
                     <CheckCircle className="w-4 h-4" /> Approve Application
                   </button>
                   <button 
                     onClick={() => setShowRejectModal(true)}
                     disabled={actionLoading}
-                    className="w-full flex items-center justify-center gap-2 bg-red-600/20 text-red-500 hover:bg-red-600/30 py-3 rounded-lg font-bold transition-colors border border-red-500/20"
+                    className="w-full flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 py-3 rounded-lg font-bold transition-colors"
                   >
                     <XCircle className="w-4 h-4" /> Reject Application
                   </button>
@@ -251,17 +251,17 @@ export default function VisaApplicationDetails({ activePage, onNavigate, api }) 
 
               {(app.status === 'Approved' || app.status === 'Letter Generated') && (
                 <div className="space-y-3">
-                  <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                    <p className="text-emerald-400 text-sm font-bold flex items-center gap-2 mb-1">
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                    <p className="text-emerald-800 text-sm font-bold flex items-center gap-2 mb-1">
                       <CheckCircle className="w-4 h-4" /> Application Approved
                     </p>
-                    <p className="text-white/50 text-xs">Approved on {new Date(app.approved_at).toLocaleString()}</p>
+                    <p className="text-gray-600 text-xs">Approved on {new Date(app.approved_at).toLocaleString()}</p>
                   </div>
                   
                   <button 
                     onClick={generateLetter}
                     disabled={actionLoading}
-                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white py-4 rounded-lg font-bold transition-all shadow-lg"
+                    className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white py-3.5 rounded-lg font-bold transition-all shadow-md"
                   >
                     <Send className="w-4 h-4" /> 
                     {app.letter_generated ? 'Regenerate Letter' : 'Generate Invitation Letter'}
@@ -272,7 +272,7 @@ export default function VisaApplicationDetails({ activePage, onNavigate, api }) 
                       href={app.generated_letter_url}
                       target="_blank"
                       rel="noreferrer"
-                      className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/20 text-white py-3 rounded-lg font-bold transition-colors border border-white/10"
+                      className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 text-black py-3 rounded-lg font-bold transition-colors border border-gray-300"
                     >
                       <Download className="w-4 h-4" /> View Generated Letter
                     </a>
@@ -281,12 +281,12 @@ export default function VisaApplicationDetails({ activePage, onNavigate, api }) 
               )}
 
               {app.status === 'Rejected' && (
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-                  <p className="text-red-400 text-sm font-bold flex items-center gap-2 mb-1">
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-700 text-sm font-bold flex items-center gap-2 mb-1">
                     <XCircle className="w-4 h-4" /> Application Rejected
                   </p>
-                  <p className="text-white/70 text-sm mt-2 font-medium">Reason:</p>
-                  <p className="text-white/50 text-sm">{app.admin_notes}</p>
+                  <p className="text-gray-800 text-sm mt-2 font-semibold">Reason:</p>
+                  <p className="text-gray-600 text-sm">{app.admin_notes}</p>
                 </div>
               )}
             </div>
@@ -296,22 +296,22 @@ export default function VisaApplicationDetails({ activePage, onNavigate, api }) 
 
       {showRejectModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-[#1a2234] border border-white/10 p-6 rounded-2xl w-full max-w-md shadow-2xl">
-            <h3 className="text-xl font-bold text-white flex items-center gap-2 mb-4">
-              <AlertTriangle className="text-red-500" /> Reject Application
+          <div className="bg-white border border-gray-200 p-6 rounded-2xl w-full max-w-md shadow-2xl text-black">
+            <h3 className="text-xl font-bold text-black flex items-center gap-2 mb-4">
+              <AlertTriangle className="text-red-600" /> Reject Application
             </h3>
-            <p className="text-white/70 text-sm mb-4">Please provide a reason for rejecting this visa application. This will be saved in the admin notes.</p>
+            <p className="text-gray-700 text-sm mb-4">Please provide a reason for rejecting this visa application. This will be saved in the admin notes.</p>
             <textarea
               value={rejectionReason}
               onChange={(e) => setRejectionReason(e.target.value)}
               placeholder="Reason for rejection..."
-              className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-red-500 mb-6"
+              className="w-full bg-white border border-gray-300 rounded-lg p-3 text-black outline-none focus:border-red-500 mb-6"
               rows="4"
             />
             <div className="flex gap-3 justify-end">
               <button 
                 onClick={() => setShowRejectModal(false)}
-                className="px-4 py-2 text-white/70 hover:text-white transition-colors"
+                className="px-4 py-2 text-gray-700 hover:text-black transition-colors font-medium"
               >
                 Cancel
               </button>

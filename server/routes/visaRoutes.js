@@ -18,7 +18,13 @@ router.post(
 
 // Admin Endpoints
 router.use(requireAuth);
-router.use(requireRole('SUPER_ADMIN', 'SYSTEM_ADMIN', 'ADMIN'));
+const canManageVisa = (req, res, next) => {
+  if (['SUPER_ADMIN', 'SYSTEM_ADMIN', 'ADMIN'].includes(req.user?.role)) {
+    return next();
+  }
+  return requirePermission('manage_system', 'visa.manage', 'settings.manage')(req, res, next);
+};
+router.use(canManageVisa);
 
 router.get('/', visaController.getApplications);
 router.get('/settings', visaController.getSettings);

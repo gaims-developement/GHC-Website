@@ -6,7 +6,21 @@ const { uploadVisaDocument, uploadGeneratedLetter } = require('../services/googl
 const { generateVisaLetter } = require('../services/pdfService');
 const { sendMail } = require('../services/mailService');
 const asyncHandler = require('../utils/asyncHandler');
-const { logDecision } = require('../services/coreServices');
+const { logActivity } = require('../services/coreServices');
+
+const logDecision = async (req, action, recordId = null, metadata = null) => {
+  try {
+    await logActivity({
+      userId: req.user?.id || null,
+      action,
+      module: 'visa',
+      recordId: recordId ? String(recordId) : null,
+      metadata,
+    });
+  } catch (err) {
+    console.error('Failed to log visa activity:', err);
+  }
+};
 
 const submitApplication = asyncHandler(async (req, res) => {
   const { body, files } = req;

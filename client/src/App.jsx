@@ -497,6 +497,44 @@ function Hero({ banner }) {
 
       <div className="hero-mobile-shell mx-auto grid min-h-screen max-w-7xl items-center gap-10 px-4 pb-12 pt-36 sm:pt-40 md:px-8 lg:grid-cols-2 lg:pt-36">
         <div className="relative z-10">
+          {/* Dual Brand Logos: GHC 2026 & GAIMS */}
+          <motion.div
+            className="flex flex-wrap items-center gap-3 sm:gap-4 mb-6"
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: finalDelay, duration: 0.7, ease: "easeOut" }}
+          >
+            <div className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-gray-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-md transition-all duration-300">
+              <span className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xs shrink-0">
+                <img
+                  src="/assets/logos/ghclogo.jpeg"
+                  alt="GHC Logo"
+                  className="h-full w-full object-cover scale-105"
+                />
+              </span>
+              <div className="flex flex-col">
+                <span className="font-['Outfit'] font-extrabold text-sm sm:text-base leading-tight text-[#081B33]">GHC 2026</span>
+                <span className="font-['Inter'] text-[10px] sm:text-[11px] font-bold text-[#173B8F] tracking-wide uppercase">Global Healthcare Conclave</span>
+              </div>
+            </div>
+
+            <div className="hidden sm:block h-6 w-px bg-gray-300/80" />
+
+            <div className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-gray-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-md transition-all duration-300">
+              <span className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xs shrink-0 p-1">
+                <img
+                  src="/assets/logos/gaims.png"
+                  alt="GAIMS Logo"
+                  className="h-full w-full object-contain"
+                />
+              </span>
+              <div className="flex flex-col">
+                <span className="font-['Outfit'] font-extrabold text-sm sm:text-base leading-tight text-[#081B33]">GAIMS</span>
+                <span className="font-['Inter'] text-[10px] sm:text-[11px] font-bold text-[#7C3AED] tracking-wide uppercase">Organised by GAIMS</span>
+              </div>
+            </div>
+          </motion.div>
+
           <motion.div className="hero-pill mb-4 bg-white/90 border border-gray-300 shadow-sm" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: finalDelay, duration: 0.7, ease: "easeOut" }}>
             <MapPin className="h-4 w-4 text-[#F43F8A]" />
             <span className="text-[#101828] font-bold text-xs tracking-wider">New Delhi · November 22-24, 2026</span>
