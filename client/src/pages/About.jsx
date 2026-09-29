@@ -4,6 +4,8 @@ import { ArrowRight, Globe2, Lightbulb, Target } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import '../home-redesign.css'
 
+const registrationUrl = 'https://mc.clirnet.com/mastercast/connect/D0921-Conclave-1'
+
 const highlights = [
   {
     icon: <Globe2 size={32} />,
@@ -57,9 +59,9 @@ export default function About() {
           ))}
         </div>
         <div style={{ display: 'flex', gap: '16px' }}>
-          <Link to="/register" className="btn-premium" style={{ padding: '10px 24px', fontSize: '0.9rem' }}>
+          <a href={registrationUrl} target="_blank" rel="noopener noreferrer" className="btn-premium" style={{ padding: '10px 24px', fontSize: '0.9rem' }}>
             Register Now
-          </Link>
+          </a>
         </div>
       </nav>
 
@@ -141,9 +143,9 @@ export default function About() {
               Secure your spot at GHC 2026. Limited seats available across all delegate tiers.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <Link to="/register" className="btn-premium" style={{ background: 'white', color: 'var(--c-deep-navy)' }}>
+              <a href={registrationUrl} target="_blank" rel="noopener noreferrer" className="btn-premium" style={{ background: 'white', color: 'var(--c-deep-navy)' }}>
                 Register Now
-              </Link>
+              </a>
               <Link to="/partner" className="btn-outline-premium" style={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}>
                 Become a Partner
               </Link>
@@ -181,7 +183,7 @@ export default function About() {
             <div>
               <h4 style={{ color: 'white', fontWeight: 600, marginBottom: '24px' }}>Important Links</h4>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <li><Link to="/register" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Register Now</Link></li>
+                <li><a href={registrationUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Register Now</a></li>
                 <li><Link to="/abstracts" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Submit Abstract</Link></li>
                 <li><Link to="/nominations" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Nominate for Awards</Link></li>
                 <li><Link to="/partner" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none' }}>Become a Partner</Link></li>

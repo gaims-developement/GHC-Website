@@ -41,6 +41,8 @@ const {
   exportResearchCSV,
   emailParticipants,
   requestRevision,
+  resendRevisionEmail,
+  revisionRateLimiter,
   validateRevisionToken,
   submitRevision,
   suspendReviewer,
@@ -116,8 +118,9 @@ router.get('/export', requireAuth, canManageResearch, exportResearchCSV);
 router.post('/email', requireAuth, canManageResearch, emailParticipants);
 router.post('/submit', upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'declaration', maxCount: 1 }]), submitResearch);
 router.post('/:id/request-revision', requireAuth, canReviewResearch, requestRevision);
-router.get('/revision/:token', validateRevisionToken);
-router.post('/revision/:token', upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'declaration', maxCount: 1 }]), submitRevision);
+router.post('/:id/resend-revision-email', requireAuth, canReviewResearch, resendRevisionEmail);
+router.get('/revision/:token', revisionRateLimiter, validateRevisionToken);
+router.post('/revision/:token', revisionRateLimiter, upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'declaration', maxCount: 1 }]), submitRevision);
 router.get('/:id', optionalAuth, getResearch);
 router.post('/', requireAuth, canManageResearch, upload.single('pdf'), createResearch);
 router.put('/:id', requireAuth, canManageResearch, upload.single('pdf'), updateResearch);

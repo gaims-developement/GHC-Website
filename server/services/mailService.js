@@ -1,8 +1,11 @@
 const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 const { pool } = require('../config/db');
 
 // Single Resend client instance
 let resend = null;
+let smtpTransporter = null;
+let smtpSignature = null;
 const getResendClient = () => {
   const key = process.env.RESEND_API_KEY;
   if (!key) return null;
@@ -16,6 +19,46 @@ const getResendClient = () => {
 if (process.env.RESEND_API_KEY) {
   resend = new Resend(process.env.RESEND_API_KEY);
 }
+
+const getSmtpConfig = () => {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USERNAME || process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASSWORD || process.env.SMTP_PASS;
+  const port = Number(process.env.SMTP_PORT || 587);
+  if (!host || !user || !pass) return null;
+  return {
+    host,
+    port,
+    secure: String(process.env.SMTP_SECURE || '').toLowerCase() === 'true' || port === 465,
+    auth: { user, pass },
+    connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT || 15000),
+    greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT || 15000),
+    socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT || 30000),
+  };
+};
+
+const getSmtpTransporter = () => {
+  const config = getSmtpConfig();
+  if (!config) return null;
+  const signature = JSON.stringify({
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    user: config.auth.user,
+  });
+  if (!smtpTransporter || smtpSignature !== signature) {
+    smtpTransporter = nodemailer.createTransport(config);
+    smtpSignature = signature;
+  }
+  return smtpTransporter;
+};
+
+const formatAddress = (name, emailOrAddress) => {
+  const value = String(emailOrAddress || '').trim();
+  if (!value) return '';
+  if (value.includes('<') && value.includes('>')) return value;
+  return `"${String(name || 'Global Healthcare Conclave').replace(/"/g, '')}" <${value}>`;
+};
 
 /**
  * Normalizes sender address from environment variables.
@@ -41,6 +84,15 @@ const getSenderConfig = () => {
   return {
     from: fromAddress,
     hasApiKey: Boolean(process.env.RESEND_API_KEY),
+  };
+};
+
+const getSmtpSenderConfig = () => {
+  const fromName = process.env.EMAIL_FROM_NAME || process.env.SMTP_FROM_NAME || 'Global Healthcare Conclave';
+  const fromEmail = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USERNAME || process.env.SMTP_USER;
+  return {
+    from: formatAddress(fromName, fromEmail),
+    hasSmtp: Boolean(getSmtpConfig()),
   };
 };
 
@@ -70,9 +122,49 @@ const formatAttachments = (attachments = []) => {
 };
 
 /**
- * Main email sending method using Resend
+ * Main email sending method. Prefer configured SMTP; fall back to Resend.
  */
 const sendMail = async ({ to, subject, html, text, attachments = [] }) => {
+  const provider = String(process.env.EMAIL_PROVIDER || '').trim().toLowerCase();
+  const useSmtp = provider === 'smtp' || (!provider && getSmtpConfig());
+
+  if (useSmtp) {
+    const transporter = getSmtpTransporter();
+    if (!transporter) {
+      throw new Error('SMTP is not configured in environment variables.');
+    }
+
+    const { from } = getSmtpSenderConfig();
+    const recipients = Array.isArray(to) ? to : [to];
+    const payload = {
+      from,
+      to: recipients,
+      subject,
+      html: html || (text ? `<p style="white-space: pre-wrap;">${text}</p>` : ''),
+      text: text || undefined,
+      attachments: formatAttachments(attachments),
+    };
+
+    try {
+      const info = await transporter.sendMail(payload);
+      console.log('[EMAIL] Provider: SMTP');
+      console.log('[EMAIL] Sent successfully');
+      console.log(`[EMAIL] ID: ${info.messageId || 'unknown'}`);
+      return {
+        messageId: info.messageId || 'unknown',
+        id: info.messageId || 'unknown',
+        provider: 'smtp',
+        data: info,
+      };
+    } catch (error) {
+      const sanitizedError = error.message || String(error);
+      console.error('[EMAIL] Provider: SMTP');
+      console.error('[EMAIL] Send failed');
+      console.error(`[EMAIL] Error: ${sanitizedError}`);
+      throw new Error(sanitizedError);
+    }
+  }
+
   const client = getResendClient();
   if (!client) {
     const err = new Error('RESEND_API_KEY is not configured in environment variables.');
@@ -113,6 +205,7 @@ const sendMail = async ({ to, subject, html, text, attachments = [] }) => {
     return {
       messageId: emailId,
       id: emailId,
+      provider: 'resend',
       data,
     };
   } catch (error) {
@@ -123,6 +216,22 @@ const sendMail = async ({ to, subject, html, text, attachments = [] }) => {
     throw new Error(sanitizedError);
   }
 };
+
+const htmlToText = (html = '') =>
+  String(html)
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<\/(p|div|h1|h2|h3|tr|table|li)>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 
 /**
  * Template email rendering, variable interpolation, and persistent logging
@@ -149,7 +258,9 @@ const sendTemplateEmail = async (templateKey, to, variables = {}) => {
       body = body.replace(regex, value !== undefined && value !== null ? value : '');
     }
 
-    const htmlBody = body.includes('<') ? body : `<div style="font-family: sans-serif; line-height: 1.6; white-space: pre-wrap;">${body}</div>`;
+    const isHtml = body.includes('<');
+    const htmlBody = isHtml ? body : `<div style="font-family: sans-serif; line-height: 1.6; white-space: pre-wrap;">${body}</div>`;
+    const textBody = isHtml ? htmlToText(body) : body;
 
     const [logResult] = await pool.query(
       "INSERT INTO email_logs (recipient, subject, status) VALUES (?, ?, 'queued')",
@@ -160,7 +271,7 @@ const sendTemplateEmail = async (templateKey, to, variables = {}) => {
     const result = await sendMail({
       to,
       subject,
-      text: body,
+      text: textBody,
       html: htmlBody,
     });
 
@@ -192,6 +303,17 @@ const sendTemplateEmail = async (templateKey, to, variables = {}) => {
  * Does not send any email.
  */
 const verifyConnection = async () => {
+  const smtp = getSmtpTransporter();
+  if (smtp) {
+    await smtp.verify();
+    return {
+      success: true,
+      provider: 'smtp',
+      message: 'SMTP authenticated successfully',
+      from: getSmtpSenderConfig().from,
+    };
+  }
+
   const client = getResendClient();
   if (!client) {
     throw new Error('RESEND_API_KEY environment variable is missing.');
@@ -246,4 +368,5 @@ module.exports = {
   sendTemplateEmail,
   verifyConnection,
   getSenderConfig,
+  getSmtpSenderConfig,
 };

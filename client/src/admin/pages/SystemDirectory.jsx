@@ -76,7 +76,7 @@ function SystemDirectory({ api, type }) {
           });
         }
       })
-      .catch((requestError) => setError(requestError.response?.data?.message || "Unable to load system data."));
+      .catch((requestError) => setError(requestError.response?.data?.message || requestError.response?.data?.error || "Unable to load system data."));
   }, [api, endpoint, type]);
 
   useEffect(() => {

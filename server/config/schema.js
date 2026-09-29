@@ -1747,6 +1747,11 @@ const createResearchTables = async () => {
       status ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'revised_submitted', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft',
       revision_token VARCHAR(255),
       revision_token_expires DATETIME,
+      revision_requested_at DATETIME NULL,
+      revision_deadline DATETIME NULL,
+      revision_email_status VARCHAR(30) NULL,
+      revision_last_email_sent_at DATETIME NULL,
+      revision_token_status VARCHAR(30) NULL,
       current_version INT DEFAULT 1,
       final_score DECIMAL(8,2),
       submitted_at TIMESTAMP NULL,
@@ -1768,11 +1773,17 @@ const createResearchTables = async () => {
   await addColumnIfMissing('abstracts', 'final_score', 'DECIMAL(8,2)');
   await addColumnIfMissing('abstracts', 'submitted_at', 'TIMESTAMP NULL');
   await pool.query("ALTER TABLE abstracts MODIFY status ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'revised_submitted', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft'");
+  await pool.query("ALTER TABLE abstracts MODIFY submission_status ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'revised_submitted', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft'");
   await pool.query("UPDATE abstracts SET abstract_id = CONCAT('GHC-ABS-', LPAD(id, 5, '0')) WHERE abstract_id IS NULL OR abstract_id = ''");
   await pool.query('UPDATE abstracts SET corresponding_author = COALESCE(corresponding_author, presenting_author), file_url = COALESCE(file_url, pdf_url), submission_status = COALESCE(submission_status, status)');
 
   await addColumnIfMissing('abstracts', 'revision_token', 'VARCHAR(255)');
   await addColumnIfMissing('abstracts', 'revision_token_expires', 'DATETIME');
+  await addColumnIfMissing('abstracts', 'revision_requested_at', 'DATETIME NULL');
+  await addColumnIfMissing('abstracts', 'revision_deadline', 'DATETIME NULL');
+  await addColumnIfMissing('abstracts', 'revision_email_status', 'VARCHAR(30) NULL');
+  await addColumnIfMissing('abstracts', 'revision_last_email_sent_at', 'DATETIME NULL');
+  await addColumnIfMissing('abstracts', 'revision_token_status', 'VARCHAR(30) NULL');
   await addColumnIfMissing('abstracts', 'current_version', 'INT DEFAULT 1');
 
   await pool.query(`
@@ -1780,12 +1791,41 @@ const createResearchTables = async () => {
       id INT PRIMARY KEY AUTO_INCREMENT,
       abstract_id INT NOT NULL,
       version_number INT NOT NULL,
+      title VARCHAR(255) NULL,
+      abstract_text LONGTEXT NULL,
+      category VARCHAR(80) NULL,
       pdf_url TEXT,
       declaration_url TEXT,
+      status VARCHAR(50) NULL,
+      revision_comments TEXT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT fk_abstract_versions_abstract_id FOREIGN KEY (abstract_id) REFERENCES abstracts(id) ON DELETE CASCADE
     )
   `);
+  await addColumnIfMissing('abstract_versions', 'title', 'VARCHAR(255) NULL');
+  await addColumnIfMissing('abstract_versions', 'abstract_text', 'LONGTEXT NULL');
+  await addColumnIfMissing('abstract_versions', 'category', 'VARCHAR(80) NULL');
+  await addColumnIfMissing('abstract_versions', 'status', 'VARCHAR(50) NULL');
+  await addColumnIfMissing('abstract_versions', 'revision_comments', 'TEXT NULL');
+  await addIndexIfMissing('abstract_versions', 'uq_abstract_versions_version', 'UNIQUE KEY uq_abstract_versions_version (abstract_id, version_number)');
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS abstract_revision_tokens (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      abstract_id INT NOT NULL,
+      token_hash CHAR(64) NOT NULL UNIQUE,
+      applicant_email VARCHAR(255) NULL,
+      abstract_version INT NOT NULL,
+      expires_at DATETIME NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_by INT NULL,
+      used_at DATETIME NULL,
+      status ENUM('active', 'used', 'expired', 'revoked') DEFAULT 'active',
+      comments TEXT NULL,
+      CONSTRAINT fk_abstract_revision_tokens_abstract_id FOREIGN KEY (abstract_id) REFERENCES abstracts(id) ON DELETE CASCADE
+    )
+  `);
+  await addIndexIfMissing('abstract_revision_tokens', 'idx_revision_tokens_lookup', 'KEY idx_revision_tokens_lookup (token_hash, status, expires_at)');
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS reviewers (
@@ -2336,9 +2376,11 @@ const createOperationsTables = async () => {
       subject VARCHAR(255),
       status ENUM('sent','failed','queued') NOT NULL DEFAULT 'queued',
       sent_at DATETIME NULL,
+      error_message TEXT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  await addColumnIfMissing('email_logs', 'error_message', 'TEXT NULL');
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS backup_records (
@@ -3251,6 +3293,122 @@ const seedWorkshops = async () => {
 };
 
 const seedResearch = async () => {
+  await pool.query(
+    `INSERT INTO email_templates (template_key, subject, body, is_active)
+     VALUES (?, ?, ?, 1)
+     ON DUPLICATE KEY UPDATE subject = VALUES(subject), body = VALUES(body), is_active = 1`,
+    [
+      'abstract_accepted',
+      'Your GHC 2026 Abstract Has Been Accepted',
+      `<!doctype html>
+<html>
+<body style="margin:0; padding:0; background:#f1f5f9; font-family: Arial, sans-serif; color:#1e293b;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9; padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px; background:#ffffff; border:1px solid #e2e8f0; border-radius:18px; overflow:hidden; box-shadow:0 12px 28px rgba(15,23,42,0.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#081B33 0%,#173B8F 58%,#00A6A6 100%); padding:30px 28px; text-align:center;">
+            <div style="display:inline-block; padding:5px 14px; border-radius:999px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:#ffffff; font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase;">GHC 2026 Scientific Committee</div>
+            <h1 style="margin:14px 0 4px; color:#ffffff; font-size:25px; line-height:1.2;">Abstract Accepted</h1>
+            <p style="margin:0; color:#c7f9f1; font-size:14px;">Global Healthcare Conclave 2026</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:30px 30px 10px; text-align:center;">
+            <div style="display:inline-block; padding:7px 16px; border-radius:999px; background:#ecfdf5; border:1px solid #a7f3d0; color:#047857; font-size:12px; font-weight:800; letter-spacing:.4px; text-transform:uppercase;">Accepted for Presentation</div>
+            <h2 style="margin:18px 0 8px; color:#0f172a; font-size:22px; line-height:1.3;">Congratulations, {{fullName}}</h2>
+            <p style="margin:0; color:#475569; font-size:15px; line-height:1.6;">Your abstract has been accepted for the GHC 2026 research program.</p>
+          </td>
+        </tr>
+        <tr><td style="padding:18px 30px;">
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:20px;">
+            <p style="margin:0 0 6px; color:#64748b; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase;">Abstract Details</p>
+            <h3 style="margin:0 0 14px; color:#0f172a; font-size:18px; line-height:1.35;">{{abstractTitle}}</h3>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px; color:#334155;">
+              <tr><td style="padding:6px 0; color:#64748b; font-weight:700;">Abstract Code</td><td style="padding:6px 0; text-align:right; font-weight:800; color:#173B8F;">{{abstractCode}}</td></tr>
+              <tr><td style="padding:6px 0; color:#64748b; font-weight:700;">Category</td><td style="padding:6px 0; text-align:right; font-weight:700;">{{category}}</td></tr>
+            </table>
+          </div>
+        </td></tr>
+        <tr><td style="padding:0 30px 22px;">
+          <div style="background:#f0fdf4; border-left:4px solid #10b981; border-radius:10px; padding:16px;">
+            <p style="margin:0 0 6px; color:#065f46; font-size:12px; font-weight:800; text-transform:uppercase;">Committee Notes</p>
+            <p style="margin:0; color:#334155; font-size:14px; line-height:1.6; white-space:pre-wrap;">{{reviewComments}}</p>
+          </div>
+        </td></tr>
+        <tr><td style="padding:0 30px 30px;">
+          <p style="margin:0; color:#475569; font-size:14px; line-height:1.7;">Further presentation format, schedule, and onsite instructions will be shared by the GHC Scientific Committee.</p>
+        </td></tr>
+        <tr><td style="background:#081B33; padding:22px 30px; text-align:center;">
+          <p style="margin:0 0 6px; color:#ffffff; font-size:13px; font-weight:800;">Global Healthcare Conclave 2026</p>
+          <p style="margin:0; color:#94a3b8; font-size:12px;">For assistance, contact <a href="mailto:{{contactEmail}}" style="color:#38bdf8; text-decoration:none;">{{contactEmail}}</a>.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+    ]
+  );
+
+  await pool.query(
+    `INSERT INTO email_templates (template_key, subject, body, is_active)
+     VALUES (?, ?, ?, 1)
+     ON DUPLICATE KEY UPDATE subject = VALUES(subject), body = VALUES(body), is_active = 1`,
+    [
+      'abstract_rejected',
+      'Update on Your GHC 2026 Abstract Submission',
+      `<!doctype html>
+<html>
+<body style="margin:0; padding:0; background:#f1f5f9; font-family: Arial, sans-serif; color:#1e293b;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9; padding:32px 16px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px; background:#ffffff; border:1px solid #e2e8f0; border-radius:18px; overflow:hidden; box-shadow:0 12px 28px rgba(15,23,42,0.08);">
+        <tr>
+          <td style="background:linear-gradient(135deg,#081B33 0%,#173B8F 58%,#e244b7 100%); padding:30px 28px; text-align:center;">
+            <div style="display:inline-block; padding:5px 14px; border-radius:999px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:#ffffff; font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase;">GHC 2026 Scientific Committee</div>
+            <h1 style="margin:14px 0 4px; color:#ffffff; font-size:25px; line-height:1.2;">Abstract Decision Update</h1>
+            <p style="margin:0; color:#fce7f3; font-size:14px;">Global Healthcare Conclave 2026</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:30px 30px 10px; text-align:center;">
+            <div style="display:inline-block; padding:7px 16px; border-radius:999px; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; font-size:12px; font-weight:800; letter-spacing:.4px; text-transform:uppercase;">Not Accepted</div>
+            <h2 style="margin:18px 0 8px; color:#0f172a; font-size:22px; line-height:1.3;">Thank you, {{fullName}}</h2>
+            <p style="margin:0; color:#475569; font-size:15px; line-height:1.6;">Thank you for submitting your abstract to the GHC 2026 research program.</p>
+          </td>
+        </tr>
+        <tr><td style="padding:18px 30px;">
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:20px;">
+            <p style="margin:0 0 6px; color:#64748b; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase;">Abstract Details</p>
+            <h3 style="margin:0 0 14px; color:#0f172a; font-size:18px; line-height:1.35;">{{abstractTitle}}</h3>
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px; color:#334155;">
+              <tr><td style="padding:6px 0; color:#64748b; font-weight:700;">Abstract Code</td><td style="padding:6px 0; text-align:right; font-weight:800; color:#173B8F;">{{abstractCode}}</td></tr>
+              <tr><td style="padding:6px 0; color:#64748b; font-weight:700;">Category</td><td style="padding:6px 0; text-align:right; font-weight:700;">{{category}}</td></tr>
+            </table>
+          </div>
+        </td></tr>
+        <tr><td style="padding:0 30px 22px;">
+          <div style="background:#fff7ed; border-left:4px solid #f97316; border-radius:10px; padding:16px;">
+            <p style="margin:0 0 6px; color:#9a3412; font-size:12px; font-weight:800; text-transform:uppercase;">Committee Feedback</p>
+            <p style="margin:0; color:#334155; font-size:14px; line-height:1.6; white-space:pre-wrap;">{{reviewComments}}</p>
+          </div>
+        </td></tr>
+        <tr><td style="padding:0 30px 30px;">
+          <p style="margin:0; color:#475569; font-size:14px; line-height:1.7;">After review, the Scientific Committee is unable to accept this abstract for presentation. We appreciate your contribution and encourage you to stay engaged with GHC scientific activities.</p>
+        </td></tr>
+        <tr><td style="background:#081B33; padding:22px 30px; text-align:center;">
+          <p style="margin:0 0 6px; color:#ffffff; font-size:13px; font-weight:800;">Global Healthcare Conclave 2026</p>
+          <p style="margin:0; color:#94a3b8; font-size:12px;">For assistance, contact <a href="mailto:{{contactEmail}}" style="color:#38bdf8; text-decoration:none;">{{contactEmail}}</a>.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`,
+    ]
+  );
+
   const [rows] = await pool.query('SELECT COUNT(*) AS count FROM abstracts');
   if (rows[0].count > 0) return;
 
@@ -3462,6 +3620,49 @@ const seedAwardNominationData = async () => {
       ]
     );
   }
+
+  await pool.query(
+    `INSERT INTO email_templates (template_key, subject, body, is_active)
+     VALUES (?, ?, ?, 1)
+     ON DUPLICATE KEY UPDATE subject = VALUES(subject), body = VALUES(body), is_active = 1`,
+    [
+      'abstract_revision_required',
+      'Revision Requested for {{abstractTitle}}',
+      `<div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 620px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+  <h2 style="margin-top: 0;">Revision Requested for Your Research Abstract</h2>
+  <p>Dear {{fullName}},</p>
+  <p>Your abstract <strong>"{{abstractTitle}}"</strong> has been sent back for revision.</p>
+  <div style="background: #fffbeb; border-left: 4px solid #d97706; padding: 14px 16px; margin: 18px 0; border-radius: 4px;">
+    <strong>Reviewer Comments / Required Revisions</strong>
+    <p style="white-space: pre-wrap;">{{revisionInstructions}}</p>
+  </div>
+  <p>Please review the requested changes and submit your revised abstract using the button below. This link expires on {{expiresAt}}.</p>
+  <p style="text-align: center; margin: 28px 0;">
+    <a href="{{revisionLink}}" style="background: #173B8F; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Revise Abstract</a>
+  </p>
+  <p style="font-size: 12px; color: #64748b;">If the button does not work, visit: <a href="{{revisionLink}}">{{revisionLink}}</a></p>
+  <p style="font-size: 12px; color: #64748b;">Need help? Contact <a href="mailto:{{contactEmail}}">{{contactEmail}}</a>.</p>
+</div>`,
+    ]
+  );
+
+  await pool.query(
+    `INSERT INTO email_templates (template_key, subject, body, is_active)
+     VALUES (?, ?, ?, 1)
+     ON DUPLICATE KEY UPDATE subject = VALUES(subject), body = VALUES(body), is_active = 1`,
+    [
+      'abstract_revision_submitted',
+      'Your Revised Abstract Has Been Submitted',
+      `<div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 620px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+  <h2 style="margin-top: 0;">Revised Abstract Submitted</h2>
+  <p>Dear {{fullName}},</p>
+  <p>We have received your revised abstract <strong>"{{abstractTitle}}"</strong>.</p>
+  <p>Your submission is now back with the Scientific Committee for review. This email is a confirmation of receipt and does not indicate approval.</p>
+  <p><strong>Abstract Code:</strong> {{abstractCode}}<br><strong>Version:</strong> {{versionNumber}}</p>
+  <p style="font-size: 12px; color: #64748b;">For assistance, contact <a href="mailto:{{contactEmail}}">{{contactEmail}}</a>.</p>
+</div>`,
+    ]
+  );
 
   // Ensure role permissions are seeded for judge roles
   const judgeRoles = ['AWARD_JUDGE', 'JUDGE'];

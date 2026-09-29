@@ -3,6 +3,8 @@ import { CalendarDays, ChevronRight, Home, Info, Mic2, MoreHorizontal, Stethosco
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+const registrationUrl = "https://mc.clirnet.com/mastercast/connect/D0921-Conclave-1";
+
 const quickItems = [
   { label: "Schedule", to: "/#ghc-timeline", icon: CalendarDays, active: ({ hash }) => hash === "#ghc-timeline" },
   { label: "Home", to: "/", icon: Home, home: true, active: ({ pathname, hash }) => pathname === "/" && (!hash || hash === "#home") },
@@ -20,7 +22,7 @@ const moreItems = [
   { label: "Venue", to: "/venue", icon: Home },
   { label: "Committees", to: "/committees", icon: MoreHorizontal },
   { label: "Contact", to: "/#contact", icon: MoreHorizontal },
-  { label: "Register", to: "/register", icon: Ticket },
+  { label: "Register", to: registrationUrl, icon: Ticket, external: true },
 ];
 
 function MobileRadialNav() {
@@ -236,11 +238,19 @@ function MobileRadialNav() {
               {moreItems.map((item) => {
                 const Icon = item.icon;
                 return (
-                  <Link key={item.label} to={item.to} onClick={() => handleNavigate(item)}>
-                    <Icon aria-hidden="true" />
-                    <span>{item.label}</span>
-                    <ChevronRight aria-hidden="true" />
-                  </Link>
+                  item.external ? (
+                    <a key={item.label} href={item.to} target="_blank" rel="noopener noreferrer" onClick={() => handleNavigate(item)}>
+                      <Icon aria-hidden="true" />
+                      <span>{item.label}</span>
+                      <ChevronRight aria-hidden="true" />
+                    </a>
+                  ) : (
+                    <Link key={item.label} to={item.to} onClick={() => handleNavigate(item)}>
+                      <Icon aria-hidden="true" />
+                      <span>{item.label}</span>
+                      <ChevronRight aria-hidden="true" />
+                    </Link>
+                  )
                 );
               })}
             </motion.div>

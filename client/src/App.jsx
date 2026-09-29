@@ -134,7 +134,8 @@ const partnerGroups = {
 const heroTitle = "Global Healthcare Conclave 2026";
 const defaultHeroDescription = "Reimagining Healthcare Beyond Borders through policy, research, clinical excellence and responsible innovation.";
 const defaultHeroButtonText = "Register Now";
-const defaultHeroLink = "/register";
+const registrationUrl = "https://mc.clirnet.com/mastercast/connect/D0921-Conclave-1";
+const defaultHeroLink = registrationUrl;
 // If the globe model still appears small inside the fixed container, move the
 // camera closer or scale the model up in the source Spline scene.
 const splineGlobeScene = import.meta.env.VITE_SPLINE_GLOBE_SCENE || "https://prod.spline.design/hBZIW8l6bSsFsHvV/scene.splinecode";
@@ -193,7 +194,9 @@ function Navbar() {
             return (
               <a 
                 key={id} 
-                href={label === "Register" ? "/register" : label === "Nomination" ? "/nominations" : label === "Committees" ? "/committees" : label === "Venue" ? "/venue" : label === "About" ? "/about" : `/#${id}`} 
+                href={label === "Register" ? registrationUrl : label === "Nomination" ? "/nominations" : label === "Committees" ? "/committees" : label === "Venue" ? "/venue" : label === "About" ? "/about" : `/#${id}`}
+                target={label === "Register" ? "_blank" : undefined}
+                rel={label === "Register" ? "noopener noreferrer" : undefined}
                 onClick={(e) => handleNavClick(e, label, id)} 
                 className={`relative py-2 font-['Inter'] text-[0.85rem] font-bold transition-colors ${isActive ? 'text-[#173B8F]' : 'text-[#081B33] hover:text-[#173B8F]'}`}
               >
@@ -206,7 +209,7 @@ function Navbar() {
           })}
         </div>
 
-        <a href="/register" className="hidden lg:flex items-center gap-2 rounded-full bg-[#173B8F] px-6 py-2.5 font-['Inter'] text-sm font-bold text-white shadow-md shadow-[#173B8F]/20 transition hover:-translate-y-0.5 hover:shadow-lg">
+        <a href={registrationUrl} target="_blank" rel="noopener noreferrer" className="hidden lg:flex items-center gap-2 rounded-full bg-[#173B8F] px-6 py-2.5 font-['Inter'] text-sm font-bold text-white shadow-md shadow-[#173B8F]/20 transition hover:-translate-y-0.5 hover:shadow-lg">
           Register Now <ArrowRight className="h-4 w-4" />
         </a>
 
@@ -218,7 +221,7 @@ function Navbar() {
       {open && (
         <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="mobile-menu mx-auto mt-3 max-w-7xl p-3 bg-white rounded-2xl shadow-xl lg:hidden">
           {navLinks?.map(([label, id]) => (
-            <a key={id} href={label === "Register" ? "/register" : label === "Nomination" ? "/nominations" : label === "Committees" ? "/committees" : label === "Venue" ? "/venue" : label === "About" ? "/about" : `/#${id}`} onClick={(e) => handleNavClick(e, label, id)} className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#081B33]/80 hover:bg-[#173B8F]/5 hover:text-[#173B8F]">
+            <a key={id} href={label === "Register" ? registrationUrl : label === "Nomination" ? "/nominations" : label === "Committees" ? "/committees" : label === "Venue" ? "/venue" : label === "About" ? "/about" : `/#${id}`} target={label === "Register" ? "_blank" : undefined} rel={label === "Register" ? "noopener noreferrer" : undefined} onClick={(e) => handleNavClick(e, label, id)} className="block rounded-xl px-4 py-3 text-sm font-semibold text-[#081B33]/80 hover:bg-[#173B8F]/5 hover:text-[#173B8F]">
               {label}
             </a>
           ))}
@@ -504,34 +507,22 @@ function Hero({ banner }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: finalDelay, duration: 0.7, ease: "easeOut" }}
           >
-            <div className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-gray-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-md transition-all duration-300">
-              <span className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xs shrink-0">
-                <img
-                  src="/assets/logos/ghclogo.jpeg"
-                  alt="GHC Logo"
-                  className="h-full w-full object-cover scale-105"
-                />
-              </span>
-              <div className="flex flex-col">
-                <span className="font-['Outfit'] font-extrabold text-sm sm:text-base leading-tight text-[#081B33]">GHC 2026</span>
-                <span className="font-['Inter'] text-[10px] sm:text-[11px] font-bold text-[#173B8F] tracking-wide uppercase">Global Healthcare Conclave</span>
-              </div>
+            <div className="inline-flex items-center">
+              <img
+                src="/assets/logos/ghclogo.jpeg"
+                alt="GHC Logo"
+                className="h-20 w-20 sm:h-24 sm:w-24 object-contain"
+              />
             </div>
 
-            <div className="hidden sm:block h-6 w-px bg-gray-300/80" />
+            <div className="hidden sm:block h-10 w-px bg-gray-300/80" />
 
-            <div className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-gray-200/90 shadow-[0_4px_20px_rgba(0,0,0,0.04)] hover:shadow-md transition-all duration-300">
-              <span className="flex h-10 w-10 sm:h-11 sm:w-11 items-center justify-center overflow-hidden rounded-xl border border-gray-100 bg-white shadow-xs shrink-0 p-1">
-                <img
-                  src="/assets/logos/gaims.png"
-                  alt="GAIMS Logo"
-                  className="h-full w-full object-contain"
-                />
-              </span>
-              <div className="flex flex-col">
-                <span className="font-['Outfit'] font-extrabold text-sm sm:text-base leading-tight text-[#081B33]">GAIMS</span>
-                <span className="font-['Inter'] text-[10px] sm:text-[11px] font-bold text-[#7C3AED] tracking-wide uppercase">Organised by GAIMS</span>
-              </div>
+            <div className="inline-flex items-center">
+              <img
+                src="/assets/logos/gaims.png"
+                alt="GAIMS Logo"
+                className="h-20 w-20 sm:h-24 sm:w-24 object-contain"
+              />
             </div>
           </motion.div>
 
@@ -602,7 +593,7 @@ function Hero({ banner }) {
           </motion.p>
           <motion.div className="mt-8 flex flex-wrap gap-3" initial="hidden" animate="visible" variants={{ hidden: {}, visible: { transition: { delayChildren: finalDelay + 0.62, staggerChildren: 0.09 } } }}>
             {[
-              <a href={heroLink} className="hero-button-primary bg-gradient-to-r from-[#EC4899] via-[#8B5CF6] to-[#173B8F] text-white border-none rounded-full px-7 py-3.5 font-bold shadow-lg shadow-pink-500/25 transition hover:brightness-110 flex items-center gap-2">{heroButtonText} <ArrowRight className="h-4 w-4" /></a>,
+              <a href={heroLink} target={heroLink === registrationUrl ? "_blank" : undefined} rel={heroLink === registrationUrl ? "noopener noreferrer" : undefined} className="hero-button-primary bg-gradient-to-r from-[#EC4899] via-[#8B5CF6] to-[#173B8F] text-white border-none rounded-full px-7 py-3.5 font-bold shadow-lg shadow-pink-500/25 transition hover:brightness-110 flex items-center gap-2">{heroButtonText} <ArrowRight className="h-4 w-4" /></a>,
               <PartnerCTAButton href="#partner-marquee" variant="hero" className="bg-white hover:bg-gray-100 border border-gray-300 shadow-sm rounded-full px-6 py-3 font-bold transition flex items-center gap-2" style={{ color: "#000000" }}><span style={{ color: "#000000" }} className="text-black font-bold">Become Partner</span> <BadgeCheck className="h-4 w-4 text-[#8B5CF6]" /></PartnerCTAButton>,
               <a href="#watch-vision" className="hero-button-secondary bg-white hover:bg-gray-100 border border-gray-300 shadow-sm rounded-full px-6 py-3 font-bold transition flex items-center gap-2" style={{ color: "#000000" }} onClick={scrollToTrailer}><span style={{ color: "#000000" }} className="text-black font-bold">Watch Trailer</span> <Play className="h-4 w-4 text-[#EC4899]" /></a>,
             ].map((button, index) => (
@@ -2152,7 +2143,7 @@ function PartnerMarquee({ partners = [] }) {
                     <span className="text-4xl md:text-5xl font-black text-[#101828] font-['Outfit'] tracking-tighter">{item.name}</span>
                   </div>
                 )}
-                <span className="text-sm md:text-base font-bold text-[#475467] uppercase tracking-widest">{item.category}</span>
+                <span className="text-sm md:text-base font-bold text-[#475467] uppercase tracking-widest">{item.name}</span>
               </>
             );
 
@@ -2452,7 +2443,7 @@ function PricingSection() {
           {/* Register Now Button */}
           <div className="relative z-10">
             <a
-              href="https://mc.clirnet.com/mastercast/connect/D0921-Conclave-1"
+              href={registrationUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full inline-flex items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-[#00A6A6] to-[#173B8F] hover:from-[#00b8b8] hover:to-[#1e48ad] px-8 py-4 font-['Inter'] text-base font-extrabold text-white shadow-[0_8px_25px_rgba(0,166,166,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(0,166,166,0.5)] active:translate-y-0"
@@ -2634,7 +2625,7 @@ function App() {
   const isWorkshopRegisterRoute = location.pathname.startsWith("/register/workshop") || (location.pathname.startsWith("/workshops/") && location.pathname.endsWith("/apply"));
   const isRegisterRoute = location.pathname.startsWith("/register");
   const isAbstractRoute = location.pathname.startsWith("/abstract-registration");
-  const isAbstractRevisionRoute = location.pathname.startsWith("/abstract-revision");
+  const isAbstractRevisionRoute = location.pathname.startsWith("/abstract/revise") || location.pathname.startsWith("/abstract-revision");
   const isPartnerRoute = location.pathname.startsWith("/partners") || location.pathname.startsWith("/partnership");
   const isWorkshopDetailRoute = location.pathname.startsWith("/workshops/") && location.pathname !== "/workshops/" && !location.pathname.endsWith("/apply");
   const isGooglePayTestRoute = location.pathname.startsWith("/google-pay-test");
@@ -2871,7 +2862,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (isAdminRoute || isJudgeRoute || isRegisterRoute || isAbstractRoute || isPartnerRoute || isWorkshopDetailRoute || isWorkshopRegisterRoute || isGooglePayTestRoute || isVerifyCertificateRoute || isDynamicFormRoute || isNominationsRoute || isVisaRoute) {
+    if (isAdminRoute || isJudgeRoute || isRegisterRoute || isAbstractRoute || isAbstractRevisionRoute || isPartnerRoute || isWorkshopDetailRoute || isWorkshopRegisterRoute || isGooglePayTestRoute || isVerifyCertificateRoute || isDynamicFormRoute || isNominationsRoute || isVisaRoute) {
       return undefined;
     }
 
@@ -2959,7 +2950,7 @@ function App() {
       lenis.destroy();
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
     };
-  }, [isAbstractRoute, isAdminRoute, isDynamicFormRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isVerifyCertificateRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute]);
+  }, [isAbstractRoute, isAbstractRevisionRoute, isAdminRoute, isDynamicFormRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isVerifyCertificateRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute]);
 
   let routeContent;
 
@@ -3003,10 +2994,14 @@ function App() {
     );
   } else if (isAbstractRevisionRoute) {
     routeContent = (
-      <>
-        <Suspense fallback={<div className="admin-loading">Loading abstract revision...</div>}><AbstractRevision /></Suspense>
+      <div ref={appRef} className="min-h-screen overflow-hidden bg-white text-[#081B33]">
+        <Navbar />
+        <main className="bg-white">
+          <Suspense fallback={<div className="admin-loading">Loading abstract revision...</div>}><AbstractRevision /></Suspense>
+        </main>
+        <Footer />
         <MobileRadialNav />
-      </>
+      </div>
     );
   } else if (isBoardMeetingRoute) {
     routeContent = (

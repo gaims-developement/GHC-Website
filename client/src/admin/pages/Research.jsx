@@ -147,6 +147,23 @@ function Research({ api }) {
     }
   };
 
+  const resendRevisionEmail = async (submission) => {
+    try {
+      const res = await api.post(`/api/research/${submission.id}/resend-revision-email`);
+      loadSubmissions();
+      if (res.data?.emailSent) {
+        alert(`Revision email resent successfully to ${res.data?.recipient || 'the author'}!`);
+      } else {
+        setRevisionResultModal({
+          link: res.data?.link,
+          recipient: res.data?.recipient || 'the author',
+        });
+      }
+    } catch (error) {
+      alert(error.response?.data?.message || error.response?.data?.error || "Failed to resend revision email.");
+    }
+  };
+
   const handleMailSubmit = async (e) => {
     e.preventDefault();
     const subject = e.target.subject.value;
@@ -247,6 +264,7 @@ function Research({ api }) {
           onApprove={setApproveModal}
           onReject={setRejectModal}
           onRevisionRequest={setRevisionModal}
+          onResendRevisionEmail={resendRevisionEmail}
         />
       </section>
 

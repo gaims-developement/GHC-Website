@@ -94,17 +94,18 @@ export default function Footer() {
           </div>
           <div>
             <h4 className="font-['Outfit'] text-lg font-bold text-[#101828] mb-6">Contact</h4>
-            <div className="grid gap-3">
+            <div className="grid gap-4">
               {[
-                "scientificghcscientific@gmail.com",
-                "itd@gaims.org",
-                "president@gaims.org",
-                "vpe@gaims.org",
-                "vpa@gaims.org",
-                "vpi@gaims.org",
-                "secretary@gaims.org",
-              ].map((email) => (
-                <a key={email} href={`mailto:${email}`} className="text-[#173B8F] hover:underline font-bold text-sm break-all">{email}</a>
+                { label: "Poster related queries", email: "scientificghcscientific@gmail.com" },
+                { label: "Sponsorships & collaboration", email: "vpe@gaims.org" },
+                { label: "Speaker slot queries", email: "vpe@gaims.org" },
+                { label: "Award nomination queries", email: "vpi@gaims.org" },
+                { label: "Conference related general queries", email: "secretary@gaims.org" },
+              ].map(({ label, email }) => (
+                <div key={`${label}-${email}`} className="flex flex-col gap-0.5">
+                  <span className="text-[#667085] text-xs font-medium">{label}</span>
+                  <a href={`mailto:${email}`} className="text-[#173B8F] hover:underline font-bold text-sm break-all w-fit">{email}</a>
+                </div>
               ))}
             </div>
           </div>

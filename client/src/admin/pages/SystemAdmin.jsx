@@ -57,7 +57,7 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
           });
         }
       })
-      .catch((requestError) => setError(requestError.response?.data?.message || `Unable to load ${activeTab} data.`));
+      .catch((requestError) => setError(requestError.response?.data?.message || requestError.response?.data?.error || `Unable to load ${activeTab} data.`));
   }, [api, activeTab]);
 
   useEffect(() => {

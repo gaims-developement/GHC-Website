@@ -152,9 +152,30 @@ const cloudinaryMonitoring = asyncHandler(async (_req, res) => {
 });
 
 const emailMonitoring = asyncHandler(async (_req, res) => {
-  const [[summary]] = await pool.query("SELECT SUM(status = 'sent') AS sent, SUM(status = 'failed') AS failed, SUM(status = 'queued') AS queued FROM email_logs");
-  const [logs] = await pool.query('SELECT * FROM email_logs ORDER BY created_at DESC LIMIT 60');
-  res.json({ summary, logs });
+  const [[summary = {}]] = await pool.query(`
+    SELECT
+      COALESCE(SUM(status = 'sent'), 0) AS sent,
+      COALESCE(SUM(status = 'failed'), 0) AS failed,
+      COALESCE(SUM(status = 'queued'), 0) AS queued
+    FROM email_logs
+  `);
+  const [logs] = await pool.query(`
+    SELECT id, recipient, subject, status, sent_at, created_at, error_message
+    FROM email_logs
+    ORDER BY created_at DESC, id DESC
+    LIMIT 60
+  `);
+
+  res.json({
+    summary: {
+      sent: Number(summary.sent || 0),
+      failed: Number(summary.failed || 0),
+      queued: Number(summary.queued || 0),
+    },
+    configured: Boolean(process.env.SMTP_HOST || process.env.RESEND_API_KEY),
+    provider: process.env.SMTP_HOST ? 'smtp' : (process.env.RESEND_API_KEY ? 'resend' : null),
+    logs,
+  });
 });
 
 const testEmail = asyncHandler(async (req, res) => {

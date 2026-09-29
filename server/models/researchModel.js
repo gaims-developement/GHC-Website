@@ -34,6 +34,11 @@ const normalize = (item) => item && ({
   currentVersion: item.current_version || 1,
   revisionToken: item.revision_token,
   revisionTokenExpires: item.revision_token_expires,
+  revisionRequestedAt: item.revision_requested_at,
+  revisionDeadline: item.revision_deadline,
+  revisionEmailStatus: item.revision_email_status,
+  revisionLastEmailSentAt: item.revision_last_email_sent_at,
+  revisionTokenStatus: item.revision_token_status,
   versions: item.versions || [],
   createdAt: item.created_at,
   updatedAt: item.updated_at,
@@ -63,7 +68,7 @@ const findById = async (id) => {
     : await pool.query('SELECT * FROM abstracts WHERE abstract_id = ? LIMIT 1', [String(id)]);
   if (!rows.length) return null;
   const abstract = rows[0];
-  const [versions] = await pool.query('SELECT * FROM abstract_versions WHERE abstract_id = ? ORDER BY version_number DESC', [abstract.id]);
+  const [versions] = await pool.query('SELECT * FROM abstract_versions WHERE abstract_id = ? ORDER BY version_number DESC', [Number(abstract.id)]);
   abstract.versions = versions;
   return normalize(abstract);
 };
@@ -247,54 +252,227 @@ const stats = async () => {
   };
 };
 
-const findByToken = async (token) => {
-  const [rows] = await pool.query('SELECT id FROM abstracts WHERE revision_token = ? AND revision_token_expires > NOW() LIMIT 1', [token]);
-  if (!rows.length) return null;
-  return findById(rows[0].id);
+const hashRevisionToken = (token) =>
+  require('crypto').createHash('sha256').update(String(token)).digest('hex');
+
+const findRevisionToken = async (token) => {
+  const tokenHash = hashRevisionToken(token);
+  const [rows] = await pool.query(
+    `SELECT art.*, a.status AS abstract_status
+     FROM abstract_revision_tokens art
+     INNER JOIN abstracts a ON a.id = art.abstract_id
+     WHERE art.token_hash = ?
+     LIMIT 1`,
+    [tokenHash]
+  );
+  return rows[0] || null;
 };
 
-const createVersion = async (abstractId, versionNumber, pdfUrl, declarationUrl) => {
-  await pool.query(
-    'INSERT INTO abstract_versions (abstract_id, version_number, pdf_url, declaration_url) VALUES (?, ?, ?, ?)',
-    [abstractId, versionNumber, pdfUrl, declarationUrl]
+const findByToken = async (token) => {
+  const revisionToken = await findRevisionToken(token);
+  if (!revisionToken) return null;
+  if (revisionToken.status !== 'active' || revisionToken.used_at || new Date(revisionToken.expires_at) <= new Date()) return null;
+  if (revisionToken.abstract_status !== 'revision_requested') return null;
+  const submission = await findById(revisionToken.abstract_id);
+  if (!submission) return null;
+  return {
+    ...submission,
+    revisionTokenId: revisionToken.id,
+    revisionComments: revisionToken.comments,
+    revisionDeadline: revisionToken.expires_at,
+  };
+};
+
+const createVersion = async (abstractId, versionNumber, pdfUrl, declarationUrl, data = {}, conn = pool) => {
+  let numericAbstractId = Number(abstractId);
+  if (!Number.isInteger(numericAbstractId) || numericAbstractId <= 0) {
+    const [[row]] = await conn.query('SELECT id FROM abstracts WHERE abstract_id = ? LIMIT 1', [String(abstractId)]);
+    numericAbstractId = Number(row?.id);
+  }
+  if (!Number.isInteger(numericAbstractId) || numericAbstractId <= 0) {
+    const error = new Error(`Invalid abstract id for version history: ${abstractId}`);
+    error.code = 'INVALID_ABSTRACT_ID';
+    throw error;
+  }
+
+  await conn.query(
+    `INSERT INTO abstract_versions
+      (abstract_id, version_number, title, abstract_text, category, pdf_url, declaration_url, status, revision_comments)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+      title = VALUES(title),
+      abstract_text = VALUES(abstract_text),
+      category = VALUES(category),
+      pdf_url = VALUES(pdf_url),
+      declaration_url = VALUES(declaration_url),
+      status = VALUES(status),
+      revision_comments = VALUES(revision_comments)`,
+    [
+      numericAbstractId,
+      versionNumber,
+      data.title || null,
+      data.abstractText || data.abstract_text || null,
+      data.category || null,
+      pdfUrl,
+      declarationUrl,
+      data.status || null,
+      data.revisionComments || data.revision_comments || null,
+    ]
   );
 };
 
-const requestRevision = async (id, token, expires) => {
-  const isNumeric = !isNaN(Number(id));
-  if (isNumeric) {
-    await pool.query(
-      'UPDATE abstracts SET status = ?, submission_status = ?, revision_token = ?, revision_token_expires = ? WHERE id = ? OR abstract_id = ?',
-      ['revision_requested', 'revision_requested', token, expires, id, String(id)]
+const requestRevision = async (id, token, expires, data = {}) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [[abstractRow]] = !isNaN(Number(id))
+      ? await conn.query('SELECT id FROM abstracts WHERE id = ? OR abstract_id = ? LIMIT 1', [id, String(id)])
+      : await conn.query('SELECT id FROM abstracts WHERE abstract_id = ? LIMIT 1', [String(id)]);
+    if (!abstractRow) {
+      const error = new Error('Research submission not found');
+      error.code = 'ABSTRACT_NOT_FOUND';
+      throw error;
+    }
+    const abstractId = abstractRow.id;
+    await conn.query(
+      `UPDATE abstract_revision_tokens
+       SET status = 'revoked'
+       WHERE abstract_id = ? AND status = 'active' AND used_at IS NULL`,
+      [abstractId]
     );
-  } else {
-    await pool.query(
-      'UPDATE abstracts SET status = ?, submission_status = ?, revision_token = ?, revision_token_expires = ? WHERE abstract_id = ?',
-      ['revision_requested', 'revision_requested', token, expires, String(id)]
+    await conn.query(
+      `INSERT INTO abstract_revision_tokens
+        (abstract_id, token_hash, applicant_email, abstract_version, expires_at, created_by, status, comments)
+       VALUES (?, ?, ?, ?, ?, ?, 'active', ?)`,
+      [
+        abstractId,
+        hashRevisionToken(token),
+        data.applicantEmail || null,
+        data.abstractVersion || 1,
+        expires,
+        data.createdBy || null,
+        data.comments || null,
+      ]
     );
-  }
-  return findById(id);
-};
-
-const saveRevision = async (id, newVersion, pdfUrl, declarationUrl) => {
-  const abstract = await findById(id);
-  if (abstract) {
-    await createVersion(id, abstract.currentVersion, abstract.pdfUrl, abstract.declarationUrl);
-    await pool.query(
-      `UPDATE abstracts SET 
-        pdf_url = COALESCE(?, pdf_url), 
-        file_url = COALESCE(?, file_url), 
-        declaration_url = COALESCE(?, declaration_url), 
-        current_version = ?, 
-        status = 'under_review', 
-        submission_status = 'under_review', 
-        revision_token = NULL, 
-        revision_token_expires = NULL 
+    await conn.query(
+      `UPDATE abstracts
+       SET status = 'revision_requested',
+           submission_status = 'revision_requested',
+           revision_token = NULL,
+           revision_token_expires = ?,
+           revision_requested_at = NOW(),
+           revision_deadline = ?,
+           revision_token_status = 'active'
        WHERE id = ?`,
-      [pdfUrl, pdfUrl, declarationUrl, newVersion, id]
+      [expires, expires, abstractId]
     );
+    await conn.commit();
+    return findById(id);
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
   }
-  return findById(id);
 };
 
-module.exports = { create, findById, findByToken, createVersion, requestRevision, saveRevision, list, review, setAward, setStatus, stats, update, updateIntegrity };
+const markRevisionEmailStatus = async (abstractId, status) => {
+  await pool.query(
+    'UPDATE abstracts SET revision_email_status = ?, revision_last_email_sent_at = NOW() WHERE id = ?',
+    [status, abstractId]
+  );
+};
+
+const saveRevision = async (token, data) => {
+  const tokenHash = hashRevisionToken(token);
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [tokens] = await conn.query(
+      `SELECT art.id AS revision_token_id,
+              art.abstract_id AS token_abstract_id,
+              art.status AS token_status,
+              art.used_at,
+              art.expires_at,
+              art.comments,
+              a.*
+       FROM abstract_revision_tokens art
+       INNER JOIN abstracts a ON a.id = art.abstract_id
+       WHERE art.token_hash = ?
+       FOR UPDATE`,
+      [tokenHash]
+    );
+    const row = tokens[0];
+    if (!row) {
+      const error = new Error('Invalid revision link.');
+      error.code = 'INVALID_TOKEN';
+      throw error;
+    }
+    if (row.used_at || row.token_status === 'used') {
+      const error = new Error('This revision link has already been used.');
+      error.code = 'USED_TOKEN';
+      throw error;
+    }
+    if (row.token_status !== 'active' || new Date(row.expires_at) <= new Date()) {
+      const error = new Error('This revision link has expired. Please contact the GHC Scientific Committee.');
+      error.code = 'EXPIRED_TOKEN';
+      throw error;
+    }
+    if (row.status !== 'revision_requested' && row.submission_status !== 'revision_requested') {
+      const error = new Error('This abstract is no longer awaiting revision.');
+      error.code = 'NOT_AWAITING_REVISION';
+      throw error;
+    }
+
+    const currentVersion = row.current_version || 1;
+    const newVersion = currentVersion + 1;
+    const numericAbstractId = row.token_abstract_id;
+
+    await createVersion(numericAbstractId, currentVersion, row.file_url || row.pdf_url, row.declaration_url, {
+      title: row.title,
+      abstractText: row.abstract_text,
+      category: row.category,
+      status: row.submission_status || row.status,
+      revisionComments: row.comments,
+    }, conn);
+
+    await createVersion(numericAbstractId, newVersion, data.pdfUrl, data.declarationUrl, {
+      title: data.title || row.title,
+      abstractText: data.abstractText || row.abstract_text,
+      category: data.category || row.category,
+      status: 'revised_submitted',
+      revisionComments: row.comments,
+    }, conn);
+
+    await conn.query(
+      `UPDATE abstracts SET
+        title = COALESCE(?, title),
+        abstract_text = COALESCE(?, abstract_text),
+        category = COALESCE(?, category),
+        pdf_url = COALESCE(?, pdf_url),
+        file_url = COALESCE(?, file_url),
+        declaration_url = COALESCE(?, declaration_url),
+        current_version = ?,
+        status = 'revised_submitted',
+        submission_status = 'revised_submitted',
+        revision_token = NULL,
+        revision_token_expires = NULL,
+        revision_token_status = 'used'
+       WHERE id = ?`,
+      [data.title || null, data.abstractText || null, data.category || null, data.pdfUrl, data.pdfUrl, data.declarationUrl, newVersion, numericAbstractId]
+    );
+    await conn.query(
+      "UPDATE abstract_revision_tokens SET status = 'used', used_at = NOW() WHERE id = ?",
+      [row.revision_token_id]
+    );
+    await conn.commit();
+    return findById(numericAbstractId);
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
+  }
+};
+
+module.exports = { create, findById, findByToken, findRevisionToken, createVersion, requestRevision, saveRevision, markRevisionEmailStatus, list, review, setAward, setStatus, stats, update, updateIntegrity };

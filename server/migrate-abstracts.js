@@ -9,7 +9,9 @@ async function migrate() {
       "ALTER TABLE abstracts ADD COLUMN city_state VARCHAR(255);",
       "ALTER TABLE abstracts ADD COLUMN specialty VARCHAR(100);",
       "ALTER TABLE abstracts ADD COLUMN year_of_study VARCHAR(50);",
-      "ALTER TABLE abstracts ADD COLUMN declaration_url TEXT;"
+      "ALTER TABLE abstracts ADD COLUMN declaration_url TEXT;",
+      "ALTER TABLE abstracts MODIFY status ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'revised_submitted', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft';",
+      "ALTER TABLE abstracts MODIFY submission_status ENUM('draft', 'submitted', 'under_review', 'revision_requested', 'revised_submitted', 'accepted', 'rejected', 'withdrawn') DEFAULT 'draft';"
     ];
 
     for (const query of queries) {

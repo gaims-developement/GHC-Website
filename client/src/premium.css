@@ -6448,3 +6448,47 @@ body {
     background-repeat: no-repeat;
   }
 }
+
+html.abstract-revision-active,
+body.abstract-revision-active {
+  background: #ffffff !important;
+  color: #101828 !important;
+}
+
+body.abstract-revision-active #root,
+body.abstract-revision-active #root > .abstract-revision-page,
+#root > .abstract-revision-page {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #101828 !important;
+}
+
+body.abstract-revision-active .abstract-revision-page,
+body.abstract-revision-active .abstract-revision-page * {
+  color-scheme: light;
+}
+
+html.abstract-revision-active body,
+body.abstract-revision-active,
+body.abstract-revision-active #root,
+body.abstract-revision-active #root > div,
+body.abstract-revision-active main,
+.abstract-revision-page {
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+.abstract-revision-page h1,
+.abstract-revision-page h2,
+.abstract-revision-page h3,
+.abstract-revision-page label,
+.abstract-revision-page dd,
+.abstract-revision-page input,
+.abstract-revision-page select,
+.abstract-revision-page textarea {
+  color: #101828;
+}
+
+.abstract-revision-page p {
+  color: #475467;
+}

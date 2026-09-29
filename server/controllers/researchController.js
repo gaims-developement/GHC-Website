@@ -3,10 +3,11 @@ const { pool } = require('../config/db');
 const ActivityLog = require('../models/activityLogModel');
 const { uploadResearchPdf } = require('../services/googleDriveService');
 const { uploadToCloudinary } = require('../services/cloudinaryService');
-const { sendMail, sendTemplateEmail } = require('../services/mailService');
+const { sendTemplateEmail } = require('../services/mailService');
 const asyncHandler = require('../utils/asyncHandler');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const rateLimit = require('express-rate-limit');
 
 const cloudinaryConfigured = () => Boolean(process.env.CLOUDINARY_NAME && process.env.CLOUDINARY_KEY && process.env.CLOUDINARY_SECRET);
 
@@ -60,6 +61,84 @@ const sanitizePayload = (body, fileOrFiles) => {
 
 const logDecision = (req, action, recordId, metadata = null) =>
   ActivityLog.logActivity({ userId: req.user?.id || null, action, module: 'scientific', recordId: String(recordId), metadata }).catch(() => {});
+
+const revisionRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const getPublicAppUrl = () => {
+  const configured = process.env.PUBLIC_APP_URL || process.env.CLIENT_URL || process.env.FRONTEND_URL || process.env.APP_URL;
+  return String(configured || 'http://localhost:5173').replace(/\/+$/, '');
+};
+
+const getRevisionContact = () =>
+  process.env.SCIENTIFIC_COMMITTEE_EMAIL || process.env.CONTACT_EMAIL || 'scientific@ghc2026.org';
+
+const mapRevisionTokenError = (tokenRecord) => {
+  if (!tokenRecord) return { status: 404, message: 'Invalid revision link.', code: 'invalid' };
+  if (tokenRecord.used_at || tokenRecord.status === 'used') {
+    return { status: 410, message: 'This revision link has already been used.', code: 'used' };
+  }
+  if (tokenRecord.status !== 'active' || new Date(tokenRecord.expires_at) <= new Date()) {
+    return {
+      status: 410,
+      message: 'This revision link has expired. Please contact the GHC Scientific Committee if you need a new revision link.',
+      code: 'expired',
+    };
+  }
+  if (tokenRecord.abstract_status !== 'revision_requested') {
+    return { status: 409, message: 'This abstract is no longer awaiting revision.', code: 'not_awaiting_revision' };
+  }
+  return null;
+};
+
+const publicRevisionPayload = (submission) => ({
+  id: submission.abstractId,
+  title: submission.title,
+  applicantName: submission.presentingAuthor || submission.authors || 'Applicant',
+  abstractText: submission.abstractText,
+  category: submission.category,
+  track: submission.track,
+  keywords: submission.keywords,
+  currentVersion: submission.currentVersion,
+  pdfUrl: submission.pdfUrl,
+  declarationUrl: submission.declarationUrl,
+  revisionComments: submission.revisionComments || submission.reviewNotes || '',
+  revisionDeadline: submission.revisionDeadline,
+  contactEmail: getRevisionContact(),
+});
+
+const sendAbstractDecisionEmail = async (req, submission, status, notes = '') => {
+  if (!['accepted', 'rejected'].includes(status) || !submission?.email) {
+    return false;
+  }
+
+  const templateKey = status === 'accepted' ? 'abstract_accepted' : 'abstract_rejected';
+  const action = status === 'accepted' ? 'abstract_acceptance_email_sent' : 'abstract_rejection_email_sent';
+  const failureAction = status === 'accepted' ? 'abstract_acceptance_email_failed' : 'abstract_rejection_email_failed';
+  const recipientName = submission.presentingAuthor || submission.authors || 'Author';
+
+  try {
+    await sendTemplateEmail(templateKey, submission.email, {
+      fullName: recipientName,
+      name: recipientName,
+      abstractTitle: submission.title,
+      title: submission.title,
+      abstractCode: submission.abstractId || `GHC-ABS-${String(submission.id).padStart(5, '0')}`,
+      category: submission.category || '',
+      reviewComments: notes || submission.reviewNotes || '',
+      contactEmail: getRevisionContact(),
+    });
+    await logDecision(req, action, submission.id, { email: submission.email });
+    return true;
+  } catch (mailErr) {
+    await logDecision(req, failureAction, submission.id, { email: submission.email, error: mailErr.message });
+    return false;
+  }
+};
 
 const validate = (payload) => {
   if (!payload.title) return 'Title is required';
@@ -234,7 +313,8 @@ const reviewResearch = asyncHandler(async (req, res) => {
   });
 
   await logDecision(req, 'review_decision', req.params.id, { status, score: req.body.reviewScore ?? req.body.review_score ?? null });
-  return res.json({ submission });
+  const emailSent = await sendAbstractDecisionEmail(req, submission, status, req.body.reviewNotes || req.body.review_notes);
+  return res.json({ submission, emailSent });
 });
 
 const statusResearch = asyncHandler(async (req, res) => {
@@ -248,7 +328,8 @@ const statusResearch = asyncHandler(async (req, res) => {
 
   const submission = await Research.setStatus(req.params.id, req.body.status);
   await logDecision(req, 'status_decision', req.params.id, { status: req.body.status });
-  return res.json({ submission });
+  const emailSent = await sendAbstractDecisionEmail(req, submission, req.body.status, req.body.notes || req.body.reviewNotes || existing.reviewNotes);
+  return res.json({ submission, emailSent });
 });
 
 const awardResearch = asyncHandler(async (req, res) => {
@@ -737,14 +818,18 @@ const requestRevision = asyncHandler(async (req, res) => {
   }
   
   const token = crypto.randomBytes(32).toString('hex');
-  const expires = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days
-  
-  await Research.requestRevision(submission.id, token, expires);
-  
-  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-  const link = `${clientUrl}/abstract-revision/${token}`;
+  const expires = new Date(Date.now() + Number(process.env.REVISION_TOKEN_TTL_DAYS || 7) * 24 * 60 * 60 * 1000);
   const notes = req.body?.notes || req.body?.comments || req.body?.revisionNotes || '';
   const authorEmail = submission.email;
+  const link = `${getPublicAppUrl()}/abstract/revise/${token}`;
+
+  await Research.requestRevision(submission.id, token, expires, {
+    applicantEmail: authorEmail,
+    abstractVersion: submission.currentVersion || 1,
+    createdBy: req.user?.id || null,
+    comments: notes,
+  });
+  await logDecision(req, 'revision_link_generated', submission.id, { expiresAt: expires, version: submission.currentVersion || 1 });
   
   let emailSent = false;
   if (authorEmail) {
@@ -778,37 +863,97 @@ const requestRevision = asyncHandler(async (req, res) => {
           <p style="font-size: 12px; color: #94a3b8; margin: 0;">Scientific Committee Secretariat • Global Healthcare Conclave 2026</p>
         </div>
       `;
-      await sendMail({
-        to: authorEmail,
-        subject,
-        html,
-        text: `Revision requested for "${submission.title}".\n\nFeedback:\n${notes}\n\nSubmit revision at: ${link}`,
+      await sendTemplateEmail('abstract_revision_required', authorEmail, {
+        fullName: submission.presentingAuthor || submission.authors || 'Author',
+        name: submission.presentingAuthor || submission.authors || 'Author',
+        abstractTitle: submission.title,
+        title: submission.title,
+        abstractCode: submission.abstractId || `GHC-ABS-${String(submission.id).padStart(5, '0')}`,
+        revisionInstructions: notes,
+        revisionLink: link,
+        link,
+        expiresAt: expires.toLocaleDateString('en-IN', { dateStyle: 'medium' }),
+        contactEmail: getRevisionContact(),
       });
       emailSent = true;
+      await Research.markRevisionEmailStatus(submission.id, 'sent');
+      await logDecision(req, 'revision_email_sent', submission.id, { email: authorEmail });
     } catch (mailErr) {
       console.error('Failed to send revision email:', mailErr.message);
-      try {
-        await pool.query(
-          "INSERT INTO email_logs (recipient, subject, status, error_message) VALUES (?, ?, 'failed', ?)",
-          [authorEmail, `Revision Requested: ${submission.title}`, mailErr.message || 'Connection timeout']
-        );
-      } catch (_) {}
+      await Research.markRevisionEmailStatus(submission.id, 'failed').catch(() => {});
+      await logDecision(req, 'revision_email_failed', submission.id, { email: authorEmail, error: mailErr.message });
     }
   }
   
   await logDecision(req, 'requested_revision', submission.id, { email: authorEmail, emailSent, notes });
-  res.json({ success: true, token, link, emailSent, recipient: authorEmail });
+  res.json({ success: true, link, emailSent, recipient: authorEmail, expiresAt: expires });
+});
+
+const resendRevisionEmail = asyncHandler(async (req, res) => {
+  const submission = await Research.findById(req.params.id);
+  if (!submission) return res.status(404).json({ message: 'Research submission not found' });
+  if (submission.status !== 'revision_requested') {
+    return res.status(409).json({ message: 'This abstract is no longer awaiting revision.' });
+  }
+  if (!submission.email) {
+    return res.status(400).json({ message: 'This abstract does not have an applicant email address.' });
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + Number(process.env.REVISION_TOKEN_TTL_DAYS || 7) * 24 * 60 * 60 * 1000);
+  const notes = req.body?.notes || req.body?.comments || submission.reviewNotes || '';
+  const link = `${getPublicAppUrl()}/abstract/revise/${token}`;
+
+  await Research.requestRevision(submission.id, token, expires, {
+    applicantEmail: submission.email,
+    abstractVersion: submission.currentVersion || 1,
+    createdBy: req.user?.id || null,
+    comments: notes,
+  });
+
+  try {
+    await sendTemplateEmail('abstract_revision_required', submission.email, {
+      fullName: submission.presentingAuthor || submission.authors || 'Author',
+      name: submission.presentingAuthor || submission.authors || 'Author',
+      abstractTitle: submission.title,
+      title: submission.title,
+      abstractCode: submission.abstractId || `GHC-ABS-${String(submission.id).padStart(5, '0')}`,
+      revisionInstructions: notes,
+      revisionLink: link,
+      link,
+      expiresAt: expires.toLocaleDateString('en-IN', { dateStyle: 'medium' }),
+      contactEmail: getRevisionContact(),
+    });
+    await Research.markRevisionEmailStatus(submission.id, 'sent');
+    await logDecision(req, 'revision_email_resent', submission.id, { email: submission.email, expiresAt: expires });
+    res.json({ success: true, link, emailSent: true, recipient: submission.email, expiresAt: expires });
+  } catch (mailErr) {
+    await Research.markRevisionEmailStatus(submission.id, 'failed').catch(() => {});
+    await logDecision(req, 'revision_email_failed', submission.id, { email: submission.email, error: mailErr.message, resend: true });
+    res.status(502).json({ success: false, link, emailSent: false, message: 'Revision link was generated, but email delivery failed.' });
+  }
 });
 
 const validateRevisionToken = asyncHandler(async (req, res) => {
+  const tokenRecord = await Research.findRevisionToken(req.params.token);
+  const tokenError = mapRevisionTokenError(tokenRecord);
+  if (tokenError) {
+    return res.status(tokenError.status).json({ message: tokenError.message, code: tokenError.code, contactEmail: getRevisionContact() });
+  }
   const submission = await Research.findByToken(req.params.token);
-  if (!submission) return res.status(404).json({ message: 'Invalid or expired revision token' });
-  res.json({ submission });
+  if (!submission) return res.status(404).json({ message: 'Invalid revision link.', code: 'invalid' });
+  await logDecision(req, 'revision_page_accessed', submission.id, { tokenId: submission.revisionTokenId });
+  res.json({ submission: publicRevisionPayload(submission) });
 });
 
 const submitRevision = asyncHandler(async (req, res) => {
+  const tokenRecord = await Research.findRevisionToken(req.params.token);
+  const tokenError = mapRevisionTokenError(tokenRecord);
+  if (tokenError) {
+    return res.status(tokenError.status).json({ message: tokenError.message, code: tokenError.code, contactEmail: getRevisionContact() });
+  }
   const submission = await Research.findByToken(req.params.token);
-  if (!submission) return res.status(404).json({ message: 'Invalid or expired revision token' });
+  if (!submission) return res.status(404).json({ message: 'Invalid revision link.', code: 'invalid' });
   
   if (!req.files?.pdf) return res.status(400).json({ message: 'Abstract PDF is required' });
   
@@ -834,8 +979,37 @@ const submitRevision = asyncHandler(async (req, res) => {
     declarationUrl = declCloudinaryUrl || declUpload?.webViewLink || `/uploads/research/${req.files.declaration[0].filename}`;
   }
   
-  const newSubmission = await Research.saveRevision(submission.id, (submission.currentVersion || 1) + 1, pdfUrl, declarationUrl);
-  await logDecision(req, 'submitted_revision', submission.id);
+  let newSubmission;
+  try {
+    newSubmission = await Research.saveRevision(req.params.token, {
+      title: req.body.title,
+      abstractText: req.body.abstractText || req.body.abstract_text,
+      category: req.body.category,
+      pdfUrl,
+      declarationUrl,
+    });
+  } catch (error) {
+    const statusByCode = {
+      INVALID_TOKEN: 404,
+      USED_TOKEN: 410,
+      EXPIRED_TOKEN: 410,
+      NOT_AWAITING_REVISION: 409,
+    };
+    return res.status(statusByCode[error.code] || 500).json({ message: error.message || 'Something went wrong. Please try again later.' });
+  }
+  await logDecision(req, 'submitted_revision', submission.id, { newVersion: newSubmission.currentVersion });
+  await logDecision(req, 'revision_token_invalidated', submission.id, { newVersion: newSubmission.currentVersion });
+  if (newSubmission.email) {
+    await sendTemplateEmail('abstract_revision_submitted', newSubmission.email, {
+      fullName: newSubmission.presentingAuthor || newSubmission.authors || 'Author',
+      name: newSubmission.presentingAuthor || newSubmission.authors || 'Author',
+      abstractTitle: newSubmission.title,
+      title: newSubmission.title,
+      abstractCode: newSubmission.abstractId || `GHC-ABS-${String(newSubmission.id).padStart(5, '0')}`,
+      versionNumber: newSubmission.currentVersion,
+      contactEmail: getRevisionContact(),
+    }).catch((mailErr) => logDecision(req, 'revision_submitted_email_failed', submission.id, { error: mailErr.message }));
+  }
   
   res.json({ success: true, submission: newSubmission });
 });
@@ -878,6 +1052,8 @@ module.exports = {
   exportResearchCSV,
   emailParticipants,
   requestRevision,
+  resendRevisionEmail,
+  revisionRateLimiter,
   validateRevisionToken,
   submitRevision,
   suspendReviewer,

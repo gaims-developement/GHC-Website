@@ -1,6 +1,6 @@
 import { Award, Edit3, Eye, Trash2, UserCheck, X, ShieldAlert, Star, Send, CheckCircle, FileX, RotateCcw } from "lucide-react";
 
-function ResearchTable({ onAssignReviewer, onAward, onDelete, onEdit, onReject, onReview, onIntegrity, onScore, onRevisionRequest, onApprove, onPreview, submissions, registeredEmails }) {
+function ResearchTable({ onAssignReviewer, onAward, onDelete, onEdit, onReject, onReview, onIntegrity, onScore, onRevisionRequest, onResendRevisionEmail, onApprove, onPreview, submissions, registeredEmails }) {
   const isRegistered = (email) => registeredEmails && registeredEmails.includes(email.toLowerCase());
 
   const renderActions = (submission, mobile = false) => {
@@ -15,6 +15,9 @@ function ResearchTable({ onAssignReviewer, onAward, onDelete, onEdit, onReject, 
             <button onClick={() => onApprove(submission)} title="Approve" style={{color: 'green'}}><CheckCircle size={16} />{mobile && "Approve"}</button>
             <button onClick={() => onReject(submission)} title="Reject" style={{color: 'red'}}><FileX size={16} />{mobile && "Reject"}</button>
             <button onClick={() => onRevisionRequest(submission)} title="Request Revision"><RotateCcw size={16} />{mobile && "Revision"}</button>
+            {submission.status === 'revision_requested' && onResendRevisionEmail && (
+              <button onClick={() => onResendRevisionEmail(submission)} title="Resend Revision Email"><Send size={16} />{mobile && "Resend Email"}</button>
+            )}
           </>
         )}
       </div>
@@ -77,6 +80,13 @@ function ResearchTable({ onAssignReviewer, onAward, onDelete, onEdit, onReject, 
                       ))}
                     </div>
                   )}
+                  {submission.status === 'revision_requested' && (
+                    <div style={{ marginTop: '0.4rem', fontSize: '0.75rem', color: '#92400e' }}>
+                      Revision requested {submission.revisionRequestedAt ? new Date(submission.revisionRequestedAt).toLocaleDateString() : ''}
+                      {submission.revisionDeadline ? ` - expires ${new Date(submission.revisionDeadline).toLocaleDateString()}` : ''}
+                      {submission.revisionEmailStatus ? ` - email ${submission.revisionEmailStatus}` : ''}
+                    </div>
+                  )}
                 </td>
                 <td>{submission.presentingAuthor || "Not provided"}</td>
                 <td>{submission.institution || "Not provided"}</td>
@@ -98,4 +108,3 @@ function ResearchTable({ onAssignReviewer, onAward, onDelete, onEdit, onReject, 
 }
 
 export default ResearchTable;
-
