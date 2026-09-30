@@ -1,10 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { CalendarDays, HeartPulse, Menu } from 'lucide-react'
 
+const registrationUrl = 'https://mc.clirnet.com/mastercast/connect/D0921-Conclave-1'
+
 const navItems = [
   { to: '/', label: 'Home' },
   { to: '/about', label: 'About' },
-  { to: '/register', label: 'Register' },
+  { to: registrationUrl, label: 'Register', external: true },
 ]
 
 function MainLayout() {
@@ -21,15 +23,27 @@ function MainLayout() {
 
           <div className="hidden items-center gap-6 md:flex">
             {navItems.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `text-sm font-medium transition ${isActive ? 'text-teal-700' : 'text-slate-600 hover:text-teal-700'}`
-                }
-              >
-                {item.label}
-              </NavLink>
+              item.external ? (
+                <a
+                  key={item.to}
+                  href={item.to}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-slate-600 transition hover:text-teal-700"
+                >
+                  {item.label}
+                </a>
+              ) : (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `text-sm font-medium transition ${isActive ? 'text-teal-700' : 'text-slate-600 hover:text-teal-700'}`
+                  }
+                >
+                  {item.label}
+                </NavLink>
+              )
             ))}
           </div>
 

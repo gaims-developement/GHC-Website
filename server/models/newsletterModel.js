@@ -19,7 +19,17 @@ const unsubscribe = async (email) => {
   return result;
 };
 
+const listSubscribers = async () => {
+  const [rows] = await pool.query(
+    `SELECT id, email, status, subscribed_at, updated_at
+     FROM newsletter_subscribers
+     ORDER BY subscribed_at DESC, id DESC`
+  );
+  return rows;
+};
+
 module.exports = {
   subscribe,
   unsubscribe,
+  listSubscribers,
 };

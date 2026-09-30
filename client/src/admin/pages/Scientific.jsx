@@ -31,6 +31,7 @@ import {
   Star,
   Trash2,
   TrendingUp,
+  Trophy,
   User,
   UserCheck,
   UserMinus,
@@ -93,6 +94,21 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
   const [reportsData, setReportsData] = useState({});
   const [abstractFilter, setAbstractFilter] = useState("all");
   const [abstractSearch, setAbstractSearch] = useState("");
+  const [rankingsData, setRankingsData] = useState({ rankings: [], summary: {}, pagination: { page: 1, limit: 25, total: 0, totalPages: 0 } });
+  const [rankingLoading, setRankingLoading] = useState(false);
+  const [rankingFilters, setRankingFilters] = useState({
+    search: "",
+    category: "all",
+    ugPg: "all",
+    institution: "",
+    reviewStatus: "fully_reviewed",
+    status: "all",
+    scoreMin: "",
+    scoreMax: "",
+    sort: "position",
+    direction: "asc",
+    page: 1,
+  });
   
   // Abstract Report (Reviews Sent) State
   const [abstractReviews, setAbstractReviews] = useState([]);
@@ -162,18 +178,16 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
   const loadChairpersonData = useCallback(async () => {
     setLoading(true);
     try {
-      const [statsRes, abstractsRes, reviewersRes, settingsRes, reviewsRes] = await Promise.all([
+      const [statsRes, abstractsRes, reviewersRes, settingsRes] = await Promise.all([
         api.get("/api/research/stats").catch(() => ({ data: { stats: {}, recentActivity: [] } })),
-        api.get("/api/research?admin=1").catch(() => ({ data: { submissions: [] } })),
+        api.get("/api/research?admin=1&compact=1&limit=75").catch(() => ({ data: { submissions: [] } })),
         api.get("/api/research/reviewers").catch(() => ({ data: { reviewers: [] } })),
         api.get("/api/research/settings").catch(() => ({ data: { settings: {} } })),
-        api.get("/api/research/reviews").catch(() => ({ data: { reviews: [] } })),
       ]);
 
       setStatsData(statsRes.data || { stats: {}, recentActivity: [] });
       setAbstracts(abstractsRes.data.submissions || []);
       setReviewers(reviewersRes.data.reviewers || []);
-      setAbstractReviews(reviewsRes.data?.reviews || []);
       if (settingsRes.data.settings) {
         setSettings((prev) => ({ ...prev, ...settingsRes.data.settings }));
       }
@@ -181,6 +195,16 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
       console.error("Failed to load chairperson data", err);
     } finally {
       setLoading(false);
+    }
+  }, [api]);
+
+  const loadAbstractReviews = useCallback(async () => {
+    try {
+      const res = await api.get("/api/research/reviews");
+      setAbstractReviews(res.data?.reviews || []);
+    } catch (err) {
+      console.error("Failed to load abstract review report", err);
+      setAbstractReviews([]);
     }
   }, [api]);
 
@@ -192,6 +216,24 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
       setReportsData({});
     }
   }, [api]);
+
+  const loadRankings = useCallback(async () => {
+    setRankingLoading(true);
+    try {
+      const params = new URLSearchParams();
+      Object.entries(rankingFilters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== "") params.set(key, value);
+      });
+      params.set("limit", "25");
+      const res = await api.get(`/api/research/rankings?${params.toString()}`);
+      setRankingsData(res.data || { rankings: [], summary: {}, pagination: { page: 1, limit: 25, total: 0, totalPages: 0 } });
+    } catch (err) {
+      console.error("Failed to load abstract rankings", err);
+      setRankingsData({ rankings: [], summary: {}, pagination: { page: 1, limit: 25, total: 0, totalPages: 0 } });
+    } finally {
+      setRankingLoading(false);
+    }
+  }, [api, rankingFilters]);
 
   // ----------------------------------------------------
   // Data Fetching: Reviewer
@@ -237,11 +279,28 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
   useEffect(() => {
     if (viewMode === "chairperson") {
       loadChairpersonData();
-      if (activeTab === "reports") loadReports();
     } else {
       loadReviewerData();
     }
-  }, [viewMode, activeTab, loadChairpersonData, loadReports, loadReviewerData]);
+  }, [viewMode, loadChairpersonData, loadReviewerData]);
+
+  useEffect(() => {
+    if (viewMode === "chairperson" && activeTab === "reports") {
+      loadReports();
+    }
+  }, [viewMode, activeTab, loadReports]);
+
+  useEffect(() => {
+    if (viewMode === "chairperson" && activeTab === "abstract-report") {
+      loadAbstractReviews();
+    }
+  }, [viewMode, activeTab, loadAbstractReviews]);
+
+  useEffect(() => {
+    if (viewMode === "chairperson" && activeTab === "rankings") {
+      loadRankings();
+    }
+  }, [viewMode, activeTab, loadRankings]);
 
   // ----------------------------------------------------
   // Chairperson Actions: Settings
@@ -431,6 +490,19 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
     return num % 1 === 0 ? String(num) : num.toFixed(1);
   }, []);
 
+  const openAbstractDetail = useCallback(async (fallback) => {
+    if (!fallback) return;
+    setViewAbstract(fallback);
+    const id = fallback.id || fallback.abstract_id || fallback.abstractId;
+    if (!id) return;
+    try {
+      const res = await api.get(`/api/research/${id}`);
+      setViewAbstract(res.data?.submission || res.data || fallback);
+    } catch (err) {
+      console.warn("Failed to load full abstract detail", err);
+    }
+  }, [api]);
+
   const handleOpenAbstractFromReview = useCallback((rev) => {
     if (!rev) return;
     const matching = abstracts.find((a) => a.id === rev.abstract_id);
@@ -447,8 +519,8 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
       abstract_text: rev.abstract_text,
       abstractText: rev.abstract_text,
     };
-    setViewAbstract(sub);
-  }, [abstracts]);
+    openAbstractDetail(sub);
+  }, [abstracts, openAbstractDetail]);
 
   const handleOpenRevisionModal = useCallback((item) => {
     if (!item) return;
@@ -552,6 +624,33 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }, [abstractReviews]);
+
+  const updateRankingFilter = useCallback((key, value) => {
+    setRankingFilters((current) => ({ ...current, [key]: value, page: 1 }));
+  }, []);
+
+  const handleExportRankings = useCallback(() => {
+    const params = new URLSearchParams();
+    Object.entries(rankingFilters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") params.set(key, value);
+    });
+    window.open(`${api.defaults.baseURL || ""}/api/research/rankings/export?${params.toString()}`, "_blank", "noopener,noreferrer");
+  }, [api, rankingFilters]);
+
+  const handleOpenRankingAbstract = useCallback((row) => {
+    const matching = abstracts.find((a) => a.id === row.id);
+    openAbstractDetail(matching || {
+      id: row.id,
+      abstractId: row.abstractId,
+      title: row.title,
+      presentingAuthor: row.applicantName,
+      institution: row.institution,
+      category: row.category,
+      yearOfStudy: row.yearOfStudy,
+      status: row.abstractStatus,
+      finalScore: row.finalScore,
+    });
+  }, [abstracts, openAbstractDetail]);
 
   // Reviewer personal metrics
   const reviewerAssignedCount = myAssignments.length;
@@ -1369,6 +1468,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
           { id: "overview", label: "Reviewer Workload & Activity", icon: Users },
           { id: "abstracts", label: `All Submitted Abstracts (${abstracts.length})`, icon: FileText },
           { id: "abstract-report", label: `Abstract Report (${abstractReviews.length})`, icon: ClipboardCheck },
+          { id: "rankings", label: "Abstract Rankings", icon: Trophy },
           { id: "team", label: `Scientific Team (${reviewers.length})`, icon: Users },
           { id: "reports", label: "Scientific Reports & Trends", icon: TrendingUp },
           { id: "settings", label: "Submission & Review Settings", icon: Sliders },
@@ -1384,6 +1484,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                 if (onNavigate) {
                   if (tab.id === "team") onNavigate("scientific-team");
                   else if (tab.id === "abstract-report") onNavigate("abstract-report");
+                  else if (tab.id === "rankings") onNavigate("abstract-rankings");
                   else if (tab.id === "overview") onNavigate("scientific");
                 }
               }}
@@ -1681,7 +1782,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                             type="button"
                             className="admin-secondary-button"
                             style={{ padding: "0.35rem 0.75rem", fontSize: "0.75rem", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "0.35rem", color: "#6C4AB6", borderColor: "#d8b4fe", background: "rgba(108,74,182,0.04)" }}
-                            onClick={() => setViewAbstract(sub)}
+                            onClick={() => openAbstractDetail(sub)}
                             title="View Abstract in Website"
                           >
                             <Eye size={13} /> View Abstract
@@ -2179,6 +2280,91 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
               </table>
             </div>
           )}
+        </section>
+      )}
+
+      {/* TAB: Abstract Rankings */}
+      {activeTab === "rankings" && (
+        <section className="admin-panel" style={{ padding: "1.5rem", borderRadius: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap", marginBottom: "1.25rem" }}>
+            <div>
+              <h2 style={{ fontSize: "1.2rem", fontWeight: 800, margin: 0 }}>Abstract Rankings</h2>
+              <p className="admin-muted" style={{ margin: "0.25rem 0 0", fontSize: "0.85rem" }}>
+                Official position is calculated server-side from finalized reviewer scores. Ties use competition ranking.
+              </p>
+            </div>
+            <button type="button" className="admin-primary-button" onClick={handleExportRankings} style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem" }}>
+              <Download size={16} /> Export Rankings
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "0.85rem", marginBottom: "1.25rem" }}>
+            {[
+              { label: "Eligible Abstracts", value: rankingsData.summary?.totalEligible ?? 0, icon: FileCheck, color: "#6C4AB6" },
+              { label: "Highest Score", value: formatScore(rankingsData.summary?.highestScore), icon: Trophy, color: "#059669" },
+              { label: "Average Score", value: formatScore(rankingsData.summary?.averageScore), icon: TrendingUp, color: "#2563eb" },
+              { label: "Lowest Score", value: formatScore(rankingsData.summary?.lowestScore), icon: Layers, color: "#d97706" },
+            ].map((card) => {
+              const Icon = card.icon;
+              return (
+                <div key={card.label} style={{ border: "1px solid #e5e7eb", borderRadius: "0.85rem", padding: "1rem", background: "#fff" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.4rem" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#64748b", fontWeight: 700 }}>{card.label}</span>
+                    <Icon size={17} color={card.color} />
+                  </div>
+                  <strong style={{ fontSize: "1.55rem", color: card.color }}>{card.value}</strong>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
+            <label>Search<input value={rankingFilters.search} onChange={(e) => updateRankingFilter("search", e.target.value)} placeholder="ID, title, applicant, institution" /></label>
+            <label>Category<select value={rankingFilters.category} onChange={(e) => updateRankingFilter("category", e.target.value)}><option value="all">All categories</option>{[...new Set(abstracts.map((a) => a.category).filter(Boolean))].map((category) => <option key={category} value={category}>{category}</option>)}</select></label>
+            <label>UG / PG<select value={rankingFilters.ugPg} onChange={(e) => updateRankingFilter("ugPg", e.target.value)}><option value="all">All levels</option><option value="ug">UG</option><option value="pg">PG</option><option value="intern">Intern</option></select></label>
+            <label>Review status<select value={rankingFilters.reviewStatus} onChange={(e) => updateRankingFilter("reviewStatus", e.target.value)}><option value="fully_reviewed">Fully Reviewed</option><option value="pending_review">Pending Review</option><option value="all">All Abstracts</option></select></label>
+            <label>Abstract status<select value={rankingFilters.status} onChange={(e) => updateRankingFilter("status", e.target.value)}><option value="all">All statuses</option>{["submitted", "under_review", "revision_requested", "revised_submitted", "accepted", "rejected"].map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}</select></label>
+            <label>Institution<input value={rankingFilters.institution} onChange={(e) => updateRankingFilter("institution", e.target.value)} placeholder="Filter institution" /></label>
+            <label>Min score<input type="number" min="0" max="50" value={rankingFilters.scoreMin} onChange={(e) => updateRankingFilter("scoreMin", e.target.value)} /></label>
+            <label>Max score<input type="number" min="0" max="50" value={rankingFilters.scoreMax} onChange={(e) => updateRankingFilter("scoreMax", e.target.value)} /></label>
+            <label>Display sort<select value={rankingFilters.sort} onChange={(e) => updateRankingFilter("sort", e.target.value)}><option value="position">Official position</option><option value="score">Score</option><option value="category">Category</option><option value="ugPg">UG/PG</option><option value="institution">Institution</option><option value="reviewStatus">Review status</option></select></label>
+          </div>
+
+          <div style={{ background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "0.75rem", padding: "0.8rem 1rem", fontSize: "0.82rem", color: "#475569", marginBottom: "1rem" }}>
+            <strong>Ranking method:</strong> {rankingsData.summary?.rankingMethod || "Average of submitted reviewer total scores"}. <strong>Tie handling:</strong> {rankingsData.summary?.tieHandling || "Competition ranking."}
+          </div>
+
+          <div className="speaker-table-wrap">
+            <table className="speaker-table">
+              <thead><tr><th>Position</th><th>Abstract</th><th>Applicant</th><th>Institution</th><th>Category</th><th>UG/PG</th><th>Score</th><th>%</th><th>Review Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                {rankingLoading && <tr><td colSpan="10">Loading rankings...</td></tr>}
+                {!rankingLoading && rankingsData.rankings?.map((row) => (
+                  <tr key={row.id}>
+                    <td><strong>{row.position || "-"}</strong></td>
+                    <td><strong>{row.abstractId || `GHC-ABS-${String(row.id).padStart(5, "0")}`}</strong><br /><span className="admin-muted">{row.title}</span></td>
+                    <td>{row.applicantName || "-"}</td>
+                    <td>{row.institution || "-"}</td>
+                    <td><span className="status-pill">{row.category || "-"}</span></td>
+                    <td>{row.yearOfStudy || "-"}</td>
+                    <td><strong>{row.finalScore !== null && row.finalScore !== undefined ? `${formatScore(row.finalScore)} / ${row.maximumScore || 50}` : "-"}</strong></td>
+                    <td>{row.percentage !== null && row.percentage !== undefined ? `${formatScore(row.percentage)}%` : "-"}</td>
+                    <td><span className={`status-pill ${row.reviewStatus === "fully_reviewed" ? "paid" : "pending"}`}>{String(row.reviewStatus || "").replaceAll("_", " ")}</span></td>
+                    <td><button type="button" className="admin-secondary-button" onClick={() => handleOpenRankingAbstract(row)}><Eye size={15} /> View</button></td>
+                  </tr>
+                ))}
+                {!rankingLoading && !rankingsData.rankings?.length && <tr><td colSpan="10">No abstracts match the current ranking filters.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", gap: "1rem", flexWrap: "wrap" }}>
+            <span className="admin-muted">Showing page {rankingsData.pagination?.page || 1} of {rankingsData.pagination?.totalPages || 1} ({rankingsData.pagination?.total || 0} rows)</span>
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button type="button" className="admin-secondary-button" disabled={(rankingsData.pagination?.page || 1) <= 1} onClick={() => setRankingFilters((current) => ({ ...current, page: Math.max(1, Number(current.page || 1) - 1) }))}>Previous</button>
+              <button type="button" className="admin-secondary-button" disabled={(rankingsData.pagination?.page || 1) >= (rankingsData.pagination?.totalPages || 1)} onClick={() => setRankingFilters((current) => ({ ...current, page: Number(current.page || 1) + 1 }))}>Next</button>
+            </div>
+          </div>
         </section>
       )}
 

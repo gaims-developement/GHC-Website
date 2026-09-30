@@ -201,7 +201,7 @@ const modules = [
   ['system-api-monitoring', 'API Monitoring', 'view_system_reports', 'system/api-monitoring', 'RadioTower', 125, true],
   ['system-database', 'Database', 'view_system_reports', 'system/database', 'Database', 126, true],
   ['system-cloudinary', 'Cloudinary', 'view_system_reports', 'system/cloudinary', 'Cloud', 127, true],
-  ['system-email', 'Email Delivery', 'view_system_reports', 'system/email', 'Mail', 128, true],
+  ['system-email', 'Emails', 'view_system_reports', 'system/email', 'Mail', 128, true],
   ['system-backups', 'Backups', 'manage_backups', 'system/backups', 'Archive', 129, true],
   ['system-security', 'Security Center', 'manage_security', 'system/security', 'ShieldAlert', 130, true],
   ['system-feature-flags', 'Feature Flags', 'manage_system', 'system/feature-flags', 'ToggleLeft', 131, true],
@@ -1828,6 +1828,22 @@ const createResearchTables = async () => {
   await addIndexIfMissing('abstract_revision_tokens', 'idx_revision_tokens_lookup', 'KEY idx_revision_tokens_lookup (token_hash, status, expires_at)');
 
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS abstract_participation_tokens (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      abstract_id INT NOT NULL,
+      token_hash CHAR(64) NOT NULL UNIQUE,
+      applicant_email VARCHAR(255) NULL,
+      expires_at DATETIME NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      created_by INT NULL,
+      confirmed_at DATETIME NULL,
+      status ENUM('active', 'confirmed', 'expired', 'revoked') DEFAULT 'active',
+      CONSTRAINT fk_abstract_participation_tokens_abstract_id FOREIGN KEY (abstract_id) REFERENCES abstracts(id) ON DELETE CASCADE
+    )
+  `);
+  await addIndexIfMissing('abstract_participation_tokens', 'idx_participation_tokens_lookup', 'KEY idx_participation_tokens_lookup (token_hash, status, expires_at)');
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS reviewers (
       id INT PRIMARY KEY AUTO_INCREMENT,
       user_id INT NOT NULL,
@@ -3296,56 +3312,91 @@ const seedResearch = async () => {
   await pool.query(
     `INSERT INTO email_templates (template_key, subject, body, is_active)
      VALUES (?, ?, ?, 1)
-     ON DUPLICATE KEY UPDATE subject = VALUES(subject), body = VALUES(body), is_active = 1`,
+     ON DUPLICATE KEY UPDATE is_active = is_active`,
     [
       'abstract_accepted',
       'Your GHC 2026 Abstract Has Been Accepted',
-      `<!doctype html>
-<html>
-<body style="margin:0; padding:0; background:#f1f5f9; font-family: Arial, sans-serif; color:#1e293b;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9; padding:32px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px; background:#ffffff; border:1px solid #e2e8f0; border-radius:18px; overflow:hidden; box-shadow:0 12px 28px rgba(15,23,42,0.08);">
-        <tr>
-          <td style="background:linear-gradient(135deg,#081B33 0%,#173B8F 58%,#00A6A6 100%); padding:30px 28px; text-align:center;">
-            <div style="display:inline-block; padding:5px 14px; border-radius:999px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); color:#ffffff; font-size:11px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase;">GHC 2026 Scientific Committee</div>
-            <h1 style="margin:14px 0 4px; color:#ffffff; font-size:25px; line-height:1.2;">Abstract Accepted</h1>
-            <p style="margin:0; color:#c7f9f1; font-size:14px;">Global Healthcare Conclave 2026</p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding:30px 30px 10px; text-align:center;">
-            <div style="display:inline-block; padding:7px 16px; border-radius:999px; background:#ecfdf5; border:1px solid #a7f3d0; color:#047857; font-size:12px; font-weight:800; letter-spacing:.4px; text-transform:uppercase;">Accepted for Presentation</div>
-            <h2 style="margin:18px 0 8px; color:#0f172a; font-size:22px; line-height:1.3;">Congratulations, {{fullName}}</h2>
-            <p style="margin:0; color:#475569; font-size:15px; line-height:1.6;">Your abstract has been accepted for the GHC 2026 research program.</p>
-          </td>
-        </tr>
-        <tr><td style="padding:18px 30px;">
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:14px; padding:20px;">
-            <p style="margin:0 0 6px; color:#64748b; font-size:11px; font-weight:800; letter-spacing:1px; text-transform:uppercase;">Abstract Details</p>
-            <h3 style="margin:0 0 14px; color:#0f172a; font-size:18px; line-height:1.35;">{{abstractTitle}}</h3>
-            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="font-size:13px; color:#334155;">
-              <tr><td style="padding:6px 0; color:#64748b; font-weight:700;">Abstract Code</td><td style="padding:6px 0; text-align:right; font-weight:800; color:#173B8F;">{{abstractCode}}</td></tr>
-              <tr><td style="padding:6px 0; color:#64748b; font-weight:700;">Category</td><td style="padding:6px 0; text-align:right; font-weight:700;">{{category}}</td></tr>
-            </table>
-          </div>
-        </td></tr>
-        <tr><td style="padding:0 30px 22px;">
-          <div style="background:#f0fdf4; border-left:4px solid #10b981; border-radius:10px; padding:16px;">
-            <p style="margin:0 0 6px; color:#065f46; font-size:12px; font-weight:800; text-transform:uppercase;">Committee Notes</p>
-            <p style="margin:0; color:#334155; font-size:14px; line-height:1.6; white-space:pre-wrap;">{{reviewComments}}</p>
-          </div>
-        </td></tr>
-        <tr><td style="padding:0 30px 30px;">
-          <p style="margin:0; color:#475569; font-size:14px; line-height:1.7;">Further presentation format, schedule, and onsite instructions will be shared by the GHC Scientific Committee.</p>
-        </td></tr>
-        <tr><td style="background:#081B33; padding:22px 30px; text-align:center;">
-          <p style="margin:0 0 6px; color:#ffffff; font-size:13px; font-weight:800;">Global Healthcare Conclave 2026</p>
-          <p style="margin:0; color:#94a3b8; font-size:12px;">For assistance, contact <a href="mailto:{{contactEmail}}" style="color:#38bdf8; text-decoration:none;">{{contactEmail}}</a>.</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
+      `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
+  <title>GHC Abstract Selected</title>
+  <style>
+    body { margin: 0; padding: 0; background-color: #f4f7fb; font-family: Arial, Helvetica, sans-serif; color: #1f2937; }
+    table { border-collapse: collapse; }
+    .wrapper { width: 100%; background-color: #f4f7fb; padding: 40px 15px; }
+    .container { width: 100%; max-width: 680px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06); }
+    .header { background: linear-gradient(135deg, #0f172a, #1e3a8a); padding: 35px 40px; text-align: center; }
+    .header-title { color: #ffffff; font-size: 28px; font-weight: 700; margin: 0; line-height: 1.3; }
+    .header-subtitle { color: #dbeafe; font-size: 14px; margin: 8px 0 0; }
+    .content { padding: 40px; }
+    .greeting { font-size: 16px; margin: 0 0 20px; }
+    .text { font-size: 15px; line-height: 1.7; color: #4b5563; margin: 0 0 18px; }
+    .selected-box { background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 22px; margin: 25px 0; text-align: center; }
+    .selected-label { color: #047857; font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+    .abstract-title { color: #064e3b; font-size: 18px; font-weight: 700; line-height: 1.5; margin: 0; }
+    .section-title { font-size: 20px; color: #111827; margin: 30px 0 18px; }
+    .step-title { font-size: 16px; font-weight: 700; color: #111827; margin: 25px 0 12px; }
+    .list { padding-left: 22px; margin: 10px 0 20px; }
+    .list li { font-size: 15px; line-height: 1.8; color: #4b5563; }
+    .note { background-color: #f9fafb; border-left: 4px solid #2563eb; padding: 16px 18px; margin: 20px 0; border-radius: 6px; font-size: 14px; line-height: 1.7; color: #4b5563; }
+    .button-wrapper { text-align: center; padding: 8px 0 20px; }
+    .button { display: inline-block; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-size: 15px; font-weight: 700; }
+    .primary-button { background-color: #2563eb; color: #ffffff !important; }
+    .whatsapp-button { background-color: #16a34a; color: #ffffff !important; }
+    .divider { border-top: 1px solid #e5e7eb; margin: 30px 0; }
+    .footer { background-color: #f8fafc; padding: 25px 40px; text-align: center; }
+    .footer-text { font-size: 13px; line-height: 1.6; color: #6b7280; margin: 0; }
+    .footer-title { font-size: 14px; font-weight: 700; color: #374151; margin: 0 0 6px; }
+    @media only screen and (max-width: 600px) {
+      .wrapper { padding: 20px 10px !important; }
+      .header { padding: 28px 22px !important; }
+      .header-title { font-size: 23px !important; }
+      .content { padding: 28px 22px !important; }
+      .footer { padding: 22px !important; }
+      .button { display: block !important; width: auto !important; }
+    }
+  </style>
+</head>
+<body>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td class="wrapper" align="center">
+    <table role="presentation" class="container" width="100%" cellpadding="0" cellspacing="0">
+      <tr><td class="header">
+        <div style="color:#ffffff; font-size:14px; font-weight:700; letter-spacing:2px; margin-bottom:14px;">GLOBAL HEALTH CONCLAVE</div>
+        <h1 class="header-title">Congratulations!</h1>
+        <p class="header-subtitle">Your abstract has been selected for presentation</p>
+      </td></tr>
+      <tr><td class="content">
+        <p class="greeting">Dear <strong>{{name}}</strong>,</p>
+        <p class="text">Thank you for your interest in presenting at the <strong>Global Health Conclave (GHC)</strong>. We received an excellent and highly competitive set of submissions, and each abstract was carefully evaluated based on innovation, relevance, and academic merit.</p>
+        <div class="selected-box"><div class="selected-label">Abstract Selected</div><p class="abstract-title">&ldquo;{{abstractTitle}}&rdquo;</p></div>
+        <p class="text">We are pleased to inform you that your poster has been <strong>SELECTED for presentation</strong> at the Global Health Conclave.</p>
+        <p class="text">We appreciate the quality of your work and look forward to seeing your poster and welcoming your active participation at GHC.</p>
+        <h2 class="section-title">Next Steps</h2>
+        <h3 class="step-title">1. Confirm Participation for Selected Abstracts</h3>
+        <p class="text">To confirm your participation, please complete the required confirmation process using the secure link below:</p>
+        <div class="button-wrapper"><a href="{{participationLink}}" class="button primary-button" target="_blank">Confirm Your Participation</a></div>
+        <p class="text">This confirmation helps the Scientific Committee coordinate:</p>
+        <ul class="list"><li>Conference participation</li><li>Scientific poster presentation planning</li><li>Presenter communication and schedule updates</li><li>Food and accommodation coordination, where applicable</li></ul>
+        <div class="note"><strong>Important:</strong> The Medical Student Hands-On Workshop is not included in the abstract presentation registration.<br><br>Workshop access is free for eligible GAIMS Elite Members. If you are not an Elite Member, you may need to purchase a GAIMS Elite Membership to access the workshop.</div>
+        <h3 class="step-title">2. Join the GHC Abstract WhatsApp Group</h3>
+        <p class="text">Please join the official GHC Abstract WhatsApp Group to receive important updates regarding abstract presentations, poster presentation instructions, scientific committee announcements, schedules, deadlines, and other abstract-related updates.</p>
+        <div class="button-wrapper"><a href="{{whatsappGroupLink}}" class="button whatsapp-button" target="_blank">Join GHC Abstract WhatsApp Group</a></div>
+        <div class="divider"></div>
+        <p class="text">If the confirmation button does not open, use this link:<br><a href="{{participationLink}}" style="color:#2563eb;">{{participationLink}}</a></p>
+        <p class="text">If you have any questions or require further assistance, please feel free to reach out to the GHC Scientific Committee.</p>
+        <p class="text">We look forward to your participation at the <strong>Global Health Conclave</strong>.</p>
+        <p class="text" style="margin-top:28px;">Warm regards,<br><strong>GHC Scientific Committee</strong></p>
+      </td></tr>
+      <tr><td class="footer">
+        <p class="footer-title">Global Health Conclave</p>
+        <p class="footer-text">Scientific Research Committee</p>
+        <p class="footer-text" style="margin-top:10px;">This is an automated email. Please do not reply directly unless instructed by the GHC team.</p>
+      </td></tr>
+    </table>
+  </td></tr></table>
 </body>
 </html>`,
     ]
@@ -3354,7 +3405,7 @@ const seedResearch = async () => {
   await pool.query(
     `INSERT INTO email_templates (template_key, subject, body, is_active)
      VALUES (?, ?, ?, 1)
-     ON DUPLICATE KEY UPDATE subject = VALUES(subject), body = VALUES(body), is_active = 1`,
+     ON DUPLICATE KEY UPDATE is_active = is_active`,
     [
       'abstract_rejected',
       'Update on Your GHC 2026 Abstract Submission',
@@ -3624,7 +3675,7 @@ const seedAwardNominationData = async () => {
   await pool.query(
     `INSERT INTO email_templates (template_key, subject, body, is_active)
      VALUES (?, ?, ?, 1)
-     ON DUPLICATE KEY UPDATE subject = VALUES(subject), body = VALUES(body), is_active = 1`,
+     ON DUPLICATE KEY UPDATE is_active = is_active`,
     [
       'abstract_revision_required',
       'Revision Requested for {{abstractTitle}}',
@@ -3640,7 +3691,11 @@ const seedAwardNominationData = async () => {
   <p style="text-align: center; margin: 28px 0;">
     <a href="{{revisionLink}}" style="background: #173B8F; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Revise Abstract</a>
   </p>
+  <p style="text-align: center; margin: 0 0 24px;">
+    <a href="{{whatsappGroupLink}}" style="background: #25D366; color: #062b14; padding: 11px 22px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Join the Abstract WhatsApp Group</a>
+  </p>
   <p style="font-size: 12px; color: #64748b;">If the button does not work, visit: <a href="{{revisionLink}}">{{revisionLink}}</a></p>
+  <p style="font-size: 12px; color: #64748b;">WhatsApp group: <a href="{{whatsappGroupLink}}">{{whatsappGroupLink}}</a></p>
   <p style="font-size: 12px; color: #64748b;">Need help? Contact <a href="mailto:{{contactEmail}}">{{contactEmail}}</a>.</p>
 </div>`,
     ]

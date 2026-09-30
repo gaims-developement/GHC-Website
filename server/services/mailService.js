@@ -6,6 +6,11 @@ const { pool } = require('../config/db');
 let resend = null;
 let smtpTransporter = null;
 let smtpSignature = null;
+const RESEND_ONLY_TEMPLATE_KEYS = new Set([
+  'abstract_revision_required',
+  'abstract_accepted',
+  'abstract_rejected',
+]);
 const getResendClient = () => {
   const key = process.env.RESEND_API_KEY;
   if (!key) return null;
@@ -122,11 +127,13 @@ const formatAttachments = (attachments = []) => {
 };
 
 /**
- * Main email sending method. Prefer configured SMTP; fall back to Resend.
+ * Main email sending method. Prefer Resend when configured; use SMTP only when explicitly requested
+ * or when Resend is unavailable.
  */
-const sendMail = async ({ to, subject, html, text, attachments = [] }) => {
-  const provider = String(process.env.EMAIL_PROVIDER || '').trim().toLowerCase();
-  const useSmtp = provider === 'smtp' || (!provider && getSmtpConfig());
+const sendMail = async ({ to, subject, html, text, attachments = [], provider: providerOverride = '' }) => {
+  const provider = String(providerOverride || process.env.EMAIL_PROVIDER || '').trim().toLowerCase();
+  const hasResend = Boolean(process.env.RESEND_API_KEY);
+  const useSmtp = provider === 'smtp' || (!provider && !hasResend && getSmtpConfig());
 
   if (useSmtp) {
     const transporter = getSmtpTransporter();
@@ -240,6 +247,7 @@ const sendTemplateEmail = async (templateKey, to, variables = {}) => {
   let logId = null;
   let subject = 'No Subject';
   const recipient = Array.isArray(to) ? to.join(', ') : to;
+  const forceResend = RESEND_ONLY_TEMPLATE_KEYS.has(templateKey);
 
   try {
     const [templates] = await pool.query('SELECT * FROM email_templates WHERE template_key = ? LIMIT 1', [templateKey]);
@@ -257,6 +265,8 @@ const sendTemplateEmail = async (templateKey, to, variables = {}) => {
       subject = subject.replace(regex, value !== undefined && value !== null ? value : '');
       body = body.replace(regex, value !== undefined && value !== null ? value : '');
     }
+    subject = subject.replace(/{{[^}]+}}/g, '');
+    body = body.replace(/{{[^}]+}}/g, '');
 
     const isHtml = body.includes('<');
     const htmlBody = isHtml ? body : `<div style="font-family: sans-serif; line-height: 1.6; white-space: pre-wrap;">${body}</div>`;
@@ -273,6 +283,7 @@ const sendTemplateEmail = async (templateKey, to, variables = {}) => {
       subject,
       text: textBody,
       html: htmlBody,
+      provider: forceResend ? 'resend' : undefined,
     });
 
     await pool.query(

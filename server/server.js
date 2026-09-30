@@ -32,6 +32,8 @@ const { startCronJobs, stopCronJobs } = require('./services/cronService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const uploadsDir = path.join(__dirname, 'uploads');
+const speakerFallbackImage = path.join(__dirname, '..', 'client', 'public', 'assets', 'logos', 'ghclogo.jpeg');
 
 app.set('trust proxy', 1);
 
@@ -56,7 +58,19 @@ app.use('/api', sanitizeBody);
 app.use('/api', csrfProtection);
 app.use('/api', apiRequestLog);
 app.use('/api', trackMutations);
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(uploadsDir));
+app.get('/uploads/speakers/:filename', (req, res, next) => {
+  const filename = String(req.params.filename || '');
+
+  if (!/\.(png|jpe?g|webp|gif)$/i.test(filename)) {
+    return next();
+  }
+
+  res.set('Cache-Control', 'public, max-age=300');
+  return res.sendFile(speakerFallbackImage, (error) => {
+    if (error) next(error);
+  });
+});
 
 app.get('/', (req, res) => {
   res.json({

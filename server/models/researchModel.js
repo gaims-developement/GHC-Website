@@ -44,7 +44,7 @@ const normalize = (item) => item && ({
   updatedAt: item.updated_at,
 });
 
-const list = async ({ includeAll = false, reviewerId = null } = {}) => {
+const list = async ({ includeAll = false, reviewerId = null, limit = null, offset = 0, compact = false } = {}) => {
   let where = includeAll ? '' : "WHERE status = 'accepted'";
   const params = [];
   
@@ -52,10 +52,20 @@ const list = async ({ includeAll = false, reviewerId = null } = {}) => {
     where = "WHERE reviewer_id = ?";
     params.push(reviewerId);
   }
+
+  const fields = compact
+    ? `id, abstract_id, title, authors, corresponding_author, presenting_author, institution, email, phone, country, city_state, specialty, year_of_study, category_id, category, track, keywords, file_url, pdf_url, declaration_url, status, submission_status, final_score, review_score, review_notes, reviewer_id, award_nomination, ai_percentage, plagiarism_percentage, current_version, revision_requested_at, revision_deadline, revision_email_status, revision_last_email_sent_at, created_at, updated_at`
+    : '*';
+
+  let paginationSql = '';
+  if (limit) {
+    paginationSql = ' LIMIT ? OFFSET ?';
+    params.push(Number(limit), Number(offset || 0));
+  }
   
   const [rows] = await pool.query(
-    `SELECT * FROM abstracts ${where}
-     ORDER BY award_nomination DESC, category ASC, created_at DESC`,
+    `SELECT ${fields} FROM abstracts ${where}
+     ORDER BY award_nomination DESC, category ASC, created_at DESC${paginationSql}`,
     params
   );
   return rows.map(normalize);
@@ -255,6 +265,8 @@ const stats = async () => {
 const hashRevisionToken = (token) =>
   require('crypto').createHash('sha256').update(String(token)).digest('hex');
 
+const hashSecureToken = hashRevisionToken;
+
 const findRevisionToken = async (token) => {
   const tokenHash = hashRevisionToken(token);
   const [rows] = await pool.query(
@@ -383,6 +395,102 @@ const markRevisionEmailStatus = async (abstractId, status) => {
   );
 };
 
+const createParticipationToken = async (id, token, expires, data = {}) => {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [[abstractRow]] = !isNaN(Number(id))
+      ? await conn.query('SELECT id FROM abstracts WHERE id = ? OR abstract_id = ? LIMIT 1', [id, String(id)])
+      : await conn.query('SELECT id FROM abstracts WHERE abstract_id = ? LIMIT 1', [String(id)]);
+    if (!abstractRow) {
+      const error = new Error('Research submission not found');
+      error.code = 'ABSTRACT_NOT_FOUND';
+      throw error;
+    }
+    const abstractId = abstractRow.id;
+    await conn.query(
+      `UPDATE abstract_participation_tokens
+       SET status = 'revoked'
+       WHERE abstract_id = ? AND status = 'active' AND confirmed_at IS NULL`,
+      [abstractId]
+    );
+    await conn.query(
+      `INSERT INTO abstract_participation_tokens
+        (abstract_id, token_hash, applicant_email, expires_at, created_by, status)
+       VALUES (?, ?, ?, ?, ?, 'active')`,
+      [
+        abstractId,
+        hashSecureToken(token),
+        data.applicantEmail || null,
+        expires,
+        data.createdBy || null,
+      ]
+    );
+    await conn.commit();
+    return findById(abstractId);
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
+  }
+};
+
+const findParticipationToken = async (token) => {
+  const tokenHash = hashSecureToken(token);
+  const [rows] = await pool.query(
+    `SELECT apt.*, a.status AS abstract_status, a.abstract_id AS abstract_code, a.title, a.presenting_author, a.authors, a.institution
+     FROM abstract_participation_tokens apt
+     INNER JOIN abstracts a ON a.id = apt.abstract_id
+     WHERE apt.token_hash = ?
+     LIMIT 1`,
+    [tokenHash]
+  );
+  return rows[0] || null;
+};
+
+const confirmParticipation = async (token) => {
+  const tokenHash = hashSecureToken(token);
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [rows] = await conn.query(
+      `SELECT apt.*, a.abstract_id AS abstract_code, a.title, a.presenting_author, a.authors, a.institution
+       FROM abstract_participation_tokens apt
+       INNER JOIN abstracts a ON a.id = apt.abstract_id
+       WHERE apt.token_hash = ?
+       FOR UPDATE`,
+      [tokenHash]
+    );
+    const row = rows[0];
+    if (!row) {
+      const error = new Error('Invalid participation confirmation link.');
+      error.code = 'INVALID_TOKEN';
+      throw error;
+    }
+    if (row.confirmed_at || row.status === 'confirmed') {
+      await conn.commit();
+      return { alreadyConfirmed: true, submission: row };
+    }
+    if (row.status !== 'active' || new Date(row.expires_at) <= new Date()) {
+      const error = new Error('This participation confirmation link has expired.');
+      error.code = 'EXPIRED_TOKEN';
+      throw error;
+    }
+    await conn.query(
+      "UPDATE abstract_participation_tokens SET status = 'confirmed', confirmed_at = NOW() WHERE id = ?",
+      [row.id]
+    );
+    await conn.commit();
+    return { alreadyConfirmed: false, submission: row };
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
+  }
+};
+
 const saveRevision = async (token, data) => {
   const tokenHash = hashRevisionToken(token);
   const conn = await pool.getConnection();
@@ -475,4 +583,4 @@ const saveRevision = async (token, data) => {
   }
 };
 
-module.exports = { create, findById, findByToken, findRevisionToken, createVersion, requestRevision, saveRevision, markRevisionEmailStatus, list, review, setAward, setStatus, stats, update, updateIntegrity };
+module.exports = { create, findById, findByToken, findRevisionToken, findParticipationToken, confirmParticipation, createParticipationToken, createVersion, requestRevision, saveRevision, markRevisionEmailStatus, list, review, setAward, setStatus, stats, update, updateIntegrity };

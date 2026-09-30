@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, Globe2, Users, Calendar, MapPin, ExternalLink, ChevronRight, Play } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { GHC_LOGO_PATH } from '../config/branding'
 import '../home-redesign.css'
 
 const registrationUrl = 'https://mc.clirnet.com/mastercast/connect/D0921-Conclave-1'
@@ -71,7 +72,7 @@ export default function Home() {
             {/* Dual Brand Logos: GHC 2026 & GAIMS */}
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(12px)', padding: '6px 14px', borderRadius: '16px', border: '1px solid var(--c-border)', boxShadow: '0 4px 16px rgba(16,24,40,0.04)' }}>
-                <img src="/assets/logos/ghclogo.jpeg" alt="GHC Logo" style={{ width: '40px', height: '40px', borderRadius: '10px', objectFit: 'cover' }} />
+                <img src={GHC_LOGO_PATH} alt="GHC Logo" style={{ width: '40px', height: '40px', borderRadius: '10px', objectFit: 'cover' }} />
                 <div>
                   <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--c-deep-navy)', lineHeight: 1.2 }}>GHC 2026</div>
                   <div style={{ fontSize: '0.65rem', color: 'var(--c-gaims-blue)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Global Healthcare Conclave</div>

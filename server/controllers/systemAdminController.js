@@ -165,6 +165,11 @@ const emailMonitoring = asyncHandler(async (_req, res) => {
     ORDER BY created_at DESC, id DESC
     LIMIT 60
   `);
+  const [newsletterSubscribers] = await pool.query(`
+    SELECT id, email, status, subscribed_at, updated_at
+    FROM newsletter_subscribers
+    ORDER BY subscribed_at DESC, id DESC
+  `);
 
   res.json({
     summary: {
@@ -174,6 +179,7 @@ const emailMonitoring = asyncHandler(async (_req, res) => {
     },
     configured: Boolean(process.env.SMTP_HOST || process.env.RESEND_API_KEY),
     provider: process.env.SMTP_HOST ? 'smtp' : (process.env.RESEND_API_KEY ? 'resend' : null),
+    newsletterSubscribers,
     logs,
   });
 });

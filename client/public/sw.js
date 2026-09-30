@@ -3,7 +3,12 @@ const CORE_ASSETS = [
   "/",
   "/register",
   "/offline.html",
-  "/favicon.svg",
+  "/ghc%20favicon/favicon.ico",
+  "/ghc%20favicon/favicon-32x32.png",
+  "/ghc%20favicon/favicon-16x16.png",
+  "/ghc%20favicon/apple-touch-icon.png",
+  "/ghc%20favicon/android-chrome-192x192.png",
+  "/ghc%20favicon/android-chrome-512x512.png",
   "/manifest.webmanifest"
 ];
 

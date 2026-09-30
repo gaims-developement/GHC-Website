@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { AlertTriangle, Plus, Search, Trash2, X } from "lucide-react";
 import WorkshopCard from "../components/workshops/WorkshopCard";
 import WorkshopForm from "../components/workshops/WorkshopForm";
 import WorkshopTable from "../components/workshops/WorkshopTable";
@@ -12,6 +12,9 @@ function Workshops({ api }) {
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   const loadWorkshops = useCallback(() => {
     api.get("/api/workshops?admin=1").then((response) => setWorkshops(response.data.workshops || []));
@@ -71,10 +74,30 @@ function Workshops({ api }) {
     loadWorkshops();
   };
 
-  const deleteWorkshop = async (workshop) => {
-    if (!window.confirm(`Delete ${workshop.title}?`)) return;
-    await api.delete(`/api/workshops/${workshop.id}`);
-    loadWorkshops();
+  const requestDeleteWorkshop = (workshop) => {
+    setDeleteTarget(workshop);
+    setDeleteError("");
+  };
+
+  const cancelDeleteWorkshop = () => {
+    if (deleteBusy) return;
+    setDeleteTarget(null);
+    setDeleteError("");
+  };
+
+  const confirmDeleteWorkshop = async () => {
+    if (!deleteTarget?.id) return;
+    setDeleteBusy(true);
+    setDeleteError("");
+    try {
+      await api.delete(`/api/workshops/${deleteTarget.id}`);
+      setDeleteTarget(null);
+      loadWorkshops();
+    } catch (err) {
+      setDeleteError(err.response?.data?.message || err.response?.data?.error || "Unable to delete this workshop right now.");
+    } finally {
+      setDeleteBusy(false);
+    }
   };
 
   const publishWorkshop = async (workshop) => {
@@ -134,12 +157,49 @@ function Workshops({ api }) {
         <WorkshopTable
           workshops={filteredWorkshops}
           onClose={closeWorkshop}
-          onDelete={deleteWorkshop}
+          onDelete={requestDeleteWorkshop}
           onEdit={openForm}
           onFeature={toggleFeature}
           onPublish={publishWorkshop}
         />
       </section>
+
+      {deleteTarget && (
+        <div className="admin-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="delete-workshop-title">
+          <section className="admin-modal workshop-delete-modal">
+            <button className="admin-modal-close" type="button" aria-label="Close delete confirmation" onClick={cancelDeleteWorkshop} disabled={deleteBusy}>
+              <X size={17} />
+            </button>
+
+            <div className="workshop-delete-icon">
+              <AlertTriangle size={24} />
+            </div>
+
+            <p className="admin-eyebrow">Delete workshop</p>
+            <h2 id="delete-workshop-title">Remove this workshop?</h2>
+            <p className="admin-muted">
+              This will permanently delete <strong>{deleteTarget.title}</strong> from the CMS and public workshop listings.
+            </p>
+
+            <div className="workshop-delete-summary">
+              <span>{deleteTarget.workshopType || "Workshop"}</span>
+              <strong>{deleteTarget.title}</strong>
+              <small>{deleteTarget.venue || "No venue set"} · {deleteTarget.capacity || 0} seats</small>
+            </div>
+
+            {deleteError && <div className="admin-inline-error">{deleteError}</div>}
+
+            <div className="workshop-delete-actions">
+              <button className="admin-secondary-button" type="button" onClick={cancelDeleteWorkshop} disabled={deleteBusy}>
+                Keep workshop
+              </button>
+              <button className="admin-danger-button" type="button" onClick={confirmDeleteWorkshop} disabled={deleteBusy}>
+                <Trash2 size={17} /> {deleteBusy ? "Deleting..." : "Delete workshop"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

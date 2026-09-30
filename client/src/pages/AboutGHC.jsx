@@ -316,9 +316,9 @@ export default function AboutGHC() {
               Secure your spot at GHC 2026. Limited seats available across all delegate tiers.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <Link to="/register" className="btn-premium" style={{ background: 'white', color: 'var(--c-deep-navy)' }}>
+              <a href="https://mc.clirnet.com/mastercast/connect/D0921-Conclave-1" target="_blank" rel="noopener noreferrer" className="btn-premium" style={{ background: 'white', color: 'var(--c-deep-navy)' }}>
                 Register Now
-              </Link>
+              </a>
               <Link to="/partner" className="btn-outline-premium" style={{ color: 'white', borderColor: 'rgba(255,255,255,0.4)' }}>
                 Become a Partner
               </Link>

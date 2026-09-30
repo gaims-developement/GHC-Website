@@ -7,6 +7,7 @@ import Lenis from "lenis";
 import { useLocation, Link } from "react-router-dom";
 import { buildEventSchema, findSeoEntry, mergeSeoEntry, setPageSeo } from "./utils/seo";
 import { apiUrl } from "./config/api";
+import { GHC_FAVICON_PATH, GHC_LOGO_PATH } from "./config/branding";
 import MobileRadialNav from "./components/MobileRadialNav";
 import GlobeCanvas from "./components/GlobeCanvas";
 import { createWorkshopSlug } from "./data/workshops";
@@ -62,9 +63,9 @@ gsap.registerPlugin(ScrollTrigger);
 const AdminApp = lazy(() => import("./admin/AdminApp"));
 const Spline = lazy(() => import("@splinetool/react-spline"));
 const Venue = lazy(() => import("./pages/Venue"));
-const Register = lazy(() => import("./pages/Register"));
 const AbstractRegister = lazy(() => import("./pages/AbstractRegister"));
 const AbstractRevision = lazy(() => import("./pages/AbstractRevision"));
+const AbstractParticipationConfirm = lazy(() => import("./pages/AbstractParticipationConfirm"));
 const PartnershipPortal = lazy(() => import("./pages/PartnershipPortal"));
 const WorkshopDetail = lazy(() => import("./pages/WorkshopDetail"));
 const WorkshopRegister = lazy(() => import("./pages/WorkshopRegister"));
@@ -125,17 +126,28 @@ const scheduleDays = [
   { key: "day3", title: "Conference Day 3", status: "November 24, 2026", subtitle: "Roundtables · Networking · Closing" },
 ];
 
-const partnerGroups = {
-  Sponsors: [{ name: "AAPI", logo: "/assets/sponsors/aapi.png" }],
-  "Digital Partner": [{ name: "Clirnet", logo: "/assets/sponsors/clirnet.png" }],
-  "Medical Education": [{ name: "Uworld", logo: "/assets/sponsors/uworld.png" }],
-};
-
 const heroTitle = "Global Healthcare Conclave 2026";
 const defaultHeroDescription = "Reimagining Healthcare Beyond Borders through policy, research, clinical excellence and responsible innovation.";
 const defaultHeroButtonText = "Register Now";
 const registrationUrl = "https://mc.clirnet.com/mastercast/connect/D0921-Conclave-1";
 const defaultHeroLink = registrationUrl;
+
+function RegistrationRedirect() {
+  useEffect(() => {
+    window.location.replace(registrationUrl);
+  }, []);
+
+  return (
+    <div className="min-h-screen grid place-items-center bg-white px-6 text-center text-[#081B33]">
+      <div>
+        <p className="font-bold mb-3">Redirecting to registration...</p>
+        <a href={registrationUrl} className="text-[#173B8F] font-semibold underline">
+          Open registration
+        </a>
+      </div>
+    </div>
+  );
+}
 // If the globe model still appears small inside the fixed container, move the
 // camera closer or scale the model up in the source Spline scene.
 const splineGlobeScene = import.meta.env.VITE_SPLINE_GLOBE_SCENE || "https://prod.spline.design/hBZIW8l6bSsFsHvV/scene.splinecode";
@@ -180,7 +192,7 @@ function Navbar() {
       <nav className="mx-auto flex max-w-[1400px] items-center justify-between pl-4 pr-3 py-2 sm:pl-5 sm:pr-3 bg-white/95 backdrop-blur-md rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.08)] border border-white/60">
         <a href="/" className="flex items-center gap-3" aria-label="Global Healthcare Conclave home">
           <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-gray-100 bg-white">
-            <img src="/assets/logos/ghclogo.jpeg" alt="GHC Logo" className="h-full w-full object-cover scale-110" />
+            <img src={GHC_FAVICON_PATH} alt="GHC Logo" className="h-full w-full object-cover" />
           </span>
           <div className="flex flex-col">
             <span className="block font-['Outfit'] text-[1.1rem] leading-tight font-extrabold text-[#081B33]">GHC 2026</span>
@@ -509,7 +521,7 @@ function Hero({ banner }) {
           >
             <div className="inline-flex items-center">
               <img
-                src="/assets/logos/ghclogo.jpeg"
+                src={GHC_LOGO_PATH}
                 alt="GHC Logo"
                 className="h-20 w-20 sm:h-24 sm:w-24 object-contain"
               />
@@ -1354,46 +1366,48 @@ function GHCTimeline() {
 
   return (
     <section id="ghc-timeline" className="schedule-section section-shell reveal-section bg-white py-24">
-      <div className="schedule-heading">
-        <div>
-          <h2 className="text-[#101828]">Schedule</h2>
-          <p className="text-[#475467]">Global Healthcare Conclave 2026</p>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <div className="schedule-heading">
+          <div>
+            <h2 className="text-[#101828]">Schedule</h2>
+            <p className="text-[#475467]">Global Healthcare Conclave 2026</p>
+          </div>
+          <div className="schedule-heading-actions">
+            <span>New Delhi</span>
+            {isAdmin && (
+              <button type="button" aria-label="Open schedule admin" onClick={() => setAdminOpen(true)}>
+                <Settings className="h-4 w-4" />
+              </button>
+            )}
+            <a href="/schedule" className="bg-[#e244b7] text-white px-5 py-2.5 rounded-full font-bold text-sm hover:bg-[#c9369e] transition-colors ml-4 shadow-sm inline-flex items-center gap-2">See full schedule <ArrowRight className="w-4 h-4" /></a>
+          </div>
         </div>
-        <div className="schedule-heading-actions">
-          <span>New Delhi</span>
-          {isAdmin && (
-            <button type="button" aria-label="Open schedule admin" onClick={() => setAdminOpen(true)}>
-              <Settings className="h-4 w-4" />
-            </button>
-          )}
-          <a href="/schedule" className="bg-[#e244b7] text-white px-5 py-2.5 rounded-full font-bold text-sm hover:bg-[#c9369e] transition-colors ml-4 shadow-sm inline-flex items-center gap-2">See full schedule <ArrowRight className="w-4 h-4" /></a>
+        <div className="schedule-card-stack">
+          {phases.map((phase) => (
+            <SchedulePhaseCard
+              key={phase.key}
+              phase={phase}
+              open={Boolean(openCards[phase.key])}
+              onToggle={() => setOpenCards((current) => ({ ...current, [phase.key]: !current[phase.key] }))}
+            />
+          ))}
         </div>
-      </div>
-      <div className="schedule-card-stack">
-        {phases.map((phase) => (
-          <SchedulePhaseCard
-            key={phase.key}
-            phase={phase}
-            open={Boolean(openCards[phase.key])}
-            onToggle={() => setOpenCards((current) => ({ ...current, [phase.key]: !current[phase.key] }))}
+        {adminOpen && (
+          <ScheduleAdminPanel
+            activityForm={activityForm}
+            dayActivities={dayActivities}
+            editingDay={editingDay}
+            editingIndex={editingIndex}
+            onChangeForm={setActivityForm}
+            onClose={() => setAdminOpen(false)}
+            onDelete={deleteActivity}
+            onEdit={editActivity}
+            onReset={resetActivityForm}
+            onSetDay={setEditingDay}
+            onSubmit={submitActivity}
           />
-        ))}
+        )}
       </div>
-      {adminOpen && (
-        <ScheduleAdminPanel
-          activityForm={activityForm}
-          dayActivities={dayActivities}
-          editingDay={editingDay}
-          editingIndex={editingIndex}
-          onChangeForm={setActivityForm}
-          onClose={() => setAdminOpen(false)}
-          onDelete={deleteActivity}
-          onEdit={editActivity}
-          onReset={resetActivityForm}
-          onSetDay={setEditingDay}
-          onSubmit={submitActivity}
-        />
-      )}
     </section>
   );
 }
@@ -2086,17 +2100,16 @@ function VenueSection() {
 }
 
 function PartnerMarquee({ partners = [] }) {
-  const hasPartnerApiData = Array.isArray(partners) && partners.length > 0;
-  const marqueeItems = hasPartnerApiData
+  const marqueeItems = Array.isArray(partners)
     ? partners.map((partner) => ({
         id: partner.id,
-        category: partner.tier || "Partner",
-        name: partner.name,
+        category: partner.tier || partner.tierName || "Partner",
+        name: partner.name || partner.companyName,
         type: "logo",
-        logo: partner.logo,
+        logo: partner.logo || partner.logoUrl,
         website: partner.website,
-      }))
-    : Object.entries(partnerGroups).flatMap(([category, partners]) => partners.map((p) => ({ category, name: p.name, logo: p.logo, type: "logo" })));
+      })).filter((partner) => partner.name)
+    : [];
 
   const groupedItems = marqueeItems.reduce((acc, item) => {
     const cat = item.category || "Sponsor";
@@ -2125,24 +2138,25 @@ function PartnerMarquee({ partners = [] }) {
           </div>
         </div>
 
-        <div className="flex flex-wrap justify-center items-center gap-16 md:gap-32 mt-16">
-          {marqueeItems.map((item, index) => {
+        {marqueeItems.length > 0 ? (
+          <div className="flex flex-wrap justify-center items-center gap-16 md:gap-32 mt-16">
+            {marqueeItems.map((item, index) => {
             const logoUrl = item.logo?.startsWith("/uploads") ? apiUrl(item.logo) : item.logo;
             const partnerKey = item.id ? `partner-${item.id}-${index}` : `${item.category}-${item.name}-${index}`;
             
             const content = (
               <>
-                {logoUrl ? (
-                  <img 
-                    src={logoUrl} 
-                    alt={item.name} 
-                    className={`${item.name?.toLowerCase() === 'aapi' ? 'h-28 md:h-40' : 'h-20 md:h-28'} w-auto object-contain filter grayscale hover:grayscale-0 transition-all duration-300`} 
-                  />
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="text-4xl md:text-5xl font-black text-[#101828] font-['Outfit'] tracking-tighter">{item.name}</span>
-                  </div>
-                )}
+                <span className="flex h-28 w-44 items-center justify-center md:h-32 md:w-56">
+                  {logoUrl ? (
+                    <img
+                      src={logoUrl}
+                      alt={item.name}
+                      className="max-h-full max-w-full object-contain filter grayscale transition-all duration-300 group-hover:grayscale-0"
+                    />
+                  ) : (
+                    <span className="text-center text-3xl font-black text-[#101828] font-['Outfit'] tracking-tighter md:text-4xl">{item.name}</span>
+                  )}
+                </span>
                 <span className="text-sm md:text-base font-bold text-[#475467] uppercase tracking-widest">{item.name}</span>
               </>
             );
@@ -2162,8 +2176,14 @@ function PartnerMarquee({ partners = [] }) {
                 {content}
               </div>
             );
-          })}
-        </div>
+            })}
+          </div>
+        ) : (
+          <div className="mt-14 mx-auto max-w-2xl rounded-3xl border border-dashed border-gray-200 bg-white px-6 py-10 text-center shadow-[0_8px_24px_rgba(16,24,40,0.04)]">
+            <p className="font-['Outfit'] text-lg font-extrabold text-[#101828]">Sponsors will appear here soon</p>
+            <p className="mt-2 text-sm font-medium text-[#667085]">Add active sponsors in the Admin CMS to publish them on the homepage.</p>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -2283,8 +2303,8 @@ function PricingSection() {
   const isEarlyBirdActive = !earlyBirdManualOff && !timeLeft.isExpired;
 
   return (
-    <section id="pricing" className="section-shell reveal-section bg-white py-24">
-      <div className="mb-14 max-w-7xl mx-auto px-4 sm:px-6 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+    <section id="pricing" className="section-shell reveal-section bg-white py-16 sm:py-20 lg:py-24">
+      <div className="mb-9 sm:mb-11 max-w-7xl mx-auto px-4 sm:px-6 flex flex-col justify-between gap-5 md:flex-row md:items-end">
         <SectionHeading
           eyebrow="Registration Fees"
           title="Conference Passes."
@@ -2292,9 +2312,9 @@ function PricingSection() {
         />
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 sm:px-6">
+      <div className="max-w-xl lg:max-w-5xl mx-auto px-4 sm:px-6">
         <motion.article
-          className="bg-[#101828] rounded-[2.5rem] shadow-[0_20px_60px_rgba(16,24,40,0.35)] border border-gray-800 p-8 sm:p-12 flex flex-col relative overflow-hidden"
+          className="bg-[#101828] rounded-[2rem] sm:rounded-[2.2rem] shadow-[0_20px_60px_rgba(16,24,40,0.35)] border border-gray-800 p-6 sm:p-8 lg:p-8 flex flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(22rem,0.9fr)] lg:gap-x-8 relative overflow-hidden"
           whileHover={{ y: -4 }}
           transition={{ duration: 0.3 }}
         >
@@ -2303,9 +2323,9 @@ function PricingSection() {
           <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#173B8F] rounded-full blur-[100px] opacity-20 -ml-24 -mb-24 pointer-events-none" />
 
           {/* Top header row */}
-          <div className="relative z-10 flex flex-wrap items-center justify-between gap-4 mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-[#00A6A6]/20 border border-[#00A6A6]/30 text-[#00E5E5] flex items-center justify-center">
-              <Ticket className="h-7 w-7" />
+          <div className="relative z-10 flex flex-col items-center text-center gap-3 mb-5 lg:col-start-1 lg:row-start-1 lg:items-start lg:text-left">
+            <div className="w-12 h-12 rounded-2xl bg-[#00A6A6]/20 border border-[#00A6A6]/30 text-[#00E5E5] flex items-center justify-center">
+              <Ticket className="h-6 w-6" />
             </div>
             {isEarlyBirdActive ? (
               <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold tracking-wider uppercase bg-[#00A6A6]/20 text-[#00E5E5] border border-[#00A6A6]/30 shadow-[0_0_15px_rgba(0,166,166,0.25)]">
@@ -2319,21 +2339,21 @@ function PricingSection() {
           </div>
 
           {/* Card Title & Subtitle */}
-          <h3 className="relative z-10 font-['Outfit'] text-3xl sm:text-4xl font-extrabold text-white mb-3">
+          <h3 className="relative z-10 font-['Outfit'] text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white mb-2 text-center lg:col-start-1 lg:row-start-2 lg:text-left">
             Registration
           </h3>
-          <p className="relative z-10 text-gray-300 font-medium leading-relaxed mb-8 text-base sm:text-lg">
+          <p className="relative z-10 text-gray-300 font-medium leading-relaxed mb-6 text-sm sm:text-base text-center lg:col-start-1 lg:row-start-3 lg:text-left">
             {isEarlyBirdActive
               ? "Avail special early bird delegate rates before regular registration opens."
               : "Standard delegate registration passes for the Global Healthcare Conclave 2026."}
           </p>
 
           {/* Pricing items */}
-          <div className="relative z-10 flex flex-col gap-4 mb-8">
+          <div className="relative z-10 flex flex-col gap-3 mb-6 lg:col-start-1 lg:row-start-4 lg:mb-0">
             {/* GAIMS Elite Member */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-5 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-[#00A6A6]/40 transition-colors">
+            <div className="flex flex-col items-start justify-between gap-2 p-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-[#00A6A6]/40 transition-colors">
               <div>
-                <span className="text-white font-['Outfit'] text-lg font-bold block">
+                <span className="text-white font-['Outfit'] text-base font-bold block">
                   GAIMS Elite member
                 </span>
                 <span className="text-xs text-gray-400 font-medium">Verified GAIMS Members</span>
@@ -2356,9 +2376,9 @@ function PricingSection() {
             </div>
 
             {/* Non-Elite */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-5 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-[#00A6A6]/40 transition-colors">
+            <div className="flex flex-col items-start justify-between gap-2 p-4 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-[#00A6A6]/40 transition-colors">
               <div>
-                <span className="text-white font-['Outfit'] text-lg font-bold block">
+                <span className="text-white font-['Outfit'] text-base font-bold block">
                   Non Elite member
                 </span>
                 <span className="text-xs text-gray-400 font-medium">Standard / Non-Member Delegates</span>
@@ -2382,40 +2402,40 @@ function PricingSection() {
           </div>
 
           {/* Countdown timer / status box */}
-          <div className="relative z-10 mb-8">
+          <div className="relative z-10 mb-6 lg:col-start-2 lg:row-start-1 lg:row-span-4 lg:self-center lg:mb-0 lg:border-l lg:border-white/10 lg:pl-8">
             {isEarlyBirdActive ? (
-              <div className="p-6 rounded-2xl bg-black/40 border border-[#00A6A6]/30 text-center relative overflow-hidden shadow-inner">
-                <div className="flex items-center justify-center gap-2 text-xs uppercase tracking-widest font-bold text-[#00E5E5] mb-4">
+              <div className="p-4 sm:p-5 rounded-2xl bg-black/40 border border-[#00A6A6]/30 text-center relative overflow-hidden shadow-inner">
+                <div className="flex items-center justify-center gap-2 text-[11px] uppercase tracking-widest font-bold text-[#00E5E5] mb-3">
                   <Clock3 className="h-4 w-4 animate-pulse" />
                   <span>Early Bird Ends In</span>
                 </div>
-                <div className="grid grid-cols-4 gap-2 sm:gap-4 max-w-sm mx-auto">
-                  <div className="p-3 rounded-xl bg-white/[0.05] border border-white/[0.08]">
-                    <div className="font-['Outfit'] text-2xl sm:text-3xl font-extrabold text-white">
+                <div className="grid grid-cols-4 gap-2 max-w-xs mx-auto">
+                  <div className="p-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08]">
+                    <div className="font-['Outfit'] text-xl sm:text-2xl font-extrabold text-white">
                       {String(timeLeft.days).padStart(2, "0")}
                     </div>
                     <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-400 mt-1">
                       Days
                     </div>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/[0.05] border border-white/[0.08]">
-                    <div className="font-['Outfit'] text-2xl sm:text-3xl font-extrabold text-white">
+                  <div className="p-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08]">
+                    <div className="font-['Outfit'] text-xl sm:text-2xl font-extrabold text-white">
                       {String(timeLeft.hours).padStart(2, "0")}
                     </div>
                     <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-400 mt-1">
                       Hours
                     </div>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/[0.05] border border-white/[0.08]">
-                    <div className="font-['Outfit'] text-2xl sm:text-3xl font-extrabold text-white">
+                  <div className="p-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08]">
+                    <div className="font-['Outfit'] text-xl sm:text-2xl font-extrabold text-white">
                       {String(timeLeft.minutes).padStart(2, "0")}
                     </div>
                     <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-400 mt-1">
                       Mins
                     </div>
                   </div>
-                  <div className="p-3 rounded-xl bg-white/[0.05] border border-white/[0.08]">
-                    <div className="font-['Outfit'] text-2xl sm:text-3xl font-extrabold text-[#00E5E5]">
+                  <div className="p-2.5 rounded-xl bg-white/[0.05] border border-white/[0.08]">
+                    <div className="font-['Outfit'] text-xl sm:text-2xl font-extrabold text-[#00E5E5]">
                       {String(timeLeft.seconds).padStart(2, "0")}
                     </div>
                     <div className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-[#00E5E5]/80 mt-1">
@@ -2423,7 +2443,7 @@ function PricingSection() {
                     </div>
                   </div>
                 </div>
-                <p className="text-xs text-gray-400 mt-4 font-medium">
+                <p className="text-[11px] text-gray-400 mt-3 font-medium">
                   Ends on 5th October 2026 at 11:59 PM IST
                 </p>
               </div>
@@ -2441,12 +2461,12 @@ function PricingSection() {
           </div>
 
           {/* Register Now Button */}
-          <div className="relative z-10">
+          <div className="relative z-10 lg:col-start-2 lg:row-start-5 lg:border-l lg:border-white/10 lg:pl-8">
             <a
               href={registrationUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full inline-flex items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-[#00A6A6] to-[#173B8F] hover:from-[#00b8b8] hover:to-[#1e48ad] px-8 py-4 font-['Inter'] text-base font-extrabold text-white shadow-[0_8px_25px_rgba(0,166,166,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(0,166,166,0.5)] active:translate-y-0"
+              className="w-full inline-flex items-center justify-center gap-2.5 rounded-full bg-gradient-to-r from-[#00A6A6] to-[#173B8F] hover:from-[#00b8b8] hover:to-[#1e48ad] px-8 py-3.5 font-['Inter'] text-base font-extrabold text-white shadow-[0_8px_25px_rgba(0,166,166,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_32px_rgba(0,166,166,0.5)] active:translate-y-0"
             >
               Register Now <ArrowRight className="h-5 w-5" />
             </a>
@@ -2496,6 +2516,13 @@ const routeSeoDefaults = {
     description: "Review and update your submitted abstract for the Global Healthcare Conclave 2026 research program.",
     keywords: "abstract revision, GHC 2026 abstract, research update, poster revision",
     path: "/abstract-revision",
+    event: true,
+  },
+  "abstract-confirmation": {
+    title: "Confirm Abstract Participation - Global Healthcare Conclave 2026",
+    description: "Confirm your accepted abstract presentation participation for the Global Healthcare Conclave 2026 research program.",
+    keywords: "abstract confirmation, GHC 2026 abstract, research presentation confirmation",
+    path: "/abstract/confirm",
     event: true,
   },
   nominations: {
@@ -2599,6 +2626,7 @@ const routeSeoPageKeys = {
   register: ["register", "registration", "checkout"],
   "abstract-registration": ["abstract", "abstract-registration", "submit-abstract", "research"],
   "abstract-revision": ["abstract-revision"],
+  "abstract-confirmation": ["abstract-confirmation"],
   nominations: ["nominations", "awards", "nomination"],
   committees: ["committees", "committee"],
   venue: ["venue", "location", "travel"],
@@ -2626,6 +2654,7 @@ function App() {
   const isRegisterRoute = location.pathname.startsWith("/register");
   const isAbstractRoute = location.pathname.startsWith("/abstract-registration");
   const isAbstractRevisionRoute = location.pathname.startsWith("/abstract/revise") || location.pathname.startsWith("/abstract-revision");
+  const isAbstractParticipationRoute = location.pathname.startsWith("/abstract/confirm");
   const isPartnerRoute = location.pathname.startsWith("/partners") || location.pathname.startsWith("/partnership");
   const isWorkshopDetailRoute = location.pathname.startsWith("/workshops/") && location.pathname !== "/workshops/" && !location.pathname.endsWith("/apply");
   const isGooglePayTestRoute = location.pathname.startsWith("/google-pay-test");
@@ -2667,6 +2696,8 @@ function App() {
       isAdminRoute ||
       isRegisterRoute ||
       isAbstractRoute ||
+      isAbstractRevisionRoute ||
+      isAbstractParticipationRoute ||
       isPartnerRoute ||
       isWorkshopDetailRoute ||
       isWorkshopRegisterRoute ||
@@ -2684,8 +2715,8 @@ function App() {
     const fetchHomepageCms = async () => {
       try {
         const [syncResponse, partnersResponse] = await Promise.all([
-          axios.get(apiUrl(publicMarketingSyncEndpoint)),
-          axios.get(apiUrl("/api/partners")),
+          axios.get(apiUrl(publicMarketingSyncEndpoint)).catch(() => ({ data: {} })),
+          axios.get(apiUrl("/api/partners")).catch(() => ({ data: { partners: [] } })),
         ]);
 
         if (!active) return;
@@ -2698,7 +2729,25 @@ function App() {
           notifications: syncData.notifications || [],
           seo: syncData.seo || [],
         });
-        setPartners(partnersResponse.data?.partners || []);
+        const seenSponsors = new Set();
+        const cmsSponsors = (partnersResponse.data?.partners || [])
+          .map((partner) => ({
+            id: `partner-${partner.id}`,
+            sourceId: partner.id,
+            name: partner.name,
+            logo: partner.logo,
+            website: partner.website,
+            tier: partner.tier || "Partner",
+            displayOrder: Number(partner.displayOrder || 0),
+          }))
+          .filter((partner) => {
+            const key = `${String(partner.name || "").trim().toLowerCase()}|${String(partner.website || "").trim().toLowerCase()}`;
+            if (!key.trim() || seenSponsors.has(key)) return false;
+            seenSponsors.add(key);
+            return true;
+          })
+          .sort((a, b) => (Number(a.displayOrder || 999) - Number(b.displayOrder || 999)) || String(a.name).localeCompare(String(b.name)));
+        setPartners(cmsSponsors);
       } catch (error) {
         console.warn("Failed to load homepage CMS data", error);
       }
@@ -2711,6 +2760,8 @@ function App() {
     };
   }, [
     isAbstractRoute,
+    isAbstractRevisionRoute,
+    isAbstractParticipationRoute,
     isAdminRoute,
     isDynamicFormRoute,
     isGooglePayTestRoute,
@@ -2743,6 +2794,10 @@ function App() {
       key = "abstract-revision";
       defaults = routeSeoDefaults["abstract-revision"];
       path = "/abstract-revision";
+    } else if (isAbstractParticipationRoute) {
+      key = "abstract-confirmation";
+      defaults = routeSeoDefaults["abstract-confirmation"];
+      path = "/abstract/confirm";
     } else if (isAbstractRoute) {
       key = "abstract-registration";
       defaults = routeSeoDefaults["abstract-registration"];
@@ -2862,7 +2917,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (isAdminRoute || isJudgeRoute || isRegisterRoute || isAbstractRoute || isAbstractRevisionRoute || isPartnerRoute || isWorkshopDetailRoute || isWorkshopRegisterRoute || isGooglePayTestRoute || isVerifyCertificateRoute || isDynamicFormRoute || isNominationsRoute || isVisaRoute) {
+    if (isAdminRoute || isJudgeRoute || isRegisterRoute || isAbstractRoute || isAbstractRevisionRoute || isAbstractParticipationRoute || isPartnerRoute || isWorkshopDetailRoute || isWorkshopRegisterRoute || isGooglePayTestRoute || isVerifyCertificateRoute || isDynamicFormRoute || isNominationsRoute || isVisaRoute) {
       return undefined;
     }
 
@@ -2950,7 +3005,7 @@ function App() {
       lenis.destroy();
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
     };
-  }, [isAbstractRoute, isAbstractRevisionRoute, isAdminRoute, isDynamicFormRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isVerifyCertificateRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute]);
+  }, [isAbstractRoute, isAbstractRevisionRoute, isAbstractParticipationRoute, isAdminRoute, isDynamicFormRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isVerifyCertificateRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute]);
 
   let routeContent;
 
@@ -2981,7 +3036,7 @@ function App() {
   } else if (isRegisterRoute) {
     routeContent = (
       <>
-        <Suspense fallback={<div className="admin-loading">Loading checkout...</div>}><Register /></Suspense>
+        <RegistrationRedirect />
         <MobileRadialNav />
       </>
     );
@@ -2998,6 +3053,17 @@ function App() {
         <Navbar />
         <main className="bg-white">
           <Suspense fallback={<div className="admin-loading">Loading abstract revision...</div>}><AbstractRevision /></Suspense>
+        </main>
+        <Footer />
+        <MobileRadialNav />
+      </div>
+    );
+  } else if (isAbstractParticipationRoute) {
+    routeContent = (
+      <div ref={appRef} className="min-h-screen overflow-hidden bg-white text-[#081B33]">
+        <Navbar />
+        <main className="bg-white">
+          <Suspense fallback={<div className="admin-loading">Loading confirmation...</div>}><AbstractParticipationConfirm /></Suspense>
         </main>
         <Footer />
         <MobileRadialNav />

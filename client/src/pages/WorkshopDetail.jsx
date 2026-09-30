@@ -24,6 +24,7 @@ import {
 import { apiUrl } from "../config/api";
 import {
   categoryColors,
+  createWorkshopSlug,
   formatWorkshopDate,
   getWorkshopBySlug,
   getWorkshopTimeRange,
@@ -200,7 +201,8 @@ export default function WorkshopDetail() {
   const isFull = capacity > 0 && remaining <= 0;
   const isRegistrationOpen = workshop.isRegistrationOpen !== false;
   const canApply = isRegistrationOpen && !isFull;
-  const applyHref = `/register/workshop/${workshop.id || workshop.slug || rawSlug}`;
+  const applySlug = workshop.slug || createWorkshopSlug(workshop.title) || rawSlug || workshop.id;
+  const applyHref = `/workshops/${encodeURIComponent(applySlug)}/apply`;
   const displayImage = resolveImage(workshop.imageUrl || workshop.image);
 
   const faqsList = useMemo(() => {

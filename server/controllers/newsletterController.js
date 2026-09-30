@@ -23,6 +23,17 @@ const subscribe = async (req, res) => {
   }
 };
 
+const listSubscribers = async (_req, res) => {
+  try {
+    const subscribers = await newsletterModel.listSubscribers();
+    res.status(200).json({ subscribers });
+  } catch (error) {
+    console.error('Error loading newsletter subscribers:', error);
+    res.status(500).json({ error: 'Failed to load newsletter subscribers.' });
+  }
+};
+
 module.exports = {
   subscribe,
+  listSubscribers,
 };

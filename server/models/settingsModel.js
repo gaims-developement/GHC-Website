@@ -14,6 +14,8 @@ const defaultSettings = {
   registration: {
     registrationOpen: true,
     abstractSubmissionOpen: true,
+    abstractWhatsappGroupUrl: 'https://chat.whatsapp.com/KX8RTHC6qCS5AwoDgXxq1D',
+    abstractWhatsappGroupText: 'Join the official GHC Abstract WhatsApp Group for important updates regarding abstract review, revisions, presentations and announcements.',
   },
   socialLinks: {
     instagram: '',

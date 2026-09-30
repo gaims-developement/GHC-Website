@@ -131,6 +131,7 @@ const pages = {
   scientific: (props) => <Scientific {...props} initialTab="overview" />,
   "scientific-team": (props) => <Scientific {...props} initialTab="team" />,
   "abstract-report": (props) => <Scientific {...props} initialTab="abstract-report" />,
+  "abstract-rankings": (props) => <Scientific {...props} initialTab="rankings" />,
   abstracts: Research,
   reviewers: (props) => <ScientificDirectory {...props} type="reviewers" />,
   reviews: Reviews,
@@ -213,6 +214,8 @@ const pages = {
   system: SystemAdmin,
   "api-monitoring": (props) => <SystemAdmin {...props} initialTab="api-monitoring" />,
   "system-api-monitoring": (props) => <SystemAdmin {...props} initialTab="api-monitoring" />,
+  "system-email": (props) => <SystemDirectory {...props} type="email" />,
+  email: (props) => <SystemDirectory {...props} type="email" />,
   "system-email-templates": (props) => <SystemAdmin {...props} initialTab="email-templates" />,
   "email-templates": (props) => <SystemAdmin {...props} initialTab="email-templates" />,
 
@@ -263,6 +266,7 @@ const pageFromPath = () => {
   if (parts[1] === "scientific" && parts[2] === "reports") return "scientific-reports";
   if (parts[1] === "scientific" && parts[2] === "team") return "scientific-team";
   if (parts[1] === "scientific" && parts[2] === "abstract-report") return "abstract-report";
+  if (parts[1] === "scientific" && parts[2] === "abstract-rankings") return "abstract-rankings";
   if (parts[1] === "sponsorship" && parts[2] === "reports") return "sponsorship-reports";
   if (parts[1] === "logistics" && parts[2] === "reports") return "logistics-reports";
   if (parts[1] === "certificates" && parts[2]) return `certificate-${parts[2]}`;
@@ -398,6 +402,7 @@ function AdminApp({ initialPage = "dashboard" }) {
     const path = pageId === "dashboard" ? "/admin" : pageId === "award-nominations" ? "/admin/award-nominations" : pageId === "workshop-applications" ? "/admin/workshop-applications" : pageId === "workshop-attendance" ? "/admin/workshop-attendance" : pageId === "workshop-certificates" ? "/admin/workshop-certificates" : pageId === "workshop-reports" ? "/admin/workshop-reports" : pageId === "teams-create" ? "/admin/teams/create" : pageId === "registrations-create" ? "/admin/registrations/create" : pageId.startsWith("registration-") ? pageId.replace(/^registration-(.+)$/, "/admin/registrations/$1") : pageId === "events-create" ? "/admin/events/create" : pageId.startsWith("event-") ? pageId.replace(/^event-(.+)$/, "/admin/events/$1") : pageId === "sponsors-create" ? "/admin/sponsors/create" : pageId.startsWith("sponsor-") ? pageId.replace(/^sponsor-(.+)$/, "/admin/sponsors/$1") : pageId.startsWith("team-")
       ? pageId.replace(/^team-([^-]+)-members$/, "/admin/teams/$1/members").replace(/^team-([^-]+)-modules$/, "/admin/teams/$1/modules").replace(/^team-([^-]+)$/, "/admin/teams/$1")
       : pageId === "scientific-reports" ? "/admin/scientific/reports"
+      : pageId === "abstract-rankings" ? "/admin/scientific/abstract-rankings"
       : pageId === "sponsorship-reports" ? "/admin/sponsorship/reports"
       : pageId === "logistics-reports" ? "/admin/logistics/reports"
       : pageId.startsWith("certificate-") ? pageId.replace(/^certificate-(.+)$/, "/admin/certificates/$1")

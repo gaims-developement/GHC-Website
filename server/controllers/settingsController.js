@@ -1,5 +1,7 @@
 const { pool } = require('../config/db');
 const Settings = require('../models/settingsModel');
+
+const DEFAULT_ABSTRACT_WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/KX8RTHC6qCS5AwoDgXxq1D';
 const asyncHandler = require('../utils/asyncHandler');
 
 const toBoolean = (value) => value === true || value === 'true' || value === '1' || value === 1;
@@ -16,6 +18,8 @@ const sanitize = (body) => ({
   registration: {
     registrationOpen: toBoolean(body.registration?.registrationOpen),
     abstractSubmissionOpen: toBoolean(body.registration?.abstractSubmissionOpen),
+    abstractWhatsappGroupUrl: body.registration?.abstractWhatsappGroupUrl?.trim() || '',
+    abstractWhatsappGroupText: body.registration?.abstractWhatsappGroupText?.trim() || '',
   },
   socialLinks: {
     instagram: body.socialLinks?.instagram?.trim(),
@@ -41,6 +45,7 @@ const validate = (settings) => {
   if (!validateUrl(urls.linkedin)) return 'LinkedIn URL must start with http:// or https://';
   if (!validateUrl(urls.twitter)) return 'X/Twitter URL must start with http:// or https://';
   if (!validateUrl(urls.website)) return 'Website URL must start with http:// or https://';
+  if (!validateUrl(settings.registration.abstractWhatsappGroupUrl)) return 'Abstract WhatsApp group URL must start with http:// or https://';
 
   if (settings.conference.startDate && settings.conference.endDate && settings.conference.endDate < settings.conference.startDate) {
     return 'End date cannot be before start date';
@@ -71,6 +76,8 @@ const getPublicSettings = asyncHandler(async (_req, res) => {
     registration: {
       abstractSubmissionOpen: result.settings.registration?.abstractSubmissionOpen ?? true,
       earlyBirdManualOff,
+      abstractWhatsappGroupUrl: result.settings.registration?.abstractWhatsappGroupUrl || DEFAULT_ABSTRACT_WHATSAPP_GROUP_URL,
+      abstractWhatsappGroupText: result.settings.registration?.abstractWhatsappGroupText || '',
     },
     conference: {
       name: result.settings.conference?.name,

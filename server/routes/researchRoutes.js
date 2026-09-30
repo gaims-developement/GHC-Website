@@ -10,7 +10,9 @@ const {
 
   getSettings,
   getResearch,
+  exportAbstractRankingsCsv,
   assignedReviews,
+  listAbstractRankings,
   listAwards,
   listAwardResults,
   listCategories,
@@ -45,6 +47,8 @@ const {
   revisionRateLimiter,
   validateRevisionToken,
   submitRevision,
+  validateParticipationToken,
+  confirmParticipation,
   suspendReviewer,
   applyReinstatement,
   reinstateReviewer,
@@ -101,6 +105,8 @@ router.post('/reviewers/reinstatement-request', requireAuth, applyReinstatement)
 router.get('/reviewer/me', requireAuth, getMyReviewerProfile);
 router.get('/reviews', requireAuth, canReviewResearch, listReviews);
 router.get('/reviews/assigned', requireAuth, canReviewResearch, assignedReviews);
+router.get('/rankings', requireAuth, canManageResearch, listAbstractRankings);
+router.get('/rankings/export', requireAuth, canManageResearch, exportAbstractRankingsCsv);
 router.get('/presentation-sessions', requireAuth, canPublishProgram, listPresentationSessions);
 router.post('/presentation-sessions', requireAuth, canPublishProgram, savePresentationSession);
 router.put('/presentation-sessions/:id', requireAuth, canPublishProgram, savePresentationSession);
@@ -121,6 +127,8 @@ router.post('/:id/request-revision', requireAuth, canReviewResearch, requestRevi
 router.post('/:id/resend-revision-email', requireAuth, canReviewResearch, resendRevisionEmail);
 router.get('/revision/:token', revisionRateLimiter, validateRevisionToken);
 router.post('/revision/:token', revisionRateLimiter, upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'declaration', maxCount: 1 }]), submitRevision);
+router.get('/participation/:token', revisionRateLimiter, validateParticipationToken);
+router.post('/participation/:token', revisionRateLimiter, confirmParticipation);
 router.get('/:id', optionalAuth, getResearch);
 router.post('/', requireAuth, canManageResearch, upload.single('pdf'), createResearch);
 router.put('/:id', requireAuth, canManageResearch, upload.single('pdf'), updateResearch);

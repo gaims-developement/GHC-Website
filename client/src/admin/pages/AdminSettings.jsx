@@ -13,6 +13,8 @@ const emptySettings = {
   registration: {
     registrationOpen: false,
     abstractSubmissionOpen: false,
+    abstractWhatsappGroupUrl: "https://chat.whatsapp.com/KX8RTHC6qCS5AwoDgXxq1D",
+    abstractWhatsappGroupText: "Join the official GHC Abstract WhatsApp Group for important updates regarding abstract review, revisions, presentations and announcements.",
   },
   socialLinks: {
     instagram: "",
@@ -219,6 +221,23 @@ function AdminSettings({ api }) {
           <div className="settings-toggle-list">
             <label><input type="checkbox" checked={settings.registration.registrationOpen} onChange={(event) => setNestedValue("registration", "registrationOpen", event.target.checked)} /> Registration open</label>
           </div>
+          <label>
+            Abstract WhatsApp group URL
+            <input
+              value={settings.registration.abstractWhatsappGroupUrl || ""}
+              onChange={(event) => setNestedValue("registration", "abstractWhatsappGroupUrl", event.target.value)}
+              placeholder="Paste WhatsApp group invite URL when available"
+            />
+          </label>
+          <label>
+            Abstract WhatsApp CTA text
+            <textarea
+              rows={3}
+              value={settings.registration.abstractWhatsappGroupText || ""}
+              onChange={(event) => setNestedValue("registration", "abstractWhatsappGroupText", event.target.value)}
+              placeholder="Message shown below the WhatsApp group button"
+            />
+          </label>
         </div>
 
         <div className="admin-panel settings-section">

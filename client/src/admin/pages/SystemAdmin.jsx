@@ -4,6 +4,18 @@ import AdminCollaboration from "./AdminCollaboration";
 
 const statusClass = (value) => ["healthy", "configured"].includes(String(value).toLowerCase()) ? "paid" : "pending";
 const boolValue = (value) => value === true || value === 1;
+const istDateTimeFormatter = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "Asia/Kolkata",
+  dateStyle: "medium",
+  timeStyle: "short",
+  hour12: true,
+});
+
+const formatIstDateTime = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : `${istDateTimeFormatter.format(date)} IST`;
+};
 
 function DataTable({ columns, rows, empty = "No records found." }) {
   return (
@@ -202,7 +214,7 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
                     <tr key={alert.id}>
                       <td><span className={`status-pill ${alert.type === "critical" ? "cancelled" : "pending"}`}>{alert.type}</span></td>
                       <td><strong>{alert.title}</strong><br /><span className="admin-muted">{alert.message}</span></td>
-                      <td>{alert.created_at ? new Date(alert.created_at).toLocaleString() : "-"}</td>
+                      <td>{formatIstDateTime(alert.created_at)}</td>
                     </tr>
                   ))}
                   {!data?.securityAlerts?.length && <tr><td colSpan="3">No active security alerts.</td></tr>}
@@ -228,7 +240,7 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
                       <td>{log.user_name || "System"}</td>
                       <td><strong>{log.action}</strong></td>
                       <td>{log.module || "-"}</td>
-                      <td>{log.created_at ? new Date(log.created_at).toLocaleString() : "-"}</td>
+                      <td>{formatIstDateTime(log.created_at)}</td>
                     </tr>
                   ))}
                   {!data?.recentAuditLogs?.length && <tr><td colSpan="4">No audit records yet.</td></tr>}
@@ -263,7 +275,7 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
             { key: "path", label: "Path" },
             { key: "status_code", label: "Status" },
             { key: "duration_ms", label: "Duration", render: (row) => `${row.duration_ms || 0}ms` },
-            { key: "created_at", label: "Time", render: (row) => row.created_at ? new Date(row.created_at).toLocaleString() : "-" },
+            { key: "created_at", label: "Time (IST)", render: (row) => formatIstDateTime(row.created_at) },
           ]} rows={data.recent || []} />
         </>
       );
@@ -321,7 +333,7 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
             { key: "subject", label: "Subject" },
             { key: "status", label: "Status", render: (row) => <span className={`status-pill ${row.status === "failed" ? "cancelled" : row.status === "sent" ? "paid" : "pending"}`}>{row.status}</span> },
             { key: "error_message", label: "Error Message" },
-            { key: "sent_at", label: "Sent at", render: (row) => row.sent_at ? new Date(row.sent_at).toLocaleString() : "-" },
+            { key: "sent_at", label: "Sent at (IST)", render: (row) => formatIstDateTime(row.sent_at) },
           ]} rows={data.logs || []} />
         </>
       );
@@ -653,7 +665,7 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
 
                 <div style={{ borderTop: "1px solid #f1f5f9", paddingTop: "0.75rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
-                    Updated {tmpl.updated_at ? new Date(tmpl.updated_at).toLocaleDateString() : "recently"}
+                    Updated {tmpl.updated_at ? formatIstDateTime(tmpl.updated_at) : "recently"}
                   </span>
                   <button
                     type="button"
@@ -691,7 +703,7 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
             { key: "backup_name", label: "Name" },
             { key: "status", label: "Status" },
             { key: "file_location", label: "Location" },
-            { key: "created_at", label: "Created", render: (row) => row.created_at ? new Date(row.created_at).toLocaleString() : "-" },
+            { key: "created_at", label: "Created (IST)", render: (row) => formatIstDateTime(row.created_at) },
           ]} rows={data.backups || []} />
         </>
       );
@@ -706,7 +718,7 @@ function SystemAdmin({ api, onNavigate, initialTab = "dashboard" }) {
             { key: "ip_address", label: "IP" },
             { key: "device", label: "Device" },
             { key: "browser", label: "Browser" },
-            { key: "created_at", label: "Time", render: (row) => row.created_at ? new Date(row.created_at).toLocaleString() : "-" },
+            { key: "created_at", label: "Time (IST)", render: (row) => formatIstDateTime(row.created_at) },
           ]} rows={data.failedLogins || []} />
         </>
       );

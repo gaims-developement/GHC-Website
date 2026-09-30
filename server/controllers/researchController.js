@@ -77,6 +77,36 @@ const getPublicAppUrl = () => {
 const getRevisionContact = () =>
   process.env.SCIENTIFIC_COMMITTEE_EMAIL || process.env.CONTACT_EMAIL || 'scientific@ghc2026.org';
 
+const getAbstractWhatsappGroupUrl = () =>
+  process.env.ABSTRACT_WHATSAPP_GROUP_URL || 'https://chat.whatsapp.com/KX8RTHC6qCS5AwoDgXxq1D';
+
+const getParticipationTokenTtlDays = () => Number(process.env.PARTICIPATION_TOKEN_TTL_DAYS || 30);
+
+const createParticipationLinkForSubmission = async (req, submission) => {
+  const token = crypto.randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + getParticipationTokenTtlDays() * 24 * 60 * 60 * 1000);
+  await Research.createParticipationToken(submission.id, token, expires, {
+    applicantEmail: submission.email,
+    createdBy: req.user?.id || null,
+  });
+  return {
+    link: `${getPublicAppUrl()}/abstract/confirm/${token}`,
+    expires,
+  };
+};
+
+const buildRevisionPointVariables = (notes = '') => {
+  const points = String(notes || '')
+    .split(/\r?\n|;/)
+    .map((point) => point.replace(/^[-*•\d.)\s]+/, '').trim())
+    .filter(Boolean);
+  return {
+    revision_point_1: points[0] || 'Please revise your abstract according to the Scientific Committee comments.',
+    revision_point_2: points[1] || 'Clarify or improve the sections highlighted by the Scientific Committee.',
+    revision_point_3: points[2] || 'Review formatting, completeness, and final submission details before resubmitting.',
+  };
+};
+
 const mapRevisionTokenError = (tokenRecord) => {
   if (!tokenRecord) return { status: 404, message: 'Invalid revision link.', code: 'invalid' };
   if (tokenRecord.used_at || tokenRecord.status === 'used') {
@@ -122,15 +152,23 @@ const sendAbstractDecisionEmail = async (req, submission, status, notes = '') =>
   const recipientName = submission.presentingAuthor || submission.authors || 'Author';
 
   try {
+    const participation = status === 'accepted'
+      ? await createParticipationLinkForSubmission(req, submission)
+      : { link: '', expires: null };
     await sendTemplateEmail(templateKey, submission.email, {
       fullName: recipientName,
       name: recipientName,
       abstractTitle: submission.title,
+      abstract_title: submission.title,
       title: submission.title,
       abstractCode: submission.abstractId || `GHC-ABS-${String(submission.id).padStart(5, '0')}`,
       category: submission.category || '',
       reviewComments: notes || submission.reviewNotes || '',
       contactEmail: getRevisionContact(),
+      participationLink: participation.link,
+      registration_link: participation.link,
+      participationExpiresAt: participation.expires ? participation.expires.toLocaleDateString('en-IN', { dateStyle: 'medium' }) : '',
+      whatsappGroupLink: getAbstractWhatsappGroupUrl(),
     });
     await logDecision(req, action, submission.id, { email: submission.email });
     return true;
@@ -176,9 +214,13 @@ const listResearch = asyncHandler(async (req, res) => {
   const includeAll = req.query.admin === '1' || isSuperOrAdmin;
   const isReviewer = !isSuperOrAdmin && req.user?.permissions?.includes('review_abstracts');
   const reviewerId = isReviewer ? req.user.id : null;
+  const limit = req.query.limit ? Math.min(Math.max(Number(req.query.limit || 50), 1), 200) : null;
+  const page = Math.max(Number(req.query.page || 1), 1);
+  const offset = limit ? (page - 1) * limit : 0;
+  const compact = req.query.compact === '1';
 
-  const submissions = await Research.list({ includeAll, reviewerId });
-  res.json({ submissions });
+  const submissions = await Research.list({ includeAll, reviewerId, limit, offset, compact });
+  res.json({ submissions, pagination: limit ? { page, limit, count: submissions.length } : null });
 });
 
 const getResearch = asyncHandler(async (req, res) => {
@@ -653,6 +695,246 @@ const listReviews = asyncHandler(async (req, res) => {
   res.json({ reviews });
 });
 
+const rankingBaseCte = `
+  WITH review_summary AS (
+    SELECT
+      a.id AS abstract_id,
+      COUNT(DISTINCT ara.reviewer_id) AS assigned_count,
+      COUNT(DISTINCT ar.reviewer_id) AS completed_count,
+      MAX(ar.reviewed_at) AS last_reviewed_at
+    FROM abstracts a
+    LEFT JOIN abstract_review_assignments ara ON ara.abstract_id = a.id
+    LEFT JOIN abstract_reviews ar ON ar.abstract_id = a.id AND ar.reviewer_id = ara.reviewer_id
+    GROUP BY a.id
+  ),
+  official_rankings AS (
+    SELECT
+      a.id AS abstract_id,
+      RANK() OVER (ORDER BY a.final_score DESC) AS official_position
+    FROM abstracts a
+    INNER JOIN review_summary rs ON rs.abstract_id = a.id
+    WHERE rs.assigned_count > 0
+      AND rs.completed_count = rs.assigned_count
+      AND a.final_score IS NOT NULL
+  )
+`;
+
+const buildRankingWhere = (query = {}) => {
+  const clauses = [];
+  const params = [];
+  const reviewStatus = query.reviewStatus || 'fully_reviewed';
+
+  if (reviewStatus === 'fully_reviewed') {
+    clauses.push('rs.assigned_count > 0 AND rs.completed_count = rs.assigned_count AND a.final_score IS NOT NULL');
+  } else if (reviewStatus === 'pending_review') {
+    clauses.push('(rs.assigned_count = 0 OR rs.completed_count < rs.assigned_count OR a.final_score IS NULL)');
+  }
+
+  if (query.category && query.category !== 'all') {
+    clauses.push('a.category = ?');
+    params.push(query.category);
+  }
+
+  if (query.ugPg && query.ugPg !== 'all') {
+    clauses.push('LOWER(COALESCE(a.year_of_study, "")) LIKE ?');
+    params.push(`%${String(query.ugPg).toLowerCase()}%`);
+  }
+
+  if (query.institution) {
+    clauses.push('a.institution LIKE ?');
+    params.push(`%${query.institution}%`);
+  }
+
+  if (query.status && query.status !== 'all') {
+    clauses.push('COALESCE(a.submission_status, a.status) = ?');
+    params.push(query.status);
+  }
+
+  if (query.scoreMin !== undefined && query.scoreMin !== '') {
+    clauses.push('a.final_score >= ?');
+    params.push(Number(query.scoreMin));
+  }
+
+  if (query.scoreMax !== undefined && query.scoreMax !== '') {
+    clauses.push('a.final_score <= ?');
+    params.push(Number(query.scoreMax));
+  }
+
+  if (query.search) {
+    const term = `%${query.search}%`;
+    clauses.push('(a.abstract_id LIKE ? OR a.title LIKE ? OR a.presenting_author LIKE ? OR a.authors LIKE ? OR a.institution LIKE ?)');
+    params.push(term, term, term, term, term);
+  }
+
+  return {
+    where: clauses.length ? `WHERE ${clauses.join(' AND ')}` : '',
+    params,
+  };
+};
+
+const rankingSelectSql = `
+  SELECT
+    orank.official_position AS position,
+    a.id,
+    a.abstract_id AS abstractId,
+    a.title,
+    COALESCE(a.presenting_author, a.authors) AS applicantName,
+    a.institution,
+    a.category,
+    a.year_of_study AS yearOfStudy,
+    COALESCE(a.submission_status, a.status) AS abstractStatus,
+    CASE
+      WHEN rs.assigned_count > 0 AND rs.completed_count = rs.assigned_count AND a.final_score IS NOT NULL THEN 'fully_reviewed'
+      WHEN rs.completed_count > 0 THEN 'partially_reviewed'
+      ELSE 'pending_review'
+    END AS reviewStatus,
+    a.final_score AS finalScore,
+    50 AS maximumScore,
+    CASE WHEN a.final_score IS NULL THEN NULL ELSE ROUND((a.final_score / 50) * 100, 2) END AS percentage,
+    rs.assigned_count AS assignedReviewers,
+    rs.completed_count AS completedReviews,
+    rs.last_reviewed_at AS lastReviewedAt
+  FROM abstracts a
+  INNER JOIN review_summary rs ON rs.abstract_id = a.id
+  LEFT JOIN official_rankings orank ON orank.abstract_id = a.id
+`;
+
+const rankingSortSql = (sort = 'position', direction = 'asc') => {
+  const dir = String(direction).toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+  const map = {
+    position: `(orank.official_position IS NULL) ASC, orank.official_position ${dir}, a.final_score DESC`,
+    score: `a.final_score ${dir}, orank.official_position ASC`,
+    category: `a.category ${dir}, orank.official_position ASC`,
+    ugPg: `a.year_of_study ${dir}, orank.official_position ASC`,
+    institution: `a.institution ${dir}, orank.official_position ASC`,
+    reviewStatus: `reviewStatus ${dir}, orank.official_position ASC`,
+    status: `abstractStatus ${dir}, orank.official_position ASC`,
+    title: `a.title ${dir}, orank.official_position ASC`,
+  };
+  return `ORDER BY ${map[sort] || map.position}`;
+};
+
+const listAbstractRankings = asyncHandler(async (req, res) => {
+  const limit = Math.min(Math.max(Number(req.query.limit || 25), 1), 100);
+  const page = Math.max(Number(req.query.page || 1), 1);
+  const offset = (page - 1) * limit;
+  const { where, params } = buildRankingWhere(req.query);
+  const orderBy = rankingSortSql(req.query.sort, req.query.direction);
+
+  const [rows] = await pool.query(
+    `${rankingBaseCte}
+     ${rankingSelectSql}
+     ${where}
+     ${orderBy}
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
+  );
+
+  const [[countRow]] = await pool.query(
+    `${rankingBaseCte}
+     SELECT COUNT(*) AS total
+     FROM abstracts a
+     INNER JOIN review_summary rs ON rs.abstract_id = a.id
+     LEFT JOIN official_rankings orank ON orank.abstract_id = a.id
+     ${where}`,
+    params
+  );
+
+  const [[summary]] = await pool.query(`
+    ${rankingBaseCte}
+    SELECT
+      COUNT(*) AS eligibleTotal,
+      MAX(a.final_score) AS highestScore,
+      AVG(a.final_score) AS averageScore,
+      MIN(a.final_score) AS lowestScore
+    FROM abstracts a
+    INNER JOIN review_summary rs ON rs.abstract_id = a.id
+    WHERE rs.assigned_count > 0
+      AND rs.completed_count = rs.assigned_count
+      AND a.final_score IS NOT NULL
+  `);
+
+  await logDecision(req, 'viewed_abstract_rankings', null, {
+    page,
+    limit,
+    reviewStatus: req.query.reviewStatus || 'fully_reviewed',
+  });
+
+  res.json({
+    rankings: rows.map((row) => ({
+      ...row,
+      position: row.position === null ? null : Number(row.position),
+      finalScore: row.finalScore === null ? null : Number(row.finalScore),
+      maximumScore: Number(row.maximumScore || 50),
+      percentage: row.percentage === null ? null : Number(row.percentage),
+      assignedReviewers: Number(row.assignedReviewers || 0),
+      completedReviews: Number(row.completedReviews || 0),
+    })),
+    summary: {
+      totalEligible: Number(summary.eligibleTotal || 0),
+      highestScore: summary.highestScore === null ? null : Number(summary.highestScore),
+      averageScore: summary.averageScore === null ? null : Number(summary.averageScore),
+      lowestScore: summary.lowestScore === null ? null : Number(summary.lowestScore),
+      rankingMethod: 'Average of submitted reviewer total scores',
+      tieHandling: 'Competition ranking: equal scores share the same position and the next position is skipped.',
+    },
+    pagination: {
+      page,
+      limit,
+      total: Number(countRow.total || 0),
+      totalPages: Math.ceil(Number(countRow.total || 0) / limit),
+    },
+  });
+});
+
+const exportAbstractRankingsCsv = asyncHandler(async (req, res) => {
+  const { where, params } = buildRankingWhere({ ...req.query, reviewStatus: req.query.reviewStatus || 'fully_reviewed' });
+  const orderBy = rankingSortSql(req.query.sort, req.query.direction);
+  const [rows] = await pool.query(
+    `${rankingBaseCte}
+     ${rankingSelectSql}
+     ${where}
+     ${orderBy}`,
+    params
+  );
+
+  await logDecision(req, 'exported_abstract_rankings', null, { count: rows.length });
+
+  const escapeCsv = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const headers = [
+    'Position',
+    'Abstract ID',
+    'Title',
+    'Applicant',
+    'Institution',
+    'Category',
+    'UG/PG',
+    'Final Score',
+    'Maximum Score',
+    'Percentage',
+    'Review Status',
+    'Abstract Status',
+  ];
+  const csvRows = rows.map((row) => [
+    row.position || '',
+    row.abstractId || '',
+    row.title || '',
+    row.applicantName || '',
+    row.institution || '',
+    row.category || '',
+    row.yearOfStudy || '',
+    row.finalScore ?? '',
+    row.maximumScore || 50,
+    row.percentage ?? '',
+    row.reviewStatus || '',
+    row.abstractStatus || '',
+  ].map(escapeCsv).join(','));
+
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="abstract_rankings.csv"');
+  res.status(200).send([headers.join(','), ...csvRows].join('\n'));
+});
+
 const saveSettings = asyncHandler(async (req, res) => {
   await pool.query(
     `INSERT INTO scientific_settings (setting_key, setting_value) VALUES ('submission_settings', ?)
@@ -863,15 +1145,21 @@ const requestRevision = asyncHandler(async (req, res) => {
           <p style="font-size: 12px; color: #94a3b8; margin: 0;">Scientific Committee Secretariat • Global Healthcare Conclave 2026</p>
         </div>
       `;
+      const revisionPoints = buildRevisionPointVariables(notes);
       await sendTemplateEmail('abstract_revision_required', authorEmail, {
         fullName: submission.presentingAuthor || submission.authors || 'Author',
         name: submission.presentingAuthor || submission.authors || 'Author',
         abstractTitle: submission.title,
+        abstract_title: submission.title,
         title: submission.title,
         abstractCode: submission.abstractId || `GHC-ABS-${String(submission.id).padStart(5, '0')}`,
+        category: submission.category || '',
         revisionInstructions: notes,
+        ...revisionPoints,
         revisionLink: link,
+        revision_link: link,
         link,
+        whatsappGroupLink: getAbstractWhatsappGroupUrl(),
         expiresAt: expires.toLocaleDateString('en-IN', { dateStyle: 'medium' }),
         contactEmail: getRevisionContact(),
       });
@@ -912,15 +1200,21 @@ const resendRevisionEmail = asyncHandler(async (req, res) => {
   });
 
   try {
+    const revisionPoints = buildRevisionPointVariables(notes);
     await sendTemplateEmail('abstract_revision_required', submission.email, {
       fullName: submission.presentingAuthor || submission.authors || 'Author',
       name: submission.presentingAuthor || submission.authors || 'Author',
       abstractTitle: submission.title,
+      abstract_title: submission.title,
       title: submission.title,
       abstractCode: submission.abstractId || `GHC-ABS-${String(submission.id).padStart(5, '0')}`,
+      category: submission.category || '',
       revisionInstructions: notes,
+      ...revisionPoints,
       revisionLink: link,
+      revision_link: link,
       link,
+      whatsappGroupLink: getAbstractWhatsappGroupUrl(),
       expiresAt: expires.toLocaleDateString('en-IN', { dateStyle: 'medium' }),
       contactEmail: getRevisionContact(),
     });
@@ -1014,6 +1308,51 @@ const submitRevision = asyncHandler(async (req, res) => {
   res.json({ success: true, submission: newSubmission });
 });
 
+const publicParticipationPayload = (tokenRecord) => ({
+  abstractCode: tokenRecord.abstract_code,
+  title: tokenRecord.title,
+  applicantName: tokenRecord.presenting_author || tokenRecord.authors || 'Author',
+  institution: tokenRecord.institution || '',
+  status: tokenRecord.status,
+  confirmedAt: tokenRecord.confirmed_at,
+  expiresAt: tokenRecord.expires_at,
+});
+
+const validateParticipationToken = asyncHandler(async (req, res) => {
+  const tokenRecord = await Research.findParticipationToken(req.params.token);
+  if (!tokenRecord) {
+    return res.status(404).json({ message: 'Invalid participation confirmation link.', code: 'invalid' });
+  }
+  if (tokenRecord.confirmed_at || tokenRecord.status === 'confirmed') {
+    return res.json({ valid: true, alreadyConfirmed: true, submission: publicParticipationPayload(tokenRecord) });
+  }
+  if (tokenRecord.status !== 'active' || new Date(tokenRecord.expires_at) <= new Date()) {
+    return res.status(410).json({ message: 'This participation confirmation link has expired.', code: 'expired' });
+  }
+  return res.json({ valid: true, alreadyConfirmed: false, submission: publicParticipationPayload(tokenRecord) });
+});
+
+const confirmParticipation = asyncHandler(async (req, res) => {
+  try {
+    const result = await Research.confirmParticipation(req.params.token);
+    await logDecision(req, result.alreadyConfirmed ? 'participation_already_confirmed' : 'participation_confirmed', result.submission.abstract_id, {
+      abstractCode: result.submission.abstract_code,
+    });
+    return res.json({
+      success: true,
+      alreadyConfirmed: result.alreadyConfirmed,
+      submission: publicParticipationPayload({
+        ...result.submission,
+        status: 'confirmed',
+        confirmed_at: result.submission.confirmed_at || new Date(),
+      }),
+    });
+  } catch (error) {
+    const statusByCode = { INVALID_TOKEN: 404, EXPIRED_TOKEN: 410 };
+    return res.status(statusByCode[error.code] || 500).json({ message: error.message || 'Unable to confirm participation.' });
+  }
+});
+
 module.exports = {
   assignPresentation,
   assignReviewer,
@@ -1021,7 +1360,9 @@ module.exports = {
   createResearch,
   getSettings,
   getResearch,
+  exportAbstractRankingsCsv,
   assignedReviews,
+  listAbstractRankings,
   listAwards: listRows('awards', 'awards', 'name ASC'),
   listAwardResults: listRows('award_results', 'results', 'score DESC'),
   listCategories: listRows('abstract_categories', 'categories', 'name ASC'),
@@ -1056,6 +1397,8 @@ module.exports = {
   revisionRateLimiter,
   validateRevisionToken,
   submitRevision,
+  validateParticipationToken,
+  confirmParticipation,
   suspendReviewer,
   applyReinstatement,
   reinstateReviewer,

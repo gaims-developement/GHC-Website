@@ -1,4 +1,5 @@
 import { apiUrl } from "../config/api";
+import { GHC_LOGO_PATH } from "../config/branding";
 
 const DEFAULT_SITE_URL = "https://ghc.gaims.org";
 
@@ -7,7 +8,7 @@ export const SITE_NAME = "Global Healthcare Conclave 2026";
 export const DEFAULT_TITLE = "Global Healthcare Conclave 2026";
 export const DEFAULT_DESCRIPTION =
   "Global Healthcare Conclave 2026 (GHC 2026) by GAIMS in New Delhi — healthcare leadership, research, hands-on workshops, world-class speakers and delegate registration. November 22–24, 2026.";
-export const DEFAULT_IMAGE = `${SITE_URL}/assets/logos/ghclogo.jpeg`;
+export const DEFAULT_IMAGE = `${SITE_URL}${GHC_LOGO_PATH}`;
 
 export const HOMEPAGE_SEO_KEYS = new Set(["home", "homepage", "default", "index"]);
 

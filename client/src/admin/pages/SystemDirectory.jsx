@@ -9,7 +9,7 @@ const titles = {
   "api-monitoring": ["API Monitoring", "Recent request volume, errors and response timing."],
   database: ["Database", "Database health, connections and table sizes."],
   cloudinary: ["Cloudinary", "Cloudinary configuration and media storage usage."],
-  email: ["Email Delivery", "Sent, failed and queued email delivery logs."],
+  email: ["Emails", "GHC Circle newsletter signups plus sent, failed and queued delivery logs."],
   backups: ["Backups", "Create backup records and jump to SQL export tools."],
   security: ["Security Center", "Failed logins and active warning or critical alerts."],
   "feature-flags": ["Feature Flags", "Enable or disable CMS capabilities without code changes."],
@@ -17,6 +17,18 @@ const titles = {
 };
 
 const boolValue = (value) => value === true || value === 1;
+const istDateTimeFormatter = new Intl.DateTimeFormat("en-IN", {
+  timeZone: "Asia/Kolkata",
+  dateStyle: "medium",
+  timeStyle: "short",
+  hour12: true,
+});
+
+const formatIstDateTime = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "-" : `${istDateTimeFormatter.format(date)} IST`;
+};
 
 function DataTable({ columns, rows, empty = "No records found." }) {
   return (
@@ -153,7 +165,7 @@ function SystemDirectory({ api, type }) {
         { key: "module", label: "Module" },
         { key: "record_type", label: "Record" },
         { key: "ip_address", label: "IP" },
-        { key: "created_at", label: "Time", render: (row) => row.created_at ? new Date(row.created_at).toLocaleString() : "-" },
+        { key: "created_at", label: "Time (IST)", render: (row) => formatIstDateTime(row.created_at) },
       ]} rows={data.logs || []} />;
     }
 
@@ -205,7 +217,7 @@ function SystemDirectory({ api, type }) {
         { key: "email", label: "Email" },
         { key: "device", label: "Device" },
         { key: "ip_address", label: "IP" },
-        { key: "last_activity", label: "Last activity", render: (row) => row.last_activity ? new Date(row.last_activity).toLocaleString() : "-" },
+        { key: "last_activity", label: "Last activity (IST)", render: (row) => formatIstDateTime(row.last_activity) },
         { key: "actions", label: "Actions", render: (row) => <button className="admin-secondary-button" type="button" onClick={() => terminateSession(row)}><Trash2 size={16} /> Terminate</button> },
       ]} rows={data.sessions || []} />;
     }
@@ -223,7 +235,7 @@ function SystemDirectory({ api, type }) {
             { key: "path", label: "Path" },
             { key: "status_code", label: "Status" },
             { key: "duration_ms", label: "Duration", render: (row) => `${row.duration_ms || 0}ms` },
-            { key: "created_at", label: "Time", render: (row) => row.created_at ? new Date(row.created_at).toLocaleString() : "-" },
+            { key: "created_at", label: "Time (IST)", render: (row) => formatIstDateTime(row.created_at) },
           ]} rows={data.recent || []} />
         </>
       );
@@ -265,6 +277,7 @@ function SystemDirectory({ api, type }) {
       return (
         <>
           <section className="ops-kpi-grid">
+            <article><strong>{data.newsletterSubscribers?.filter((subscriber) => subscriber.status === "active").length || 0}</strong><span>GHC Circle</span></article>
             <article><strong>{data.summary?.sent || 0}</strong><span>Sent</span></article>
             <article><strong>{data.summary?.failed || 0}</strong><span>Failed</span></article>
             <article><strong>{data.summary?.queued || 0}</strong><span>Queued</span></article>
@@ -276,12 +289,21 @@ function SystemDirectory({ api, type }) {
             <button className="admin-primary-button" type="submit">Send Test Email</button>
           </form>
 
+          <h2>GHC Circle Emails</h2>
+          <DataTable columns={[
+            { key: "email", label: "Email", render: (row) => <strong>{row.email}</strong> },
+            { key: "status", label: "Status", render: (row) => <span className={`status-pill ${row.status === "active" ? "paid" : "pending"}`}>{row.status || "-"}</span> },
+            { key: "subscribed_at", label: "Subscribed at (IST)", render: (row) => formatIstDateTime(row.subscribed_at) },
+            { key: "updated_at", label: "Updated at (IST)", render: (row) => formatIstDateTime(row.updated_at) },
+          ]} rows={data.newsletterSubscribers || []} empty="No GHC Circle email signups yet." />
+
+          <h2 style={{ marginTop: "2rem" }}>Delivery Logs</h2>
           <DataTable columns={[
             { key: "recipient", label: "Recipient" },
             { key: "subject", label: "Subject" },
             { key: "status", label: "Status", render: (row) => <span className={`status-pill ${row.status === "failed" ? "cancelled" : row.status === "sent" ? "paid" : "pending"}`}>{row.status}</span> },
             { key: "error_message", label: "Error Message" },
-            { key: "sent_at", label: "Sent at", render: (row) => row.sent_at ? new Date(row.sent_at).toLocaleString() : "-" },
+            { key: "sent_at", label: "Sent at (IST)", render: (row) => formatIstDateTime(row.sent_at) },
           ]} rows={data.logs || []} />
         </>
       );
@@ -299,7 +321,7 @@ function SystemDirectory({ api, type }) {
             { key: "backup_name", label: "Name" },
             { key: "status", label: "Status" },
             { key: "file_location", label: "Location" },
-            { key: "created_at", label: "Created", render: (row) => row.created_at ? new Date(row.created_at).toLocaleString() : "-" },
+            { key: "created_at", label: "Created (IST)", render: (row) => formatIstDateTime(row.created_at) },
           ]} rows={data.backups || []} />
         </>
       );
@@ -314,8 +336,16 @@ function SystemDirectory({ api, type }) {
             { key: "ip_address", label: "IP" },
             { key: "device", label: "Device" },
             { key: "browser", label: "Browser" },
-            { key: "created_at", label: "Time", render: (row) => row.created_at ? new Date(row.created_at).toLocaleString() : "-" },
+            { key: "created_at", label: "Time (IST)", render: (row) => formatIstDateTime(row.created_at) },
           ]} rows={data.failedLogins || []} />
+
+          <h2 style={{ marginTop: "2rem" }}>Security alerts</h2>
+          <DataTable columns={[
+            { key: "type", label: "Type", render: (row) => <span className={`status-pill ${row.type === "critical" ? "cancelled" : "pending"}`}>{row.type || "-"}</span> },
+            { key: "title", label: "Title", render: (row) => <strong>{row.title || "-"}</strong> },
+            { key: "message", label: "Message" },
+            { key: "created_at", label: "Time (IST)", render: (row) => formatIstDateTime(row.created_at) },
+          ]} rows={data.alerts || []} empty="No security alerts found." />
         </>
       );
     }

@@ -18,6 +18,7 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import { apiUrl } from "../config/api";
+import { createWorkshopSlug } from "../data/workshops";
 
 const ACADEMIC_LEVELS = [
   { id: "UG", label: "Undergraduate (UG)" },
@@ -116,9 +117,19 @@ export default function WorkshopRegister() {
       try {
         const res = await axios.get(apiUrl("/api/workshops"));
         if (!active) return;
-        const found = (res.data?.workshops || []).find(
-          (w) => String(w.id) === String(workshopIdentifier) || w.slug === workshopIdentifier
-        );
+        const normalizedIdentifier = String(workshopIdentifier || "").toLowerCase();
+        const found = (res.data?.workshops || []).find((w) => {
+          const candidates = [
+            w.id,
+            w.slug,
+            w.workshopCode,
+            w.workshop_code,
+            createWorkshopSlug(w.title || ""),
+          ]
+            .filter(Boolean)
+            .map((value) => String(value).toLowerCase());
+          return candidates.includes(normalizedIdentifier);
+        });
         if (found) setWorkshop(found);
       } catch (err) {
         console.error("Failed to load workshop fallback:", err);
@@ -721,14 +732,14 @@ export default function WorkshopRegister() {
               />
               <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
                 <span className="text-slate-500">Need a GHC Pass?</span>
-                <Link
-                  to="/register"
+                <a
+                  href="https://mc.clirnet.com/mastercast/connect/D0921-Conclave-1"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="font-bold text-[#173B8F] hover:text-[#00A6A6] hover:underline inline-flex items-center gap-1"
                 >
                   Register for GHC Pass First <ArrowRight className="w-3 h-3" />
-                </Link>
+                </a>
               </div>
             </div>
           </div>

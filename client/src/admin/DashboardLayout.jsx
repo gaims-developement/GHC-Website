@@ -65,7 +65,6 @@ import {
   Scale,
   Smartphone,
   ReceiptText,
-  Store,
   Ticket,
   Trophy,
   ToggleLeft,
@@ -76,7 +75,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const icons = {
   Activity,
@@ -141,7 +140,6 @@ const icons = {
   Scale,
   Smartphone,
   ReceiptText,
-  Store,
   Ticket,
   Trophy,
   ToggleLeft,
@@ -207,7 +205,6 @@ const NAV_SECTIONS = [
     title: "PARTNERS & COMMITTEES",
     items: [
       { id: "partners", label: "Event Sponsors", icon: Building2, permissions: ["manage_sponsors", "partners.manage"] },
-      { id: "sponsorships", label: "Sponsorships", icon: Store, permissions: ["manage_sponsors", "sponsorship.manage", "manage_exhibitors"], aliases: ["exhibitors"] },
       { id: "committees", label: "Committees", icon: Users, permissions: ["manage_homepage", "committees.manage", "manage_committees"] },
     ],
   },
@@ -240,6 +237,7 @@ const NAV_SECTIONS = [
       { id: "system-audit-logs", label: "Audit Logs", icon: ShieldCheck, permissions: ["view_audit_logs", "manage_system"] },
       { id: "visa-applications", label: "Visa Applications", icon: PlaneTakeoff, permissions: ["manage_system", "visa.manage"] },
       { id: "api-monitoring", label: "API Monitoring", icon: Activity, permissions: ["view_system_reports", "manage_system", "api.monitor"] },
+      { id: "system-email", label: "Emails", icon: Mail, permissions: ["manage_system", "view_system_reports", "manage_settings"] },
       { id: "system-email-templates", label: "Email Templates", icon: Mail, permissions: ["manage_system", "view_system_reports", "manage_settings"] },
       { id: "collaboration", label: "Collaboration", icon: Handshake, permissions: ["manage_system", "manage_settings", "settings.manage"] },
     ],
@@ -248,8 +246,9 @@ const NAV_SECTIONS = [
 
 function DashboardLayout({ api, children, user, activePage, eventContext, impersonating, onEventContextChange, onNavigate, onLogout, onReturnToSuperAdmin }) {
   const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchFocused, setSearchFocused] = useState(false);
+  const searchInputRef = useRef(null);
 
   const accountDisplayName = (() => {
     const rawName = (user?.name || "").trim();
@@ -353,23 +352,41 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
       return searchable.includes(query);
     })
     : [];
-  const showSearchResults = searchFocused && searchQuery.trim().length > 0;
+  const displayedSearchResults = query ? searchResults.slice(0, 8) : flatVisibleItems.slice(0, 8);
+
+  useEffect(() => {
+    const handleGlobalShortcut = (event) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+
+    window.addEventListener("keydown", handleGlobalShortcut);
+    return () => window.removeEventListener("keydown", handleGlobalShortcut);
+  }, []);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    const focusTimer = window.setTimeout(() => searchInputRef.current?.focus(), 40);
+    return () => window.clearTimeout(focusTimer);
+  }, [searchOpen]);
 
   const handleNavigate = (pageId) => {
     onNavigate(pageId);
     setOpen(false);
-    setSearchFocused(false);
+    setSearchOpen(false);
     setSearchQuery("");
   };
 
   const handleSearchKeyDown = (event) => {
-    if (event.key === "Enter" && searchResults[0]) {
+    if (event.key === "Enter" && displayedSearchResults[0]) {
       event.preventDefault();
-      handleNavigate(searchResults[0].navigationId);
+      handleNavigate(displayedSearchResults[0].navigationId);
     }
 
     if (event.key === "Escape") {
-      setSearchFocused(false);
+      setSearchOpen(false);
       setSearchQuery("");
     }
   };
@@ -439,34 +456,10 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
             <Menu size={18} />
           </button>
           <div className="admin-search-wrap">
-            <label className="admin-search">
-            <Search size={17} />
-              <input
-                value={searchQuery}
-                onBlur={() => window.setTimeout(() => setSearchFocused(false), 120)}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                onFocus={() => setSearchFocused(true)}
-                onKeyDown={handleSearchKeyDown}
-                placeholder="Search CMS"
-              />
-            </label>
-            {showSearchResults && (
-              <div className="admin-search-results">
-                {searchResults.length > 0 ? (
-                  searchResults.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <button key={item.id} type="button" onMouseDown={() => handleNavigate(item.id)}>
-                        <Icon size={16} />
-                        <span>{item.label}</span>
-                      </button>
-                    );
-                  })
-                ) : (
-                  <div>No CMS sections found</div>
-                )}
-              </div>
-            )}
+            <button className="admin-search-trigger" type="button" onClick={() => setSearchOpen(true)}>
+              <span><Search size={17} /> Search CMS</span>
+              <kbd>Ctrl K</kbd>
+            </button>
           </div>
           <button className="admin-icon-button" aria-label="Notifications">
             <Bell size={18} />
@@ -485,6 +478,42 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
           </button>
         )}
       </div>
+
+      {searchOpen && (
+        <div className="admin-command-overlay" role="dialog" aria-modal="true" aria-label="Search CMS">
+          <button className="admin-command-backdrop" type="button" aria-label="Close search" onClick={() => setSearchOpen(false)} />
+          <section className="admin-command-panel">
+            <div className="admin-command-search">
+              <Search size={20} />
+              <input
+                ref={searchInputRef}
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="Search pages, reports, abstract tools..."
+              />
+              <kbd>Esc</kbd>
+            </div>
+
+            <div className="admin-command-results">
+              <p>{query ? "Results" : "Quick access"}</p>
+              {displayedSearchResults.length > 0 ? (
+                displayedSearchResults.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <button key={item.id} type="button" onClick={() => handleNavigate(item.navigationId)}>
+                      <span><Icon size={18} /> {item.label}</span>
+                      <small>{item.navigationId}</small>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="admin-command-empty">No CMS sections found</div>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
 
       <nav className="admin-bottom-nav" aria-label="Admin mobile navigation">
         {primaryMobileItems.map((item) => {

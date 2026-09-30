@@ -71,6 +71,7 @@ export default function AbstractRegister() {
   const [submissionState, setSubmissionState] = useState({ status: "idle", message: "" });
   const [errors, setErrors] = useState({});
   const [isCallsOpen, setIsCallsOpen] = useState(null);
+  const [abstractWhatsapp, setAbstractWhatsapp] = useState({ url: "", text: "" });
 
   useEffect(() => {
     document.body.classList.add('redesign-active')
@@ -85,6 +86,10 @@ export default function AbstractRegister() {
         } else {
           setIsCallsOpen(true); // Default
         }
+        setAbstractWhatsapp({
+          url: res.data?.registration?.abstractWhatsappGroupUrl || "",
+          text: res.data?.registration?.abstractWhatsappGroupText || "",
+        });
       })
       .catch(err => {
         console.error("Failed to load public settings:", err);
@@ -239,6 +244,21 @@ export default function AbstractRegister() {
           </div>
           <h2 className="text-2xl font-bold text-[#1a2b3c] mb-4">Submission Successful</h2>
           <p className="text-gray-500 mb-8">{submissionState.message}</p>
+          {abstractWhatsapp.url && (
+            <div className="mb-6 rounded-2xl border border-[#349e81]/20 bg-[#F4FAF8] p-4">
+              <a
+                href={abstractWhatsapp.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-[#25D366] text-white rounded-full font-bold hover:bg-[#1fb855] transition-colors shadow-sm"
+              >
+                Join GHC Abstract WhatsApp Group <ArrowRight className="w-4 h-4" />
+              </a>
+              <p className="mt-3 text-sm text-[#475467] leading-relaxed">
+                {abstractWhatsapp.text || "Join the official GHC Abstract WhatsApp Group for important updates regarding abstract review, revisions, presentations and announcements."}
+              </p>
+            </div>
+          )}
           <Link to="/" className="inline-flex items-center justify-center px-8 py-3 bg-[#349e81] text-white rounded-full font-medium hover:bg-[#2b836b] transition-colors">
             Return to Homepage
           </Link>
