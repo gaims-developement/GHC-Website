@@ -230,7 +230,7 @@ export default function AbstractRegister() {
   const [step, setStep] = useState(0);
   const [submissionState, setSubmissionState] = useState({ status: "idle", message: "" });
   const [errors, setErrors] = useState({});
-  const [isCallsOpen, setIsCallsOpen] = useState(null);
+  const [isCallsOpen, setIsCallsOpen] = useState(true);
   const [abstractWhatsapp, setAbstractWhatsapp] = useState({ url: "", text: "" });
   const [expandedGuidelines, setExpandedGuidelines] = useState(false);
 
@@ -258,8 +258,30 @@ export default function AbstractRegister() {
       });
   }, []);
 
+const defaultCountries = [
+  { id: 101, name: "India" },
+  { id: 233, name: "United States" },
+  { id: 232, name: "United Kingdom" },
+  { id: 13, name: "Australia" },
+  { id: 38, name: "Canada" },
+  { id: 229, name: "United Arab Emirates" },
+  { id: 199, name: "Singapore" },
+  { id: 156, name: "Nepal" },
+  { id: 167, name: "Pakistan" },
+  { id: 18, name: "Bangladesh" },
+  { id: 206, name: "Sri Lanka" },
+  { id: 82, name: "Germany" },
+  { id: 75, name: "France" },
+  { id: 132, name: "Malaysia" },
+  { id: 191, name: "Saudi Arabia" },
+  { id: 169, name: "Philippines" },
+  { id: 162, name: "Nigeria" },
+  { id: 113, name: "Kenya" },
+  { id: 204, name: "South Africa" }
+];
+
   // Location Data States
-  const [countriesList, setCountriesList] = useState([]);
+  const [countriesList, setCountriesList] = useState(defaultCountries);
   const [statesList, setStatesList] = useState([]);
   const [citiesList, setCitiesList] = useState([]);
   const [loadingLocations, setLoadingLocations] = useState(false);
@@ -269,7 +291,11 @@ export default function AbstractRegister() {
 
   useEffect(() => {
     axios.get(apiUrl("/api/locations/countries"))
-      .then(res => setCountriesList(Array.isArray(res.data) ? res.data : []))
+      .then(res => {
+        if (Array.isArray(res.data) && res.data.length > 0) {
+          setCountriesList(res.data);
+        }
+      })
       .catch(err => console.error("Failed to load countries:", err));
   }, []);
 
@@ -441,14 +467,6 @@ export default function AbstractRegister() {
             <ArrowLeft className="w-4 h-4" /> Return to Homepage
           </Link>
         </motion.div>
-      </div>
-    );
-  }
-
-  if (isCallsOpen === null) {
-    return (
-      <div className="min-h-screen bg-[#E5F3EF] flex flex-col items-center justify-center p-6">
-        <div className="w-10 h-10 border-4 border-[#349e81] border-t-transparent rounded-full animate-spin mb-4"></div>
       </div>
     );
   }
