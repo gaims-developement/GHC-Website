@@ -46,6 +46,7 @@ import {
   Sparkles,
   Stethoscope,
   Book,
+  BookOpen,
   Bookmark,
   Settings,
   Trophy,
@@ -1674,20 +1675,298 @@ function ResearchHub() {
 
                 {/* Scrollable Content */}
                 <div data-lenis-prevent="true" className="flex-1 overflow-y-auto min-h-0 custom-scrollbar p-6 md:p-8 space-y-6 text-white/80 leading-relaxed text-sm md:text-base w-full font-['DM_Sans']">
-                  <div className="bg-[#ff3d7f]/10 border border-[#ff3d7f]/20 rounded-2xl p-6">
-                    <p className="font-bold text-[#ff3d7f] text-lg mb-2 flex items-center gap-2"><Info className="w-5 h-5"/> Important Note</p>
-                    <p>Last date for Submission: <strong>30th October , 2026.</strong></p>
-                    <ul className="list-disc list-inside mt-4 space-y-2">
-                      <li>The file must be in <strong>PDF or DOCX</strong> format and not more than <strong>10 MB</strong> in size.</li>
-                      <li>All data entered must be accurate and verified.</li>
-                      <li>Abstracts may include tables and references.</li>
-                      <li>Word Limit: <strong>350–400 words</strong>.</li>
-                      <li>No AI-generated content. Plagiarism up to 10% allowed. (We will use a standardized tool to screen).</li>
-                      <li>If you are the presenting author, you can submit <strong>only one poster</strong> for presentation. You cannot be the presenting author on more than one submission. You may still be a co-author on other submissions — but you can present only one.</li>
-                      <li>Cash prize and Certificate of presentation will <strong>only be given to presenting author</strong>.</li>
+                  {/* Important Note */}
+                  <div className="bg-[#ff3d7f]/10 border border-[#ff3d7f]/25 rounded-2xl p-6 shadow-lg">
+                    <p className="font-bold text-[#ff3d7f] text-lg mb-3 flex items-center gap-2">
+                      <Info className="w-5 h-5"/> Important Note & Key Deadlines
+                    </p>
+                    <div className="grid sm:grid-cols-2 gap-3 mb-4">
+                      <div className="bg-black/30 rounded-xl p-3 border border-white/5">
+                        <span className="text-xs text-white/50 block font-semibold uppercase tracking-wider">Initial Submission Deadline</span>
+                        <span className="text-sm font-bold text-white">22 October 2026</span>
+                        <span className="text-[11px] text-amber-300/80 block mt-0.5">(Extendable to 31 Oct subject to official notice)</span>
+                      </div>
+                      <div className="bg-black/30 rounded-xl p-3 border border-white/5">
+                        <span className="text-xs text-white/50 block font-semibold uppercase tracking-wider">Screening & Evaluation</span>
+                        <span className="text-sm font-bold text-emerald-400">Rolling Basis (~10–15 Oct onwards)</span>
+                        <span className="text-[11px] text-white/60 block mt-0.5">Decisions communicated as received</span>
+                      </div>
+                      <div className="bg-black/30 rounded-xl p-3 border border-white/5">
+                        <span className="text-xs text-white/50 block font-semibold uppercase tracking-wider">Revision Deadline (Submitted ≤ 22 Oct)</span>
+                        <span className="text-sm font-bold text-blue-300">31 October 2026</span>
+                      </div>
+                      <div className="bg-black/30 rounded-xl p-3 border border-white/5">
+                        <span className="text-xs text-white/50 block font-semibold uppercase tracking-wider">Revision Deadline (Submitted 23–31 Oct)</span>
+                        <span className="text-sm font-bold text-blue-300">5 November 2026</span>
+                      </div>
+                    </div>
+                    <ul className="list-disc list-inside space-y-2 text-white/90 text-sm">
+                      <li><strong>File Format:</strong> DOCX only, Times New Roman, Font size 12, max <strong>10 MB</strong>.</li>
+                      <li><strong>Word Limit:</strong> <strong>350–400 words</strong> (tables, legends, and references are excluded from count).</li>
+                      <li><strong>Integrity Thresholds:</strong> Plagiarism <strong>less than 20%</strong>; AI-detection score <strong>less than 30%</strong> (compliant with JAMA guidelines).</li>
+                      <li><strong>Sequential Submissions Only:</strong> An applicant may submit a 2nd abstract <em>only</em> if the 1st submission is outrightly rejected.</li>
+                      <li><strong>Presenting Author Restriction:</strong> An individual may be presenting author for <strong>only one accepted poster</strong>.</li>
+                      <li><strong>Awards & Certificates:</strong> Certificate of Presentation and applicable Cash Prize are awarded <strong>only to the presenting author</strong>.</li>
                     </ul>
                   </div>
+
+                  {/* 16 Detailed Guidelines Sections */}
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-bold text-[#00E5FF] tracking-wider uppercase flex items-center gap-2">
+                      <BookOpen className="w-4 h-4" /> Full Submission & Presentation Guidelines
+                    </h3>
+
+                    {/* Section 1 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">1</span>
+                        Original and Unpublished Work
+                      </h4>
+                      <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
+                        <li>Only <strong>original and unpublished work</strong> will be accepted.</li>
+                        <li>The submitted abstract must not have been previously published or presented elsewhere.</li>
+                        <li>All submissions must comply with the prescribed originality, plagiarism, and AI-use requirements.</li>
+                      </ul>
+                    </div>
+
+                    {/* Section 2 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">2</span>
+                        Submission Timeline
+                      </h4>
+                      <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
+                        <li><strong>Initial Abstract Submission Deadline:</strong> 22 October 2026.</li>
+                        <li>The submission deadline may be extended until <strong>31 October 2026</strong>, subject to an official announcement.</li>
+                        <li>Abstract screening will begin on a <strong>rolling basis from approximately 10–15 October 2026</strong> rather than waiting until the final submission deadline.</li>
+                        <li>Registration, screening, and acceptance/rejection communication will take place in parallel on a rolling basis to avoid a concentration of submissions near the deadline.</li>
+                      </ul>
+                    </div>
+
+                    {/* Section 3 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">3</span>
+                        Revision Deadlines
+                      </h4>
+                      <p className="text-white/80 text-sm">For abstracts where revisions are requested by the Scientific Committee:</p>
+                      <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
+                        <li><strong>31 October 2026:</strong> Deadline for revised submissions where the original abstract was submitted on or before 22 October 2026.</li>
+                        <li><strong>5 November 2026:</strong> Deadline for revised submissions where the original abstract was submitted between 23 and 31 October 2026, if the submission deadline has officially been extended.</li>
+                        <li>Only the revision specifically requested by the Scientific Committee should be submitted within the applicable revision deadline.</li>
+                      </ul>
+                    </div>
+
+                    {/* Section 4 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">4</span>
+                        Multiple Submission Policy & Presenting Author Restriction
+                      </h4>
+                      <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
+                        <li>Multiple submissions will be permitted <strong>only sequentially</strong>.</li>
+                        <li>An applicant may have only <strong>one active abstract submission at a time</strong>.</li>
+                        <li>A second abstract may be submitted only if the applicant&apos;s first abstract has been <strong>outrightly rejected</strong>.</li>
+                        <li>The second submission must be made within the applicable abstract submission deadline (22 October 2026, or the officially announced extended deadline).</li>
+                        <li>Participants must not submit two different abstracts simultaneously while the first submission is still under review.</li>
+                        <li>If two submissions are made simultaneously, the second submission will be flagged and <strong>will not be reviewed</strong> until eligibility conditions are satisfied.</li>
+                        <li>Each eligible submission receives its own unique Submission ID and review status.</li>
+                        <li><strong>Presenting Author Restriction:</strong> A participant may be the presenting author for <strong>only one accepted poster</strong>. (A participant may be listed as a co-author on other abstracts or posters, but cannot serve as presenting author for more than one presentation).</li>
+                      </ul>
+                    </div>
+
+                    {/* Section 5 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">5</span>
+                        Abstract Submission Format
+                      </h4>
+                      <div className="grid sm:grid-cols-2 gap-2 text-sm text-white/80 my-2">
+                        <div className="bg-white/[0.02] p-2.5 rounded-lg border border-white/5"><strong>File Format:</strong> DOCX only</div>
+                        <div className="bg-white/[0.02] p-2.5 rounded-lg border border-white/5"><strong>Max File Size:</strong> 10 MB</div>
+                        <div className="bg-white/[0.02] p-2.5 rounded-lg border border-white/5"><strong>Font & Size:</strong> Times New Roman, Size 12</div>
+                        <div className="bg-white/[0.02] p-2.5 rounded-lg border border-white/5"><strong>Word Count:</strong> 350–400 words</div>
+                      </div>
+                      <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
+                        <li>Tables, legends, and references are excluded from the abstract word count.</li>
+                        <li>Abstracts may include relevant tables and references.</li>
+                        <li>All information and data entered in the submission must be accurate and verified.</li>
+                      </ul>
+                    </div>
+
+                    {/* Section 6 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">6</span>
+                        Plagiarism and AI Usage
+                      </h4>
+                      <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
+                        <li><strong>Plagiarism Threshold:</strong> Less than 20%.</li>
+                        <li><strong>AI-Detection Score:</strong> Less than 30%.</li>
+                        <li>These thresholds are intended for preliminary screening and <strong>do not override the requirement that the submitted work must be original</strong>.</li>
+                        <li>Use of artificial intelligence tools must comply with applicable <strong>JAMA policies and guidelines concerning the use and disclosure of AI in medical writing and publishing</strong>.</li>
+                        <li>Authors remain responsible for the accuracy, originality, scientific integrity, references, analysis, and content of their submission.</li>
+                      </ul>
+                    </div>
+
+                    {/* Section 7 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">7</span>
+                        Screening and Acceptance
+                      </h4>
+                      <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
+                        <li>Abstracts will be evaluated on a <strong>rolling basis</strong>, beginning approximately 10–15 October 2026.</li>
+                        <li>The Scientific Committee will evaluate submissions progressively during the window.</li>
+                        <li>Participants may receive <strong>Accepted → Revision Required → Rejected</strong> decisions while the submission window remains open.</li>
+                        <li>Acceptance, revision, and rejection communication will be dispatched on a rolling basis.</li>
+                      </ul>
+                    </div>
+
+                    {/* Section 8 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">8</span>
+                        Waitlist / Standby Policy
+                      </h4>
+                      <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
+                        <li>There will generally be <strong>no formal waitlist</strong>.</li>
+                        <li>If high-quality accepted abstracts exceed available presentation slots, additional eligible abstracts may be placed on a <strong>standby list</strong>.</li>
+                        <li>If an accepted presenting author withdraws, the next eligible standby participant may be invited to fill the vacant presentation slot.</li>
+                        <li>Placement on the standby list does not guarantee a presentation opportunity.</li>
+                      </ul>
+                    </div>
+
+                    {/* Section 9 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">9</span>
+                        Submission Portal and Tracking
+                      </h4>
+                      <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
+                        <li>Each abstract receives a <strong>unique Submission ID</strong> upon completion.</li>
+                        <li>Track the progress of each eligible submission through the participant dashboard tracker:</li>
+                      </ul>
+                      <div className="bg-black/30 p-3 rounded-xl border border-white/5 text-xs text-emerald-300 font-mono text-center">
+                        Abstract Submitted → Received by Scientific Committee → Under Review → Accepted / Revision Required / Rejected
+                      </div>
+                    </div>
+
+                    {/* Section 10 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">10</span>
+                        Poster Specifications
+                      </h4>
+                      <div className="grid sm:grid-cols-2 gap-3 text-sm text-white/80 my-2">
+                        <div className="bg-white/[0.02] p-3 rounded-xl border border-white/5">
+                          <span className="text-xs text-white/50 block">Orientation</span>
+                          <strong className="text-white">Portrait</strong>
+                        </div>
+                        <div className="bg-white/[0.02] p-3 rounded-xl border border-white/5">
+                          <span className="text-xs text-white/50 block">Dimensions</span>
+                          <strong className="text-white">36 inches × 48 inches</strong>
+                        </div>
+                      </div>
+                      <p className="text-white/75 text-sm">Posters must follow the official template and formatting requirements provided by the organizers.</p>
+                    </div>
+
+                    {/* Section 11 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">11</span>
+                        Author and Affiliation Format
+                      </h4>
+                      <p className="text-white/80 text-sm">Author names and affiliations should be displayed in the following format:</p>
+                      <div className="bg-black/30 p-3 rounded-xl border border-white/5 text-xs text-white/90 space-y-1">
+                        <p className="font-bold text-white">Author Name¹, Author Name²</p>
+                        <p className="text-white/70">¹Department, Institution/Affiliation, State, Country</p>
+                        <p className="text-white/70">²Department, Institution/Affiliation, State, Country</p>
+                      </div>
+                      <p className="text-white/70 text-xs">Superscript numbers associate each author with their appropriate department and institutional affiliation.</p>
+                    </div>
+
+                    {/* Section 12 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">12</span>
+                        Poster Formatting
+                      </h4>
+                      <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
+                        <li>Main poster content font size: <strong>more than 30 pt</strong>.</li>
+                        <li>Introduction or major section headings: <strong>more than 50 pt</strong>.</li>
+                        <li>The presenting author&apos;s <strong>email address and LinkedIn ID</strong> must be included.</li>
+                        <li>Relevant graphs, figures, photographs, tables, charts, and supporting visual material should be incorporated.</li>
+                        <li>Posters must remain readable, visually clear, and scientifically structured.</li>
+                      </ul>
+                    </div>
+
+                    {/* Section 13 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">13</span>
+                        Research Poster Structure
+                      </h4>
+                      <p className="text-white/80 text-sm">Research posters must contain the following sections using the official Research Poster Template:</p>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {["Title", "Authors & Affiliations", "Introduction", "Objectives", "Methodology", "Results", "Conclusion", "References", "Graphs/Tables"].map(s => (
+                          <span key={s} className="px-2.5 py-1 rounded-lg bg-white/[0.05] border border-white/10 text-xs text-white/90 font-medium">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Section 14 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">14</span>
+                        Case Poster Structure
+                      </h4>
+                      <p className="text-white/80 text-sm">Case-report posters must contain the following sections using the official Case Poster Template:</p>
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {["Title", "Authors & Affiliations", "Introduction", "Case Report / Description", "Investigations", "Treatment / Management", "Follow-up / Outcome", "Discussion", "Conclusion", "References", "Clinical Images"].map(s => (
+                          <span key={s} className="px-2.5 py-1 rounded-lg bg-white/[0.05] border border-white/10 text-xs text-white/90 font-medium">
+                            {s}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Section 15 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">15</span>
+                        Presentation, Certificate and Cash Prize
+                      </h4>
+                      <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
+                        <li>Only the officially designated <strong>presenting author</strong> may present the poster.</li>
+                        <li>An individual may serve as the presenting author for <strong>only one poster</strong>.</li>
+                        <li>The same individual may be listed as a co-author on additional submissions.</li>
+                        <li>The <strong>Certificate of Presentation</strong> will be issued only to the presenting author.</li>
+                        <li>Any applicable <strong>cash prize will also be awarded only to the presenting author</strong>.</li>
+                        <li>Co-authorship alone does not create eligibility for a presentation certificate or cash prize.</li>
+                      </ul>
+                    </div>
+
+                    {/* Section 16 */}
+                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
+                      <h4 className="font-bold text-white text-base flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">16</span>
+                        Responsibility of Authors
+                      </h4>
+                      <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
+                        <li>Submission of an abstract confirms that the authors:</li>
+                        <li className="ml-4">Have verified the accuracy of the submitted information;</li>
+                        <li className="ml-4">Take responsibility for the originality and scientific integrity of the work;</li>
+                        <li className="ml-4">Have obtained appropriate permissions or approvals wherever required;</li>
+                        <li className="ml-4">Have complied with submission, plagiarism, AI-use, authorship, and presentation policies; and</li>
+                        <li className="ml-4">Agree to follow the decisions and timelines communicated by the Scientific Committee.</li>
+                      </ul>
+                    </div>
+                  </div>
                   
+                  {/* Abstract Format Cards */}
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 flex flex-col justify-between">
                       <div>
@@ -1804,7 +2083,7 @@ function ResearchHub() {
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-6 flex flex-col md:flex-row gap-6 items-center justify-between">
                     <div>
                       <h3 className="font-bold text-blue-400 text-lg mb-2">Declaration Form</h3>
-                      <p className="text-sm">Please download, sign, and submit the declaration form along with your abstract.</p>
+                      <p className="text-sm text-white/80">Please download, sign, and submit the declaration form along with your abstract.</p>
                     </div>
                     <a href="/assets/forms/GHC%20Poster%20Presenter%20Declaration%20Form%201.docx" download className="inline-flex items-center gap-2 whitespace-nowrap px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-xl transition-colors">
                       <Download className="w-4 h-4" /> Download Form
@@ -1815,19 +2094,19 @@ function ResearchHub() {
                     <h3 className="font-bold text-[#ff3d7f] text-lg mb-4">For Queries, Contact:</h3>
                     <ul className="space-y-3">
                       <li className="flex items-center gap-3">
-                        <span className="font-bold text-white w-32">Email:</span>
+                        <span className="font-bold text-white w-40">Email:</span>
                         <a href="mailto:ghcscientific@gmail.com" className="hover:text-[#ff3d7f] transition-colors">ghcscientific@gmail.com</a>
                       </li>
                       <li className="flex items-center gap-3">
-                        <span className="font-bold text-white w-32">Girik Subbudhi:</span>
+                        <span className="font-bold text-white w-40">Girik Subudhi:</span>
                         <a href="tel:+918169011833" className="hover:text-[#ff3d7f] transition-colors">+91 8169011833</a>
                       </li>
                       <li className="flex items-center gap-3">
-                        <span className="font-bold text-white w-32">Guarav Jayadev:</span>
+                        <span className="font-bold text-white w-40">Gaurav Jayadev:</span>
                         <a href="tel:+917022408203" className="hover:text-[#ff3d7f] transition-colors">+91 7022408203</a>
                       </li>
                       <li className="flex items-center gap-3">
-                        <span className="font-bold text-white w-32">Prakhar Bhajpai:</span>
+                        <span className="font-bold text-white w-40">Dr Prakhar Bajpai:</span>
                         <a href="tel:+919758523839" className="hover:text-[#ff3d7f] transition-colors">+91 97585 23839</a>
                       </li>
                     </ul>

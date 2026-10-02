@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, ArrowRight, FileText, Upload, User, BookOpen, CheckCircle2, ChevronRight, Info, Check, Microscope, Stethoscope } from "lucide-react";
+import { ArrowLeft, ArrowRight, FileText, Upload, User, BookOpen, CheckCircle2, ChevronRight, ChevronDown, ChevronUp, Info, Check, Microscope, Stethoscope, Download, Phone, Mail } from "lucide-react";
 import { apiUrl } from "../config/api";
 import { Link } from "react-router-dom";
 import '../home-redesign.css';
@@ -63,6 +63,166 @@ const caseDescriptionSubItems = [
   "Follow-up",
 ];
 
+const submissionGuidelinesData = [
+  {
+    num: "01",
+    title: "Original and Unpublished Work",
+    points: [
+      "Only original and unpublished work will be accepted.",
+      "The submitted abstract must not have been previously published or presented elsewhere.",
+      "All submissions must comply with the prescribed originality, plagiarism, and AI-use requirements."
+    ]
+  },
+  {
+    num: "02",
+    title: "Submission Timeline",
+    points: [
+      "Initial Abstract Submission Deadline: 22 October 2026.",
+      "The submission deadline may be extended until 31 October 2026, subject to an official announcement.",
+      "Abstract screening will begin on a rolling basis from approximately 10–15 October 2026 rather than waiting until the final submission deadline.",
+      "Registration, screening, and acceptance/rejection communication will take place in parallel on a rolling basis to avoid a concentration of submissions near the deadline."
+    ]
+  },
+  {
+    num: "03",
+    title: "Revision Deadlines",
+    points: [
+      "31 October 2026: Deadline for revised submissions where the original abstract was submitted on or before 22 October 2026.",
+      "5 November 2026: Deadline for revised submissions where the original abstract was submitted between 23 and 31 October 2026, if the submission deadline has officially been extended.",
+      "Only the revision specifically requested by the Scientific Committee should be submitted within the applicable revision deadline."
+    ]
+  },
+  {
+    num: "04",
+    title: "Multiple Submission Policy & Presenting Author Restriction",
+    points: [
+      "Multiple submissions will be permitted only sequentially.",
+      "An applicant may have only one active abstract submission at a time.",
+      "A second abstract may be submitted only if the applicant's first abstract has been outrightly rejected.",
+      "The second submission must be made within the applicable abstract submission deadline (22 October 2026, or the officially announced extended deadline, if applicable).",
+      "Participants must not submit two different abstracts simultaneously while the first submission is still under review.",
+      "If two submissions are made simultaneously, the second submission will be flagged and will not be reviewed until the eligibility conditions are satisfied.",
+      "Each eligible submission receives its own unique submission ID and review status.",
+      "Presenting Author Restriction: A participant may be the presenting author for only one accepted poster. A participant may be listed as a co-author on other abstracts or posters but cannot serve as the presenting author for more than one presentation."
+    ]
+  },
+  {
+    num: "05",
+    title: "Abstract Submission Format",
+    points: [
+      "File format: DOCX only (Maximum file size: 10 MB).",
+      "Font: Times New Roman, Font size: 12.",
+      "Word count: 350–400 words (Tables, legends, and references are excluded from the abstract word count).",
+      "Abstracts may include relevant tables and references.",
+      "All information and data entered in the submission must be accurate and verified."
+    ]
+  },
+  {
+    num: "06",
+    title: "Plagiarism and AI Usage",
+    points: [
+      "Plagiarism screening threshold: Less than 20%.",
+      "AI-detection score: Less than 30%.",
+      "These thresholds are intended for preliminary screening and do not override the requirement that the submitted work must be original.",
+      "Use of artificial intelligence tools must comply with applicable JAMA policies and guidelines concerning the use and disclosure of AI in medical writing and publishing.",
+      "Authors remain responsible for the accuracy, originality, scientific integrity, references, analysis, and content of their submission."
+    ]
+  },
+  {
+    num: "07",
+    title: "Screening and Acceptance",
+    points: [
+      "Abstracts will be evaluated on a rolling basis, beginning approximately 10–15 October 2026.",
+      "The Scientific Committee should not wait until the final submission deadline before beginning evaluation.",
+      "Participants may receive: Accepted → Revision Required → Rejected decisions while the submission window remains open.",
+      "Acceptance, revision, and rejection communication will also be sent on a rolling basis."
+    ]
+  },
+  {
+    num: "08",
+    title: "Waitlist / Standby Policy",
+    points: [
+      "There will generally be no formal waitlist.",
+      "However, if the number of high-quality accepted abstracts exceeds available presentation slots, additional eligible abstracts may be placed on a standby list.",
+      "If an accepted presenting author subsequently withdraws, an eligible standby participant may be offered the vacant presentation slot.",
+      "Placement on the standby list does not guarantee a presentation opportunity."
+    ]
+  },
+  {
+    num: "09",
+    title: "Submission Portal and Tracking",
+    points: [
+      "Each abstract receives a unique Submission ID upon registration.",
+      "Track your progress in the participant dashboard: Abstract Submitted → Received by Scientific Committee → Under Review → Accepted / Revision Required / Rejected (and Revised Abstract Submitted → Under Review → Final Decision).",
+      "The status tracker remains visible in your participant dashboard."
+    ]
+  },
+  {
+    num: "10",
+    title: "Poster Specifications",
+    points: [
+      "Orientation: Portrait.",
+      "Size: 36 inches × 48 inches.",
+      "Posters must follow the official template and formatting requirements provided by the organizers."
+    ]
+  },
+  {
+    num: "11",
+    title: "Author and Affiliation Format",
+    points: [
+      "Display Format: Author Name¹, Author Name²",
+      "¹Department, Institution/Affiliation, State, Country",
+      "²Department, Institution/Affiliation, State, Country",
+      "Superscript numbers must associate each author with their appropriate department and institutional affiliation."
+    ]
+  },
+  {
+    num: "12",
+    title: "Poster Formatting",
+    points: [
+      "Main poster content font size: more than 30 pt.",
+      "Introduction or major section headings font size: more than 50 pt.",
+      "Presenting author's email address and LinkedIn ID must be included.",
+      "Relevant graphs, figures, photographs, tables, charts, and visual material should be incorporated.",
+      "Posters must remain readable, visually clear, and scientifically structured."
+    ]
+  },
+  {
+    num: "13",
+    title: "Research Poster Structure",
+    points: [
+      "Sections: Title, Authors & Affiliations, Introduction, Objectives (where applicable), Methodology, Results, Conclusion, References (where applicable), Relevant graphs/tables.",
+      "Presenters must use the official Research Poster Template provided by the organizers."
+    ]
+  },
+  {
+    num: "14",
+    title: "Case Poster Structure",
+    points: [
+      "Sections: Title, Authors & Affiliations, Introduction, Case Report / Case Presentation, Investigations (where applicable), Treatment / Management, Follow-up / Outcome, Discussion, Conclusion (where applicable), References, Clinical images.",
+      "Presenters must use the official Case Poster Template provided by the organizers."
+    ]
+  },
+  {
+    num: "15",
+    title: "Presentation, Certificate and Cash Prize",
+    points: [
+      "Only the officially designated presenting author may present the poster.",
+      "An individual may serve as the presenting author for only one poster (though may be listed as a co-author on other submissions).",
+      "The Certificate of Presentation will be issued only to the presenting author.",
+      "Any applicable cash prize will also be awarded only to the presenting author.",
+      "Co-authorship alone does not create eligibility for a presentation certificate or cash prize."
+    ]
+  },
+  {
+    num: "16",
+    title: "Responsibility of Authors",
+    points: [
+      "Submission of an abstract confirms that the authors: have verified the accuracy of the submitted information; take responsibility for the originality and scientific integrity of the work; have obtained appropriate permissions or approvals wherever required; have complied with submission, plagiarism, AI-use, authorship, and presentation policies; and agree to follow the decisions and timelines communicated by the Scientific Committee."
+    ]
+  }
+];
+
 export default function AbstractRegister() {
   const [form, setForm] = useState(initialForm);
   const [pdf, setPdf] = useState(null);
@@ -72,6 +232,7 @@ export default function AbstractRegister() {
   const [errors, setErrors] = useState({});
   const [isCallsOpen, setIsCallsOpen] = useState(null);
   const [abstractWhatsapp, setAbstractWhatsapp] = useState({ url: "", text: "" });
+  const [expandedGuidelines, setExpandedGuidelines] = useState(false);
 
   useEffect(() => {
     document.body.classList.add('redesign-active')
@@ -165,7 +326,7 @@ export default function AbstractRegister() {
       if (type === 'declaration') setDeclaration(file);
       setErrors((curr) => ({ ...curr, [type]: null }));
     } else {
-      setErrors((curr) => ({ ...curr, [type]: "Please upload a valid PDF or DOCX file" }));
+      setErrors((curr) => ({ ...curr, [type]: "Please upload a valid DOCX or PDF file" }));
     }
   };
 
@@ -348,23 +509,84 @@ export default function AbstractRegister() {
               {/* STEP 0: GUIDELINES */}
               {step === 0 && (
                 <motion.div key="step0" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-6">
-                  <h3 className="text-[0.7rem] font-bold text-[#7a958b] tracking-wider uppercase mb-6">PLEASE READ CAREFULLY</h3>
+                  <h3 className="text-[0.7rem] font-bold text-[#7a958b] tracking-wider uppercase mb-2">PLEASE READ CAREFULLY</h3>
                   
                   <div className="space-y-6 text-[#4a5f6e] text-sm">
-                    <div className="bg-[#fff5f5] border border-[#ffe0e0] rounded-xl p-5">
-                      <p className="font-bold text-[#e04040] mb-2 flex items-center gap-2"><Info className="w-4 h-4"/> Important Note</p>
-                      <p>Last date for Submission: <strong>30th October , 2026.</strong></p>
-                      <ul className="list-disc list-inside mt-3 space-y-1.5 opacity-90">
-                        <li>The file must be in <strong>PDF or DOCX</strong> format and not more than <strong>10 MB</strong> in size.</li>
+                    {/* Important Note Box */}
+                    <div className="bg-[#fff5f5] border border-[#ffe0e0] rounded-2xl p-5 shadow-xs">
+                      <p className="font-bold text-[#e04040] mb-3 flex items-center gap-2">
+                        <Info className="w-5 h-5"/> Important Note & Submission Timeline
+                      </p>
+                      <div className="grid sm:grid-cols-2 gap-2.5 mb-3.5">
+                        <div className="bg-white/80 rounded-xl p-2.5 border border-red-100">
+                          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Initial Submission Deadline</span>
+                          <span className="text-xs font-bold text-gray-900">22 October 2026</span>
+                          <span className="text-[10px] text-amber-700 block">(Extendable to 31 Oct subject to notice)</span>
+                        </div>
+                        <div className="bg-white/80 rounded-xl p-2.5 border border-red-100">
+                          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Screening</span>
+                          <span className="text-xs font-bold text-emerald-700">Rolling Basis (~10–15 Oct onwards)</span>
+                          <span className="text-[10px] text-gray-500 block">Decisions sent as reviewed</span>
+                        </div>
+                        <div className="bg-white/80 rounded-xl p-2.5 border border-red-100">
+                          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Revision Deadline (Submitted ≤ 22 Oct)</span>
+                          <span className="text-xs font-bold text-blue-900">31 October 2026</span>
+                        </div>
+                        <div className="bg-white/80 rounded-xl p-2.5 border border-red-100">
+                          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider block">Revision Deadline (Submitted 23–31 Oct)</span>
+                          <span className="text-xs font-bold text-blue-900">5 November 2026</span>
+                        </div>
+                      </div>
+                      <ul className="list-disc list-inside space-y-1.5 text-xs text-gray-700">
+                        <li>The file must be in <strong>DOCX format</strong> and not more than <strong>10 MB</strong> in size (Font: Times New Roman, Size: 12).</li>
+                        <li>Word Limit: <strong>350–400 words</strong> (Tables, legends, and references are excluded from count).</li>
+                        <li>Screening Thresholds: Plagiarism <strong>less than 20%</strong>; AI-detection score <strong>less than 30%</strong> (compliant with JAMA guidelines).</li>
+                        <li><strong>Multiple Submissions:</strong> Permitted <em>only sequentially</em> if the first abstract is outrightly rejected.</li>
+                        <li><strong>Presenting Author Restriction:</strong> An individual may be the presenting author for <strong>only one accepted poster</strong>.</li>
+                        <li>Cash prize and Certificate of presentation will <strong>only be given to the presenting author</strong>.</li>
                         <li>All data entered must be accurate and verified.</li>
-                        <li>Abstracts may include tables and references.</li>
-                        <li>Word Limit: <strong>350–400 words</strong>.</li>
-                        <li>No AI-generated content. Plagiarism up to 10% allowed.</li>
-                        <li>If you are the presenting author, you can submit <strong>only one poster</strong> for presentation.</li>
-                        <li>Cash prize and Certificate of presentation will <strong>only be given to presenting author</strong>.</li>
                       </ul>
                     </div>
 
+                    {/* Expandable Full 16 Guidelines Accordion */}
+                    <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-xs">
+                      <button
+                        type="button"
+                        onClick={() => setExpandedGuidelines(!expandedGuidelines)}
+                        className="w-full flex items-center justify-between p-4 bg-gray-50/80 hover:bg-gray-100/80 transition-colors text-left font-bold text-[#1a2b3c] text-xs sm:text-sm"
+                      >
+                        <span className="flex items-center gap-2 text-[#173B8F]">
+                          <BookOpen className="w-4 h-4" />
+                          Abstract & Poster Submission Guidelines (All 16 Sections)
+                        </span>
+                        <span className="flex items-center gap-1 text-xs text-gray-500 font-medium">
+                          {expandedGuidelines ? "Collapse" : "View Full Guidelines"}
+                          {expandedGuidelines ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        </span>
+                      </button>
+
+                      {expandedGuidelines && (
+                        <div className="p-4 sm:p-5 space-y-4 max-h-96 overflow-y-auto border-t border-gray-100 bg-[#fbfdfc] text-xs">
+                          {submissionGuidelinesData.map((item) => (
+                            <div key={item.num} className="bg-white p-3 rounded-xl border border-gray-100 space-y-1.5 shadow-2xs">
+                              <h5 className="font-bold text-[#1a2b3c] text-xs flex items-center gap-1.5">
+                                <span className="w-5 h-5 rounded bg-[#349e81]/10 text-[#2b836b] font-bold text-[10px] flex items-center justify-center shrink-0">
+                                  {item.num}
+                                </span>
+                                {item.title}
+                              </h5>
+                              <ul className="list-disc list-inside text-gray-600 space-y-1 pl-1 text-[11px] leading-relaxed">
+                                {item.points.map((pt, idx) => (
+                                  <li key={idx}>{pt}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Formats Grid */}
                     <div className="grid lg:grid-cols-2 gap-5">
                       {/* Research Abstract Format */}
                       <div className="bg-white border border-gray-200/90 rounded-2xl p-5 shadow-xs flex flex-col justify-between hover:border-[#349e81]/40 transition-colors">
@@ -477,9 +699,42 @@ export default function AbstractRegister() {
                       </div>
                     </div>
 
-                    <div className="border-l-4 border-[#349e81] bg-[#f4faf8] p-4 rounded-r-xl">
-                      <p className="text-xs font-semibold text-[#1a2b3c]">Submission Instructions</p>
-                      <p className="text-xs mt-1 opacity-80">Kindly review the declaration form on the uploads page. If you agree with its terms, please sign the document and return a copy in PDF format. <strong>Submission of your signed declaration is mandatory.</strong></p>
+                    {/* Declaration Notice */}
+                    <div className="border-l-4 border-[#349e81] bg-[#f4faf8] p-4 rounded-r-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold text-[#1a2b3c]">Declaration Form Requirement</p>
+                        <p className="text-xs mt-1 opacity-80">Download, sign, and upload the declaration form during step 2. Submission of the signed declaration is mandatory.</p>
+                      </div>
+                      <a href="/assets/forms/GHC%20Poster%20Presenter%20Declaration%20Form%201.docx" download="GHC Poster Presenter Declaration Form.docx" className="inline-flex items-center gap-1.5 text-xs text-[#349e81] hover:text-[#2b836b] font-bold whitespace-nowrap px-3 py-1.5 bg-white border border-[#349e81]/30 rounded-lg shadow-2xs">
+                        <Download className="w-3.5 h-3.5" /> Download Form
+                      </a>
+                    </div>
+
+                    {/* Queries / Contacts Box */}
+                    <div className="bg-[#f8fafc] border border-gray-200 rounded-2xl p-5">
+                      <h4 className="font-bold text-[#1a2b3c] text-xs sm:text-sm uppercase tracking-wider mb-3">For Queries, Contact:</h4>
+                      <div className="grid sm:grid-cols-2 gap-3 text-xs">
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-4 h-4 text-[#349e81] shrink-0" />
+                          <span className="text-gray-500 font-medium">Email:</span>
+                          <a href="mailto:ghcscientific@gmail.com" className="font-bold text-[#173B8F] hover:underline">ghcscientific@gmail.com</a>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-[#349e81] shrink-0" />
+                          <span className="text-gray-500 font-medium">Girik Subudhi:</span>
+                          <a href="tel:+918169011833" className="font-bold text-[#1a2b3c] hover:text-[#349e81]">+91 8169011833</a>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-[#349e81] shrink-0" />
+                          <span className="text-gray-500 font-medium">Gaurav Jayadev:</span>
+                          <a href="tel:+917022408203" className="font-bold text-[#1a2b3c] hover:text-[#349e81]">+91 7022408203</a>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-[#349e81] shrink-0" />
+                          <span className="text-gray-500 font-medium">Dr Prakhar Bajpai:</span>
+                          <a href="tel:+919758523839" className="font-bold text-[#1a2b3c] hover:text-[#349e81]">+91 97585 23839</a>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
