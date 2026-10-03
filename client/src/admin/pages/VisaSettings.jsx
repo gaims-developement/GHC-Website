@@ -6,7 +6,7 @@ import { API_BASE_URL } from '../../config/api';
 export default function VisaSettings({ onBack, onNavigate, api }) {
   const [settings, setSettings] = useState({
     event_name: 'Global Health Conclave (GHC)',
-    event_dates: '22nd–24th November 2026',
+    event_dates: 'November 2026',
     venue: 'New Delhi, India',
     organizer_name: 'GAIMS',
     collaboration_org: 'AIIMS Student Association',

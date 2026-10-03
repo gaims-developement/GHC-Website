@@ -283,7 +283,7 @@ export default function WorkshopDetail() {
               </div>
               <div className="min-w-0">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#475467]">Date</p>
-                <p className="text-xs sm:text-sm font-bold text-[#101828] truncate">{workshop.displayDate || "Nov 22-24, 2026"}</p>
+                <p className="text-xs sm:text-sm font-bold text-[#101828] truncate">{workshop.displayDate || "November 2026"}</p>
               </div>
             </div>
 

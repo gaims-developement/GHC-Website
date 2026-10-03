@@ -305,7 +305,7 @@ export default function WorkshopApplicationDetailModal({
               <div>
                 <span className="text-gray-500 block">Dates & Venue</span>
                 <span className="font-semibold text-gray-900">
-                  {application.workshopDuration || "22nd & 23rd"} • {application.workshopVenue || "New Delhi"}
+                  {application.workshopDuration || "November 2026"} • {application.workshopVenue || "New Delhi"}
                 </span>
               </div>
               <div>

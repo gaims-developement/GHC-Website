@@ -406,7 +406,7 @@ export default function WorkshopRegister() {
               <Clock3 className="w-4 h-4 text-[#173B8F] shrink-0" />
               <div>
                 <span className="text-[11px] text-slate-400 block font-semibold uppercase">Dates</span>
-                <strong>{workshop.duration || "22nd & 23rd September"}</strong>
+                <strong>{workshop.duration || "November 2026"}</strong>
               </div>
             </div>
 

@@ -118,13 +118,11 @@ const mockWorkshops = [];
 const defaultScheduleActivities = {
   day1: [],
   day2: [],
-  day3: [],
 };
 
 const scheduleDays = [
-  { key: "day1", title: "Conference Day 1", status: "November 22, 2026", subtitle: "Opening · Keynotes · Panels" },
-  { key: "day2", title: "Conference Day 2", status: "November 23, 2026", subtitle: "Research · Workshops · Awards" },
-  { key: "day3", title: "Conference Day 3", status: "November 24, 2026", subtitle: "Roundtables · Networking · Closing" },
+  { key: "day1", title: "Conference Day 1", status: "November 2026", subtitle: "Opening · Keynotes · Panels" },
+  { key: "day2", title: "Conference Day 2", status: "November 2026", subtitle: "Research · Workshops · Awards" },
 ];
 
 const heroTitle = "Global Healthcare Conclave 2026";
@@ -541,7 +539,7 @@ function Hero({ banner }) {
 
           <motion.div className="hero-pill mb-4 bg-white/90 border border-gray-300 shadow-sm" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: finalDelay, duration: 0.7, ease: "easeOut" }}>
             <MapPin className="h-4 w-4 text-[#F43F8A]" />
-            <span className="text-[#101828] font-bold text-xs tracking-wider">New Delhi · November 22-24, 2026</span>
+            <span className="text-[#101828] font-bold text-xs tracking-wider">New Delhi · November 2026</span>
           </motion.div>
           <motion.h1
             className="mt-4 font-['Outfit'] text-5xl font-extrabold leading-[1.1] sm:text-6xl lg:text-7xl text-[#101828]"
@@ -1339,8 +1337,8 @@ function GHCTimeline() {
       key: "abstract",
       title: "Abstract Submission",
       subtitle: "How to submit",
-      status: "Announcing Soon",
-      statusType: "soon",
+      status: "Calls open",
+      statusType: "confirmed",
       icon: FileText,
       content: <AbstractSubmissionContent />,
     },
@@ -1477,7 +1475,7 @@ function AbstractSubmissionContent() {
   const steps = [
     ["Click on Submit Abstract", "Start the submission process from the abstract submission section."],
     ["Fill details in the form", "Enter all the required information about you and your research."],
-    ["Upload abstract", "Attach your abstract as a PDF."],
+    ["Upload abstract", "Attach your abstract in DOCX format."],
     ["Submit abstract", "Submit your form and await the review."],
   ];
 
@@ -1495,6 +1493,11 @@ function AbstractSubmissionContent() {
           </div>
         </div>
       ))}
+      <div className="pt-2 pl-9">
+        <Link to="/abstract-registration" className="inline-flex items-center gap-2 bg-[#173B8F] text-white px-5 py-2.5 rounded-full font-bold text-xs hover:bg-[#0D47A1] transition-all shadow-sm">
+          Submit Abstract Now <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+      </div>
     </div>
   );
 }

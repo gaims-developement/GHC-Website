@@ -168,7 +168,7 @@ export default function About() {
               <p className="text-body" style={{ color: 'rgba(255,255,255,0.6)' }}>
                 Global Healthcare Conclave<br/>
                 New Delhi, India<br/>
-                22-24 November 2026
+                November 2026
               </p>
             </div>
             <div>

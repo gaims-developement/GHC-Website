@@ -7,7 +7,7 @@ export const SITE_URL = (import.meta.env.VITE_SITE_URL || DEFAULT_SITE_URL).repl
 export const SITE_NAME = "Global Healthcare Conclave 2026";
 export const DEFAULT_TITLE = "Global Healthcare Conclave 2026";
 export const DEFAULT_DESCRIPTION =
-  "Global Healthcare Conclave 2026 (GHC 2026) by GAIMS in New Delhi — healthcare leadership, research, hands-on workshops, world-class speakers and delegate registration. November 22–24, 2026.";
+  "Global Healthcare Conclave 2026 (GHC 2026) by GAIMS in New Delhi — healthcare leadership, research, hands-on workshops, world-class speakers and delegate registration. November 2026.";
 export const DEFAULT_IMAGE = `${SITE_URL}${GHC_LOGO_PATH}`;
 
 export const HOMEPAGE_SEO_KEYS = new Set(["home", "homepage", "default", "index"]);

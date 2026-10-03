@@ -12,17 +12,16 @@ const resolveImageUrl = (img) => {
 };
 
 const days = [
-  { id: 'Day 1', label: 'Day 1', date: 'November 22, 2026' },
-  { id: 'Day 2', label: 'Day 2', date: 'November 23, 2026' },
-  { id: 'Day 3', label: 'Day 3', date: 'November 24, 2026' }
+  { id: 'Day 1', label: 'Day 1', date: 'November 2026' },
+  { id: 'Day 2', label: 'Day 2', date: 'November 2026' }
 ];
 
 const Schedule = () => {
   const [searchParams] = useSearchParams();
   const [activeDay, setActiveDay] = useState(() => {
     const dayParam = searchParams.get("day");
-    const normalized = { day1: "Day 1", day2: "Day 2", day3: "Day 3" }[dayParam] || dayParam;
-    return ["Day 1", "Day 2", "Day 3"].includes(normalized) ? normalized : "Day 1";
+    const normalized = { day1: "Day 1", day2: "Day 2" }[dayParam] || dayParam;
+    return ["Day 1", "Day 2"].includes(normalized) ? normalized : "Day 1";
   });
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,8 +53,7 @@ const Schedule = () => {
   const filteredSchedules = schedules.filter((event) => {
     if (event.day === activeDay) return true;
     if (activeDay === 'Day 1' && (!event.day || event.day.includes('1') || event.date?.includes('22'))) return true;
-    if (activeDay === 'Day 2' && (event.day?.includes('2') || event.date?.includes('23'))) return true;
-    if (activeDay === 'Day 3' && (event.day?.includes('3') || event.date?.includes('24'))) return true;
+    if (activeDay === 'Day 2' && (event.day?.includes('2') || event.day?.includes('3') || event.date?.includes('23') || event.date?.includes('24'))) return true;
     return false;
   });
 

@@ -72,7 +72,7 @@ export default function Venue() {
           <div className="absolute inset-0 bg-gradient-to-t from-[#081B33]/80 via-transparent to-transparent"></div>
           <div className="absolute bottom-6 left-6 text-white">
             <h3 className="font-['Outfit'] text-2xl font-extrabold">New Delhi, India</h3>
-            <p className="text-white/80">November 22-24, 2026</p>
+            <p className="text-white/80">November 2026</p>
           </div>
         </div>
       </section>

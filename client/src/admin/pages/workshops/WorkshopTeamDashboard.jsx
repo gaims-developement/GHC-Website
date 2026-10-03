@@ -222,7 +222,7 @@ export default function WorkshopTeamDashboard({ api, onNavigate, user }) {
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        Dates: {ws.duration || "22nd & 23rd"} • Venue: {ws.venue || "New Delhi"}
+                        Dates: {ws.duration || "November 2026"} • Venue: {ws.venue || "New Delhi"}
                       </p>
                     </div>
                     <div className="text-right">

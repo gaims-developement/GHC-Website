@@ -38,7 +38,7 @@ function AnnualMeetingInvite() {
             <div className="flex items-center gap-3 text-slate-400">
               <CalendarDays className="text-[#d4af37]" size={20} />
               <div className="text-left">
-                <div className="text-white font-bold">November 22, 2026</div>
+                <div className="text-white font-bold">November 2026</div>
                 <div className="text-sm">9:00 AM - 1:00 PM</div>
               </div>
             </div>

@@ -32,12 +32,12 @@ export const getInitials = (name = "") => {
 };
 
 export const formatWorkshopDate = (date) => {
-  if (!date) return "November 22-24, 2026";
-  if (/Will be announced soon/i.test(date)) return "November 22-24, 2026";
-  if (/June\s+(14|15|16),\s+2026/i.test(date)) return "November 22-24, 2026";
-  if (/Dates will be announced soon/i.test(date)) return "November 22-24, 2026";
+  if (!date) return "November 2026";
+  if (/Will be announced soon/i.test(date)) return "November 2026";
+  if (/June\s+(14|15|16),\s+2026/i.test(date)) return "November 2026";
+  if (/Dates will be announced soon/i.test(date)) return "November 2026";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
-  return new Intl.DateTimeFormat("en", { month: "long", day: "numeric", year: "numeric" }).format(new Date(`${date}T00:00:00`));
+  return new Intl.DateTimeFormat("en", { month: "long", year: "numeric" }).format(new Date(`${date}T00:00:00`));
 };
 
 export const formatWorkshopTime = (time) => {

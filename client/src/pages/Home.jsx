@@ -119,7 +119,7 @@ export default function Home() {
               </div>
               <div style={{ width: '1px', height: '24px', background: 'var(--c-border)' }} />
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 600, color: 'var(--c-deep-navy)' }}>
-                <Calendar size={20} color="var(--c-ghc-purple)" /> 22–24 NOV 2026
+                <Calendar size={20} color="var(--c-ghc-purple)" /> NOV 2026
               </div>
             </div>
           </motion.div>
@@ -131,7 +131,7 @@ export default function Home() {
         <div className="container">
           <div className="grid-4">
             {[
-              { label: 'Days of Innovation', value: '3+', icon: <Calendar size={32}/> },
+              { label: 'Days of Innovation', value: '2', icon: <Calendar size={32}/> },
               { label: 'Global Delegates', value: '2,500+', icon: <Globe2 size={32}/> },
               { label: 'Expert Speakers', value: '150+', icon: <Users size={32}/> },
               { label: 'Research Papers', value: '500+', icon: <ExternalLink size={32}/> },
@@ -187,13 +187,12 @@ export default function Home() {
         <div className="container">
           <div style={{ textAlign: 'center', marginBottom: '64px' }}>
             <div className="text-eyebrow" style={{ marginBottom: '16px' }}>Scientific Programme</div>
-            <h2 className="heading-lg">3 Days of Discovery</h2>
+            <h2 className="heading-lg">2 Days of Discovery</h2>
           </div>
-          <div className="grid-3">
+          <div className="grid-2">
             {[
-              { day: 'Day 01', date: '22 Nov', title: 'Opening & Global Health', tags: ['KEYNOTE', 'NETWORKING'] },
-              { day: 'Day 02', date: '23 Nov', title: 'Scientific Sessions & Research', tags: ['SCIENTIFIC', 'PANEL'] },
-              { day: 'Day 03', date: '24 Nov', title: 'Innovation & Collaboration', tags: ['WORKSHOP', 'AWARDS'] }
+              { day: 'Day 01', date: 'November 2026', title: 'Opening & Global Health', tags: ['KEYNOTE', 'NETWORKING'] },
+              { day: 'Day 02', date: 'November 2026', title: 'Scientific Sessions & Research', tags: ['SCIENTIFIC', 'PANEL', 'AWARDS'] },
             ].map((d, i) => (
               <motion.div key={i} className="card-rounded-md" style={{ padding: '40px' }}
                 initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.1 }}>
@@ -209,7 +208,7 @@ export default function Home() {
                     </span>
                   ))}
                 </div>
-                <Link to="/program" style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--c-gaims-blue)', fontWeight: 600, textDecoration: 'none' }}>
+                <Link to="/schedule" style={{ display: 'inline-flex', alignItems: 'center', color: 'var(--c-gaims-blue)', fontWeight: 600, textDecoration: 'none' }}>
                   View Agenda <ChevronRight size={18} />
                 </Link>
               </motion.div>
@@ -351,7 +350,7 @@ export default function Home() {
               <p className="text-body" style={{ color: 'rgba(255,255,255,0.6)' }}>
                 Global Healthcare Conclave<br/>
                 New Delhi, India<br/>
-                22-24 November 2026
+                November 2026
               </p>
             </div>
             <div>

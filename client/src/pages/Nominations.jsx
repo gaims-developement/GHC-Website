@@ -1011,7 +1011,7 @@ export default function Nominations() {
                       </div>
                       <div className="sm:col-span-2 pt-2 border-t border-gray-100 flex items-center gap-1.5 text-xs text-slate-600">
                         <MapPin className="w-3.5 h-3.5 text-[#6C4AB6] shrink-0" />
-                        <span><strong>Event Venue:</strong> S.E.T Facility, AIIMS New Delhi</span>
+                        <span><strong>Event Venue:</strong> New Delhi</span>
                       </div>
                     </div>
                   </div>
