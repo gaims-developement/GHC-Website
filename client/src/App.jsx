@@ -1710,7 +1710,7 @@ function ResearchHub() {
                     </ul>
                   </div>
 
-                  {/* 16 Detailed Guidelines Sections */}
+                  {/* 15 Detailed Guidelines Sections */}
                   <div className="space-y-4">
                     <h3 className="text-xs font-bold text-[#00E5FF] tracking-wider uppercase flex items-center gap-2">
                       <BookOpen className="w-4 h-4" /> Full Submission & Presentation Guidelines
@@ -1841,21 +1841,6 @@ function ResearchHub() {
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
                       <h4 className="font-bold text-white text-base flex items-center gap-2">
                         <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">9</span>
-                        Submission Portal and Tracking
-                      </h4>
-                      <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
-                        <li>Each abstract receives a <strong>unique Submission ID</strong> upon completion.</li>
-                        <li>Track the progress of each eligible submission through the participant dashboard tracker:</li>
-                      </ul>
-                      <div className="bg-black/30 p-3 rounded-xl border border-white/5 text-xs text-emerald-300 font-mono text-center">
-                        Abstract Submitted → Received by Scientific Committee → Under Review → Accepted / Revision Required / Rejected
-                      </div>
-                    </div>
-
-                    {/* Section 10 */}
-                    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
-                      <h4 className="font-bold text-white text-base flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">10</span>
                         Poster Specifications
                       </h4>
                       <div className="grid sm:grid-cols-2 gap-3 text-sm text-white/80 my-2">
@@ -1871,10 +1856,10 @@ function ResearchHub() {
                       <p className="text-white/75 text-sm">Posters must follow the official template and formatting requirements provided by the organizers.</p>
                     </div>
 
-                    {/* Section 11 */}
+                    {/* Section 10 */}
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
                       <h4 className="font-bold text-white text-base flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">11</span>
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">10</span>
                         Author and Affiliation Format
                       </h4>
                       <p className="text-white/80 text-sm">Author names and affiliations should be displayed in the following format:</p>
@@ -1886,10 +1871,10 @@ function ResearchHub() {
                       <p className="text-white/70 text-xs">Superscript numbers associate each author with their appropriate department and institutional affiliation.</p>
                     </div>
 
-                    {/* Section 12 */}
+                    {/* Section 11 */}
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
                       <h4 className="font-bold text-white text-base flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">12</span>
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">11</span>
                         Poster Formatting
                       </h4>
                       <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
@@ -1901,10 +1886,10 @@ function ResearchHub() {
                       </ul>
                     </div>
 
-                    {/* Section 13 */}
+                    {/* Section 12 */}
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
                       <h4 className="font-bold text-white text-base flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">13</span>
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">12</span>
                         Research Poster Structure
                       </h4>
                       <p className="text-white/80 text-sm">Research posters must contain the following sections using the official Research Poster Template:</p>
@@ -1917,10 +1902,10 @@ function ResearchHub() {
                       </div>
                     </div>
 
-                    {/* Section 14 */}
+                    {/* Section 13 */}
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
                       <h4 className="font-bold text-white text-base flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">14</span>
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">13</span>
                         Case Poster Structure
                       </h4>
                       <p className="text-white/80 text-sm">Case-report posters must contain the following sections using the official Case Poster Template:</p>
@@ -1933,10 +1918,10 @@ function ResearchHub() {
                       </div>
                     </div>
 
-                    {/* Section 15 */}
+                    {/* Section 14 */}
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
                       <h4 className="font-bold text-white text-base flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">15</span>
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">14</span>
                         Presentation, Certificate and Cash Prize
                       </h4>
                       <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
@@ -1949,10 +1934,10 @@ function ResearchHub() {
                       </ul>
                     </div>
 
-                    {/* Section 16 */}
+                    {/* Section 15 */}
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
                       <h4 className="font-bold text-white text-base flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">16</span>
+                        <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">15</span>
                         Responsibility of Authors
                       </h4>
                       <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">

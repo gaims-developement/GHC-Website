@@ -150,15 +150,6 @@ const submissionGuidelinesData = [
   },
   {
     num: "09",
-    title: "Submission Portal and Tracking",
-    points: [
-      "Each abstract receives a unique Submission ID upon registration.",
-      "Track your progress in the participant dashboard: Abstract Submitted → Received by Scientific Committee → Under Review → Accepted / Revision Required / Rejected (and Revised Abstract Submitted → Under Review → Final Decision).",
-      "The status tracker remains visible in your participant dashboard."
-    ]
-  },
-  {
-    num: "10",
     title: "Poster Specifications",
     points: [
       "Orientation: Portrait.",
@@ -167,7 +158,7 @@ const submissionGuidelinesData = [
     ]
   },
   {
-    num: "11",
+    num: "10",
     title: "Author and Affiliation Format",
     points: [
       "Display Format: Author Name¹, Author Name²",
@@ -177,7 +168,7 @@ const submissionGuidelinesData = [
     ]
   },
   {
-    num: "12",
+    num: "11",
     title: "Poster Formatting",
     points: [
       "Main poster content font size: more than 30 pt.",
@@ -188,7 +179,7 @@ const submissionGuidelinesData = [
     ]
   },
   {
-    num: "13",
+    num: "12",
     title: "Research Poster Structure",
     points: [
       "Sections: Title, Authors & Affiliations, Introduction, Objectives (where applicable), Methodology, Results, Conclusion, References (where applicable), Relevant graphs/tables.",
@@ -196,7 +187,7 @@ const submissionGuidelinesData = [
     ]
   },
   {
-    num: "14",
+    num: "13",
     title: "Case Poster Structure",
     points: [
       "Sections: Title, Authors & Affiliations, Introduction, Case Report / Case Presentation, Investigations (where applicable), Treatment / Management, Follow-up / Outcome, Discussion, Conclusion (where applicable), References, Clinical images.",
@@ -204,7 +195,7 @@ const submissionGuidelinesData = [
     ]
   },
   {
-    num: "15",
+    num: "14",
     title: "Presentation, Certificate and Cash Prize",
     points: [
       "Only the officially designated presenting author may present the poster.",
@@ -215,7 +206,7 @@ const submissionGuidelinesData = [
     ]
   },
   {
-    num: "16",
+    num: "15",
     title: "Responsibility of Authors",
     points: [
       "Submission of an abstract confirms that the authors: have verified the accuracy of the submitted information; take responsibility for the originality and scientific integrity of the work; have obtained appropriate permissions or approvals wherever required; have complied with submission, plagiarism, AI-use, authorship, and presentation policies; and agree to follow the decisions and timelines communicated by the Scientific Committee."
@@ -566,7 +557,7 @@ const defaultCountries = [
                       </ul>
                     </div>
 
-                    {/* Expandable Full 16 Guidelines Accordion */}
+                    {/* Expandable Full 15 Guidelines Accordion */}
                     <div className="border border-gray-200 rounded-2xl overflow-hidden bg-white shadow-xs">
                       <button
                         type="button"
@@ -575,7 +566,7 @@ const defaultCountries = [
                       >
                         <span className="flex items-center gap-2 text-[#173B8F]">
                           <BookOpen className="w-4 h-4" />
-                          Abstract & Poster Submission Guidelines (All 16 Sections)
+                          Abstract & Poster Submission Guidelines (All 15 Sections)
                         </span>
                         <span className="flex items-center gap-1 text-xs text-gray-500 font-medium">
                           {expandedGuidelines ? "Collapse" : "View Full Guidelines"}
