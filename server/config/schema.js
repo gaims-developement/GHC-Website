@@ -3187,25 +3187,50 @@ const seedSpeakers = async () => {
 
   const speakers = [
     [
-      'Dr Sashi Kuppala (Invited)', '', '',
-      '',
-      'past', 'published', 1
+      'Dr Sashi Kuppala (Invited)', 'Keynote Speaker', '',
+      '', 'current', 'published', 1, ''
     ],
     [
-      'Dr Meher Medavaram (Invited)', '', '',
-      '',
-      'past', 'published', 2
+      'Dr Meher Medavaram (Invited)', 'Keynote Speaker', '',
+      '', 'current', 'published', 2, ''
     ],
     [
-      'Dr Sowmya Vishwanathan (Invited)', '', '',
-      '',
-      'past', 'published', 3
+      'Dr Sowmya Vishwanathan (Invited)', 'Keynote Speaker', '',
+      '', 'current', 'published', 3, ''
+    ],
+    [
+      'Dr Mukesh Bhatia', 'Founder, DBMCI', '',
+      '', 'past', 'published', 1, 'Pioneer in PG Medical Entrance education. Mentored millions of medical students.'
+    ],
+    [
+      'Dr Randeep Guleria', 'Former Director, AIIMS New Delhi', '',
+      '', 'past', 'published', 2, 'Padma Shri Awardee. Lead architect of India\'s COVID-19 pandemic response.'
+    ],
+    [
+      'Dr Minu Bajpai', 'Executive Director, NBE', '',
+      '', 'past', 'published', 3, 'Renowned Paediatric Surgeon and academician. Former Head of Department at AIIMS.'
+    ],
+    [
+      'Dr Rakesh Garg', 'Additional Professor, AIIMS New Delhi', '',
+      '', 'past', 'published', 4, 'Expert in Anesthesiology, Pain Medicine and Critical Care. Over 200+ publications.'
+    ],
+    [
+      'Dr Tanmay Motiwala', 'Paediatric Surgeon & Influencer', '',
+      '', 'past', 'published', 5, 'Inspiring voice in the medical community with focus on surgical education.'
+    ],
+    [
+      'Lt Gen Dr DP Vats', 'Former Director, AFMC Pune', '',
+      '', 'past', 'published', 6, 'Rajya Sabha MP. Param Vishisht Seva Medal (PVSM) awardee. Eminent Ophthalmologist.'
+    ],
+    [
+      'Dr Yogendra Malik', 'Former Advisor to CM, Haryana', '',
+      '', 'past', 'published', 7, 'Eminent medical educationist and health policy maker.'
     ]
   ];
 
   await pool.query(
     `INSERT INTO speakers
-      (name, designation, institution, bio, speaker_type, status, display_order)
+      (name, designation, institution, bio, speaker_type, status, display_order, achievements)
      VALUES ?`,
     [speakers]
   );
@@ -3460,23 +3485,8 @@ const seedResearch = async () => {
     ]
   );
 
-  const [rows] = await pool.query('SELECT COUNT(*) AS count FROM abstracts');
-  if (rows[0].count > 0) return;
-
-  const abstracts = [
-    ['AI in Healthcare', 'Dr A Sharma; Prof Kabir Shah', 'Dr A Sharma', 'AIIMS Delhi', 'ai.health@example.com', '+91 90000 00001', 'oral', 'Digital Health & AI', 'AI, clinical safety, workflow', 'A study on responsible AI adoption in tertiary care workflows with emphasis on validation, governance and measurable clinical outcomes.', null, 'accepted', 91.5, 'Strong translational value and clear implementation pathway.', 1, true],
-    ['Maternal Health', 'Dr Meera Rao; Dr Leena Menon', 'Dr Meera Rao', 'GAIMS', 'maternal@example.com', '+91 90000 00002', 'poster', "Women's Health", 'maternal health, equity, access', 'A community-linked maternal health intervention designed to improve continuity of care and high-risk pregnancy identification.', null, 'accepted', 87.0, 'Relevant public health model with strong poster potential.', 1, false],
-    ['Digital Public Health', 'Public Health Action Group', 'Anaya Patel', 'Public Health Action', 'digitalph@example.com', '+91 90000 00003', 'oral', 'Public Health', 'surveillance, digital health, population health', 'Digital public health dashboards were evaluated for early risk detection and district-level program coordination.', null, 'under_review', 78.0, 'Needs deeper methods detail before final decision.', 1, false],
-    ['Climate Health', 'Planetary Health Alliance', 'Dr Omar Khalid', 'Planetary Health Council', 'climate@example.com', '+91 90000 00004', 'poster', 'Climate Health', 'heat, hospitals, resilience', 'Assessment of hospital heat-readiness and climate-linked emergency preparedness across urban care settings.', null, 'submitted', null, null, null, false],
-    ['HPV Awareness', 'Women Care Collaborative', 'Mira Sen', "Women's Care Collaborative", 'hpv@example.com', '+91 90000 00005', 'poster', "Women's Health", 'HPV, awareness, prevention', 'A student-led awareness model to improve HPV vaccine literacy among adolescents and parents.', null, 'rejected', 62.0, 'Important topic, but study design needs significant strengthening.', 1, false],
-  ];
-
-  await pool.query(
-    `INSERT INTO abstracts
-      (title, authors, presenting_author, institution, email, phone, category, track, keywords, abstract_text, pdf_url, status, review_score, review_notes, reviewer_id, award_nomination)
-     VALUES ?`,
-    [abstracts]
-  );
+  // Do not seed dummy test abstracts into the database
+  return;
 };
 
 const seedTickets = async () => {

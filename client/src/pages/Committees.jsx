@@ -11,7 +11,7 @@ export default function Committees() {
   const [error, setError] = useState(false);
   const [selectedMember, setSelectedMember] = useState(null);
 
-  const committees = [
+  const defaultCommittees = [
     {
       id: "organising",
       name: "Organising Committee",
@@ -32,6 +32,35 @@ export default function Committees() {
     },
   ];
 
+  const [committees, setCommittees] = useState(defaultCommittees);
+
+  const committeeNameMap = committees.reduce((acc, c) => {
+    acc[c.id] = c.name;
+    return acc;
+  }, {});
+
+  useEffect(() => {
+    axios
+      .get(apiUrl("/api/committees/definitions"))
+      .then((res) => {
+        if (res.data?.committees?.length) {
+          setCommittees(
+            res.data.committees.map((c) => ({
+              id: c.slug,
+              name: c.name,
+              description:
+                c.description ||
+                (c.slug === "organising"
+                  ? "Meet the team bringing the Global Health Conclave to life."
+                  : `Meet the distinguished members of the ${c.name}.`),
+              icon: Users,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     // Sync URL with active committee
     const urlParams = new URLSearchParams(window.location.search);
@@ -41,7 +70,7 @@ export default function Committees() {
     } else {
       window.history.replaceState({}, "", `${window.location.pathname}?type=${activeCommittee}`);
     }
-  }, []);
+  }, [committees]);
 
   const handleCommitteeChange = (id) => {
     setActiveCommittee(id);
@@ -244,6 +273,12 @@ export default function Committees() {
                               {member.committeeRole}
                             </span>
                           )}
+                          {activeCommittee === "organising" && member.committeeType && member.committeeType !== "organising" && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#173B8F] bg-[#173B8F]/8 px-2 py-0.5 rounded-md mb-1.5 w-fit">
+                              <Users size={11} />
+                              {committeeNameMap[member.committeeType] || member.committeeType}
+                            </span>
+                          )}
                           <h3 className="font-bold font-['Sora'] text-lg text-[#101828] leading-tight mb-1 group-hover:text-[#173B8F] transition-colors">
                             {member.name}
                           </h3>
@@ -304,8 +339,14 @@ export default function Committees() {
               <div className="w-full md:w-3/5 p-8 md:p-12 overflow-y-auto custom-scrollbar flex flex-col bg-white">
                 <div className="mb-6">
                   {selectedMember.committeeRole && (
-                    <div className="inline-flex items-center px-3 py-1 rounded-full bg-purple-50 text-[#D946EF] border border-purple-100 text-xs font-bold uppercase tracking-widest mb-4">
+                    <div className="inline-flex items-center px-3 py-1 rounded-full bg-purple-50 text-[#D946EF] border border-purple-100 text-xs font-bold uppercase tracking-widest mb-3 mr-2">
                       {selectedMember.committeeRole}
+                    </div>
+                  )}
+                  {selectedMember.committeeType && (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#173B8F] border border-blue-100 text-xs font-bold uppercase tracking-widest mb-3">
+                      <Users size={12} />
+                      {committeeNameMap[selectedMember.committeeType] || selectedMember.committeeType}
                     </div>
                   )}
                   <h2 className="text-3xl md:text-4xl font-bold font-['Sora'] text-[#101828] mb-2">{selectedMember.name}</h2>

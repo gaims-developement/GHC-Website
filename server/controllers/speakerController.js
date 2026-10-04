@@ -34,6 +34,7 @@ const sanitizePayload = (body, file) => ({
   keynote: toBoolean(body.keynote),
   displayOrder: body.displayOrder ?? body.display_order ?? 0,
   status: body.status || 'draft',
+  speakerType: body.speakerType || body.speaker_type || 'current',
 });
 
 const validate = (payload) => {
@@ -44,7 +45,8 @@ const validate = (payload) => {
 
 const listSpeakers = asyncHandler(async (req, res) => {
   const includeDrafts = req.query.admin === '1' && ['SUPER_ADMIN', 'ADMIN', 'MEDIA'].includes(req.user?.role);
-  const speakers = await Speaker.list({ includeDrafts, req });
+  const type = req.query.type || null;
+  const speakers = await Speaker.list({ includeDrafts, req, type });
   res.json({ speakers });
 });
 

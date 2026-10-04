@@ -12,6 +12,14 @@ router.get(
 );
 
 router.get(
+  '/definitions',
+  asyncHandler(async (req, res) => {
+    const committees = await committeeModel.listCommittees();
+    res.json({ committees });
+  })
+);
+
+router.get(
   '/:type',
   asyncHandler(async (req, res) => {
     const { type } = req.params;

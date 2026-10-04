@@ -271,7 +271,7 @@ export default function WorkshopDetail() {
           </div>
 
           {/* Workshop Name */}
-          <h1 className="font-['Outfit'] text-3xl sm:text-4xl md:text-5xl font-black text-[#101828] leading-tight mb-5">
+          <h1 className="font-['Outfit'] text-2xl sm:text-4xl md:text-5xl font-black text-[#101828] leading-tight mb-5 break-words">
             {workshop.title}
           </h1>
 
@@ -602,7 +602,7 @@ export default function WorkshopDetail() {
       {/* Sticky Mobile Apply Bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold text-[#101828] truncate">{workshop.title}</p>
+          <p className="text-xs font-bold text-[#101828] line-clamp-2 leading-tight break-words">{workshop.title}</p>
           <p className="text-[11px] font-semibold text-emerald-600">{remaining} of {capacity} seats left</p>
         </div>
         {canApply ? (

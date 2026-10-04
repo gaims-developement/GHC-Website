@@ -20,6 +20,9 @@ export const apiUrl = (path) => {
 export const getImageUrl = (url) => {
   if (!url) return '';
   if (url.startsWith('http') || url.startsWith('data:')) return url;
+  if (url.startsWith('/assets/') || url.startsWith('assets/')) {
+    return url.startsWith('/') ? url : `/${url}`;
+  }
   const normalizedPath = url.startsWith('/') ? url : `/${url}`;
   return `${API_BASE_URL}${normalizedPath}`;
 };

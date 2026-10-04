@@ -951,18 +951,74 @@ function SpotlightCard({ children, className = "" }) {
   );
 }
 
+const defaultPastSpeakers = [
+  {
+    name: "Dr Mukesh Bhatia",
+    designation: "Founder, DBMCI",
+    achievements: "Pioneer in PG Medical Entrance education. Mentored millions of medical students.",
+    photoUrl: "/assets/Speakers/mukeshBhatia.jpeg",
+  },
+  {
+    name: "Dr Randeep Guleria",
+    designation: "Former Director, AIIMS New Delhi",
+    achievements: "Padma Shri Awardee. Lead architect of India's COVID-19 pandemic response.",
+    photoUrl: "/assets/Speakers/RandeepGuleria.jpeg",
+  },
+  {
+    name: "Dr Minu Bajpai",
+    designation: "Executive Director, NBE",
+    achievements: "Renowned Paediatric Surgeon and academician. Former Head of Department at AIIMS.",
+    photoUrl: "/assets/Speakers/MinuBhajpai.jpeg",
+  },
+  {
+    name: "Dr Rakesh Garg",
+    designation: "Additional Professor, AIIMS New Delhi",
+    achievements: "Expert in Anesthesiology, Pain Medicine and Critical Care. Over 200+ publications.",
+    photoUrl: "/assets/Speakers/RakeshGarg.jpeg",
+  },
+  {
+    name: "Dr Tanmay Motiwala",
+    designation: "Paediatric Surgeon & Influencer",
+    achievements: "Inspiring voice in the medical community with focus on surgical education.",
+    photoUrl: "/assets/Speakers/TanmayMotiwala.jpeg",
+  },
+  {
+    name: "Lt Gen Dr DP Vats",
+    designation: "Former Director, AFMC Pune",
+    achievements: "Rajya Sabha MP. Param Vishisht Seva Medal (PVSM) awardee. Eminent Ophthalmologist.",
+    photoUrl: "/assets/Speakers/LtGenDrDPVats.jpeg",
+  },
+  {
+    name: "Dr Yogendra Malik",
+    designation: "Former Advisor to CM, Haryana",
+    achievements: "Eminent medical educationist and health policy maker.",
+    photoUrl: "/assets/Speakers/YogendraMalik.jpeg",
+  }
+];
+
 function WorldClassSpeakers() {
   const { endpoint } = useMockResource(apiEndpoints.speakers, mockSpeakers);
   const [speakerData, setSpeakerData] = useState(mockSpeakers);
+  const [pastSpeakerData, setPastSpeakerData] = useState(defaultPastSpeakers);
 
   useEffect(() => {
     axios.get(apiUrl("/api/speakers")).then((response) => {
       const speakers = response.data.speakers || [];
       if (speakers.length) {
-        setSpeakerData(speakers.map((speaker) => ({
+        const current = speakers.filter(s => s.speakerType !== 'past');
+        const past = speakers.filter(s => s.speakerType === 'past');
+
+        setSpeakerData(current.map((speaker) => ({
           ...speaker,
           initials: speaker.name?.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase(),
         })));
+
+        if (past.length > 0) {
+          setPastSpeakerData(past.map((speaker) => ({
+            ...speaker,
+            initials: speaker.name?.split(" ").filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase(),
+          })));
+        }
       }
     }).catch(() => {});
   }, []);
@@ -976,11 +1032,11 @@ function WorldClassSpeakers() {
         {speakerData?.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {speakerData.map((speaker) => (
-              <SpotlightCard key={speaker.name} className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgba(16,24,40,0.06)] p-8 flex flex-col items-center text-center">
+              <SpotlightCard key={speaker.id || speaker.name} className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgba(16,24,40,0.06)] p-8 flex flex-col items-center text-center">
                 <SpeakerPhoto speaker={speaker} />
-                <h3 className="mt-6 font-['Outfit'] text-xl font-extrabold text-[#101828]">{speaker.name}</h3>
-                <p className="mt-2 text-sm font-bold text-[#173B8F] uppercase tracking-wider">{speaker.designation}</p>
-                <p className="mt-5 text-sm text-[#475467] leading-relaxed border-t border-gray-100 pt-5 w-full font-medium">
+                <h3 className="mt-6 font-['Outfit'] text-xl font-extrabold text-[#101828] break-words">{speaker.name}</h3>
+                <p className="mt-2 text-sm font-bold text-[#173B8F] uppercase tracking-wider break-words">{speaker.designation}</p>
+                <p className="mt-5 text-sm text-[#475467] leading-relaxed border-t border-gray-100 pt-5 w-full font-medium break-words">
                   {speaker.topic || speaker.institution || "Speaker Topic"}
                 </p>
               </SpotlightCard>
@@ -994,62 +1050,25 @@ function WorldClassSpeakers() {
       </div>
 
       <div className="mt-24 max-w-7xl mx-auto px-4 sm:px-6">
-        <SectionHeading eyebrow="Legacy" title="Past Speakers" text="Distinguished faculty and visionaries from our previous editions." />
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {[
-            {
-              name: "Dr Mukesh Bhatia",
-              designation: "Founder, DBMCI",
-              achievements: "Pioneer in PG Medical Entrance education. Mentored millions of medical students.",
-              photoUrl: "/assets/Speakers/mukeshBhatia.jpeg",
-            },
-            {
-              name: "Dr Randeep Guleria",
-              designation: "Former Director, AIIMS New Delhi",
-              achievements: "Padma Shri Awardee. Lead architect of India's COVID-19 pandemic response.",
-              photoUrl: "/assets/Speakers/RandeepGuleria.jpeg",
-            },
-            {
-              name: "Dr Minu Bajpai",
-              designation: "Executive Director, NBE",
-              achievements: "Renowned Paediatric Surgeon and academician. Former Head of Department at AIIMS.",
-              photoUrl: "/assets/Speakers/MinuBhajpai.jpeg",
-            },
-            {
-              name: "Dr Rakesh Garg",
-              designation: "Additional Professor, AIIMS New Delhi",
-              achievements: "Expert in Anesthesiology, Pain Medicine and Critical Care. Over 200+ publications.",
-              photoUrl: "/assets/Speakers/RakeshGarg.jpeg",
-            },
-            {
-              name: "Dr Tanmay Motiwala",
-              designation: "Paediatric Surgeon & Influencer",
-              achievements: "Inspiring voice in the medical community with focus on surgical education.",
-              photoUrl: "/assets/Speakers/TanmayMotiwala.jpeg",
-            },
-            {
-              name: "Lt Gen Dr DP Vats",
-              designation: "Former Director, AFMC Pune",
-              achievements: "Rajya Sabha MP. Param Vishisht Seva Medal (PVSM) awardee. Eminent Ophthalmologist.",
-              photoUrl: "/assets/Speakers/LtGenDrDPVats.jpeg",
-            },
-            {
-              name: "Dr Yogendra Malik",
-              designation: "Former Advisor to CM, Haryana",
-              achievements: "Eminent medical educationist and health policy maker.",
-              photoUrl: "/assets/Speakers/YogendraMalik.jpeg",
-            }
-          ].map(speaker => (
-            <SpotlightCard key={speaker.name} className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgba(16,24,40,0.04)] p-8 flex flex-col items-center text-center opacity-90">
-              <SpeakerPhoto speaker={{ ...speaker, initials: speaker.name.split(" ").slice(1, 3).map(n => n[0]).join("") }} />
-              <h3 className="mt-6 font-['Outfit'] text-xl font-extrabold text-[#101828]">{speaker.name}</h3>
-              <p className="mt-2 text-sm font-bold text-[#173B8F] uppercase tracking-wider">{speaker.designation}</p>
-              <p className="mt-5 text-sm text-[#475467] leading-relaxed border-t border-gray-100 pt-5 w-full font-medium">
-                {speaker.achievements}
-              </p>
-            </SpotlightCard>
-          ))}
-        </div>
+        <SectionHeading eyebrow="Legacy" title="Legacy Speakers" text="Distinguished faculty and visionaries from our previous editions." />
+        {pastSpeakerData?.length > 0 ? (
+          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {pastSpeakerData.map(speaker => (
+              <SpotlightCard key={speaker.id || speaker.name} className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgba(16,24,40,0.04)] p-8 flex flex-col items-center text-center opacity-90">
+                <SpeakerPhoto speaker={{ ...speaker, initials: speaker.initials || speaker.name?.split(" ").filter(Boolean).slice(0, 2).map(n => n[0]).join("").toUpperCase() }} />
+                <h3 className="mt-6 font-['Outfit'] text-xl font-extrabold text-[#101828] break-words">{speaker.name}</h3>
+                <p className="mt-2 text-sm font-bold text-[#173B8F] uppercase tracking-wider break-words">{speaker.designation}</p>
+                <p className="mt-5 text-sm text-[#475467] leading-relaxed border-t border-gray-100 pt-5 w-full font-medium break-words">
+                  {speaker.achievements || speaker.topic || speaker.bio || "Distinguished faculty and medical leader."}
+                </p>
+              </SpotlightCard>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-white border border-gray-100 rounded-3xl w-full p-12 text-center shadow-sm col-span-full mt-12">
+            <h3 className="text-xl font-['Outfit'] font-bold text-[#475467]">Legacy speakers will be announced soon.</h3>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -1131,11 +1150,11 @@ function WorkshopsExperience() {
           return (
             <motion.article
               key={workshop.title || workshop.id}
-              className="w-[360px] sm:w-[410px] md:w-[450px] flex-shrink-0 snap-start bg-white rounded-[2.25rem] shadow-[0_8px_30px_rgba(16,24,40,0.04)] border border-gray-100 p-8 flex flex-col justify-between hover:border-[#173B8F]/30 hover:shadow-[0_20px_40px_-10px_rgba(16,24,40,0.08)] transition-all duration-300 relative overflow-hidden group"
+              className="w-[85vw] max-w-[360px] sm:max-w-none sm:w-[410px] md:w-[450px] flex-shrink-0 snap-start bg-white rounded-[2.25rem] shadow-[0_8px_30px_rgba(16,24,40,0.04)] border border-gray-100 p-5 sm:p-8 flex flex-col justify-between hover:border-[#173B8F]/30 hover:shadow-[0_20px_40px_-10px_rgba(16,24,40,0.08)] transition-all duration-300 relative overflow-hidden group"
               whileHover={{ y: -6 }}
             >
               {/* Card Header & Badge */}
-              <div>
+              <div className="flex-1 flex flex-col">
                 <div className="flex items-center justify-between gap-2 mb-4">
                   <span className="inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-50 text-[#173B8F] truncate max-w-[220px]">
                     {workshop.workshopType || workshop.category || "Clinical Skills"}
@@ -1146,7 +1165,7 @@ function WorkshopsExperience() {
                 </div>
 
                 {/* Workshop Name */}
-                <h3 className="font-['Outfit'] text-2xl sm:text-[1.65rem] font-black text-[#101828] group-hover:text-[#173B8F] transition-colors line-clamp-2 min-h-[4.25rem] leading-snug">
+                <h3 className="font-['Outfit'] text-xl sm:text-2xl md:text-[1.65rem] font-black text-[#101828] group-hover:text-[#173B8F] transition-colors leading-snug break-words">
                   {workshop.title}
                 </h3>
 

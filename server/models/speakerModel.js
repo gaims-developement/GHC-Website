@@ -14,6 +14,7 @@ const normalize = (speaker) => speaker && ({
   bio: speaker.bio,
   topic: speaker.topic,
   achievements: speaker.achievements,
+  speakerType: speaker.speaker_type || 'current',
   travelStatus: speaker.travel_status,
   accommodationStatus: speaker.accommodation_status,
   specialRequirements: speaker.special_requirements,
@@ -34,11 +35,15 @@ const normalize = (speaker) => speaker && ({
   updatedAt: speaker.updated_at,
 });
 
-const list = async ({ includeDrafts = false, req = null } = {}) => {
+const list = async ({ includeDrafts = false, req = null, type = null } = {}) => {
   const clauses = [];
   const params = [];
   applyEventScope(clauses, params, req, 'event_id');
   if (!includeDrafts) clauses.push("status IN ('published', 'confirmed')");
+  if (type) {
+    clauses.push("speaker_type = ?");
+    params.push(type);
+  }
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const [rows] = await pool.query(
     `SELECT * FROM speakers ${where}
@@ -60,8 +65,8 @@ const create = async (data, req = null) => {
   const eventId = getCurrentEventId(req);
   const [result] = await pool.query(
     `INSERT INTO speakers
-      (name, full_name, designation, institution, organization, specialization, country, city, bio, topic, achievements, travel_status, accommodation_status, special_requirements, email, phone, photo_url, profile_image, linkedin_url, twitter_url, website_url, instagram_url, featured, keynote, display_order, status, event_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (name, full_name, designation, institution, organization, specialization, country, city, bio, topic, achievements, travel_status, accommodation_status, special_requirements, email, phone, photo_url, profile_image, linkedin_url, twitter_url, website_url, instagram_url, featured, keynote, display_order, status, speaker_type, event_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.name || data.fullName,
       data.name || data.fullName,
@@ -89,6 +94,7 @@ const create = async (data, req = null) => {
       Boolean(data.keynote),
       Number(data.displayOrder || 0),
       data.status || 'draft',
+      data.speakerType || data.speaker_type || 'current',
       eventId,
     ]
   );
@@ -126,7 +132,8 @@ const update = async (id, data, req = null) => {
       featured = ?,
       keynote = ?,
       display_order = ?,
-      status = ?
+      status = ?,
+      speaker_type = ?
      WHERE ${clauses.join(' AND ')}`,
     [
       data.name || data.fullName,
@@ -155,6 +162,7 @@ const update = async (id, data, req = null) => {
       Boolean(data.keynote),
       Number(data.displayOrder || 0),
       data.status || 'draft',
+      data.speakerType || data.speaker_type || 'current',
       ...whereParams,
     ]
   );

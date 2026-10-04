@@ -385,7 +385,7 @@ export default function WorkshopRegister() {
             )}
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-extrabold text-[#101828] mb-2 leading-tight">
+          <h1 className="text-xl sm:text-3xl md:text-4xl font-extrabold text-[#101828] mb-2 leading-tight break-words">
             {workshop.title}
           </h1>
 
@@ -813,9 +813,9 @@ export default function WorkshopRegister() {
                 <span className="text-slate-500 uppercase font-bold tracking-wider text-[11px]">Application ID</span>
                 <strong className="font-mono text-sm text-[#173B8F]">{successModalData.applicationId}</strong>
               </div>
-              <div className="flex justify-between items-center border-b border-purple-200/50 pb-2">
-                <span className="text-slate-500 uppercase font-bold tracking-wider text-[11px]">Workshop</span>
-                <span className="font-semibold text-slate-900">{successModalData.workshopTitle}</span>
+              <div className="flex justify-between items-center gap-2 border-b border-purple-200/50 pb-2">
+                <span className="text-slate-500 uppercase font-bold tracking-wider text-[11px] shrink-0">Workshop</span>
+                <span className="font-semibold text-slate-900 text-right break-words">{successModalData.workshopTitle}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-slate-500 uppercase font-bold tracking-wider text-[11px]">Status</span>
