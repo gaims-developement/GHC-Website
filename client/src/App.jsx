@@ -3309,10 +3309,14 @@ function App() {
     );
   } else if (isAbstractRoute) {
     routeContent = (
-      <>
-        <Suspense fallback={<div className="admin-loading">Loading abstract registration...</div>}><AbstractRegister /></Suspense>
+      <div ref={appRef} className="min-h-screen overflow-hidden bg-white text-[#081B33]">
+        <Navbar />
+        <main className="bg-white">
+          <Suspense fallback={<div className="admin-loading">Loading abstract registration...</div>}><AbstractRegister /></Suspense>
+        </main>
+        <Footer />
         <MobileRadialNav />
-      </>
+      </div>
     );
   } else if (isAbstractRevisionRoute) {
     routeContent = (
