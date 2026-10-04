@@ -3493,9 +3493,9 @@ const seedTickets = async () => {
   const [rows] = await pool.query('SELECT COUNT(*) AS count FROM ticket_types');
   if (rows[0].count === 0) {
     const tickets = [
-      ['GAIMS Elites (Early Bird)', 'Early bird registration for GAIMS elites (Valid till Oct 5th).', 1500, 'INR', 700, 700, true, true],
+      ['GAIMS Elites (Early Bird)', 'Early bird registration for GAIMS elites (Valid till Oct 15th).', 1500, 'INR', 700, 700, true, true],
       ['GAIMS Elites (Late)', 'Late registration for GAIMS elites (Valid till mid Nov).', 2500, 'INR', 700, 700, false, true],
-      ['Non-Member (Early Bird)', 'Early bird registration for non-members (Valid till Oct 5th).', 2000, 'INR', 800, 800, true, true],
+      ['Non-Member (Early Bird)', 'Early bird registration for non-members (Valid till Oct 15th).', 2000, 'INR', 800, 800, true, true],
       ['Non-Member (Late)', 'Late registration for non-members (Valid till mid Nov).', 3000, 'INR', 800, 800, false, true],
     ];
 

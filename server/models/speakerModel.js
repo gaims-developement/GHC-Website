@@ -47,7 +47,7 @@ const list = async ({ includeDrafts = false, req = null, type = null } = {}) => 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const [rows] = await pool.query(
     `SELECT * FROM speakers ${where}
-     ORDER BY featured DESC, display_order ASC, created_at DESC`,
+     ORDER BY (CASE WHEN speaker_type = 'current' OR speaker_type IS NULL THEN 0 ELSE 1 END) ASC, featured DESC, display_order ASC, created_at DESC`,
     params
   );
   return rows.map(normalize);

@@ -343,8 +343,23 @@ function Schedule({ api }) {
               </div>
 
               <div style={{ display: "flex", flexDirection: "column", gap: "1.2rem" }}>
-                <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "#0f172a", borderBottom: "1px solid #eee", paddingBottom: "0.5rem", margin: 0 }}>Details, Speaker & CME</h3>
-                <label>Speaker<select value={sessionModal.speaker_id || ""} onChange={(e) => setSessionModal({...sessionModal, speaker_id: e.target.value})}><option value="">Unassigned</option>{speakers.map(s => <option key={s.id} value={s.id}>{s.name || s.full_name}</option>)}</select></label>
+                <label>Speaker
+                  <select value={sessionModal.speaker_id || ""} onChange={(e) => setSessionModal({...sessionModal, speaker_id: e.target.value})}>
+                    <option value="">Unassigned</option>
+                    <optgroup label="Current Speakers (GHC 2026)">
+                      {speakers.filter(s => s.speakerType !== 'past').map(s => (
+                        <option key={s.id} value={s.id}>{s.name || s.full_name}</option>
+                      ))}
+                    </optgroup>
+                    {speakers.some(s => s.speakerType === 'past') && (
+                      <optgroup label="Legacy Speakers">
+                        {speakers.filter(s => s.speakerType === 'past').map(s => (
+                          <option key={s.id} value={s.id}>{s.name || s.full_name}</option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                </label>
                 <label>Track<select value={sessionModal.track_id || ""} onChange={(e) => setSessionModal({...sessionModal, track_id: e.target.value})}><option value="">None / General</option>{tracks.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
                 <label>Session Type<select value={sessionModal.session_type || "lecture"} onChange={(e) => setSessionModal({...sessionModal, session_type: e.target.value})}><option value="lecture">Lecture</option><option value="keynote">Keynote</option><option value="panel">Panel Discussion</option><option value="workshop">Workshop</option><option value="breakout">Breakout Session</option></select></label>
                 <label>CME Credit Points<input type="number" step="0.5" value={sessionModal.cme_credit_points || 0} onChange={(e) => setSessionModal({...sessionModal, cme_credit_points: e.target.value})} /></label>

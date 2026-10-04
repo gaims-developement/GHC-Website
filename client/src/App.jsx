@@ -1005,8 +1005,9 @@ function WorldClassSpeakers() {
     axios.get(apiUrl("/api/speakers")).then((response) => {
       const speakers = response.data.speakers || [];
       if (speakers.length) {
-        const current = speakers.filter(s => s.speakerType !== 'past');
-        const past = speakers.filter(s => s.speakerType === 'past');
+        const isPast = (s) => String(s.speakerType || s.speaker_type || '').trim().toLowerCase() === 'past';
+        const current = speakers.filter(s => !isPast(s));
+        const past = speakers.filter(s => isPast(s));
 
         setSpeakerData(current.map((speaker) => ({
           ...speaker,
@@ -2540,7 +2541,7 @@ function PastOrganisations() {
   );
 }
 
-const EARLY_BIRD_DEADLINE = new Date("2026-10-05T23:59:59+05:30").getTime();
+const EARLY_BIRD_DEADLINE = new Date("2026-10-15T23:59:59+05:30").getTime();
 
 function PricingSection() {
   const [earlyBirdManualOff, setEarlyBirdManualOff] = useState(false);
@@ -2730,7 +2731,7 @@ function PricingSection() {
                   </div>
                 </div>
                 <p className="text-[11px] text-gray-400 mt-3 font-medium">
-                  Ends on 5th October 2026 at 11:59 PM IST
+                  Ends on 15th October 2026 at 11:59 PM IST
                 </p>
               </div>
             ) : (

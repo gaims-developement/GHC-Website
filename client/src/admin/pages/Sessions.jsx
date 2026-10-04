@@ -65,7 +65,23 @@ function Sessions({ api }) {
         <form className="super-form-grid" onSubmit={save}>
           <label>Title<input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} /></label>
           <label>Type<select value={form.sessionType} onChange={(event) => setForm({ ...form, sessionType: event.target.value })}>{sessionTypes.map((type) => <option key={type} value={type}>{type}</option>)}</select></label>
-          <label>Speaker<select value={form.speakerId} onChange={(event) => setForm({ ...form, speakerId: event.target.value })}><option value="">Missing speaker</option>{speakers.map((speaker) => <option key={speaker.id} value={speaker.id}>{speaker.name}</option>)}</select></label>
+          <label>Speaker
+            <select value={form.speakerId} onChange={(event) => setForm({ ...form, speakerId: event.target.value })}>
+              <option value="">Missing speaker</option>
+              <optgroup label="Current Speakers (GHC 2026)">
+                {speakers.filter(s => s.speakerType !== 'past').map((speaker) => (
+                  <option key={speaker.id} value={speaker.id}>{speaker.name}</option>
+                ))}
+              </optgroup>
+              {speakers.some(s => s.speakerType === 'past') && (
+                <optgroup label="Legacy Speakers">
+                  {speakers.filter(s => s.speakerType === 'past').map((speaker) => (
+                    <option key={speaker.id} value={speaker.id}>{speaker.name}</option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+          </label>
           <label>Hall<select value={form.hallId} onChange={(event) => setForm({ ...form, hallId: event.target.value })}><option value="">Select hall</option>{halls.map((hall) => <option key={hall.id} value={hall.id}>{hall.name}</option>)}</select></label>
           <label>Track<select value={form.trackId} onChange={(event) => setForm({ ...form, trackId: event.target.value })}><option value="">Select track</option>{tracks.map((track) => <option key={track.id} value={track.id}>{track.name}</option>)}</select></label>
           <label>Start<input type="datetime-local" value={form.startTime} onChange={(event) => setForm({ ...form, startTime: event.target.value })} /></label>
