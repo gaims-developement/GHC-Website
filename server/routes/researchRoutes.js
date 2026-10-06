@@ -70,8 +70,15 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (_req, file, cb) => {
-    // allow PDF and DOCX
-    const allowed = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword'];
+    // allow PDF, DOCX/DOC, and images (for declarations)
+    const allowed = [
+      'application/pdf',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/msword',
+      'image/jpeg',
+      'image/png',
+      'image/jpg',
+    ];
     cb(null, allowed.includes(file.mimetype));
   },
   limits: { fileSize: Number(process.env.MAX_RESEARCH_UPLOAD_SIZE || 10 * 1024 * 1024) },

@@ -1,3 +1,5 @@
+const fs = require('fs/promises');
+const path = require('path');
 const Research = require('../models/researchModel');
 const { pool } = require('../config/db');
 const ActivityLog = require('../models/activityLogModel');
@@ -11,17 +13,77 @@ const rateLimit = require('express-rate-limit');
 
 const cloudinaryConfigured = () => Boolean(process.env.CLOUDINARY_NAME && process.env.CLOUDINARY_KEY && process.env.CLOUDINARY_SECRET);
 
-const uploadFileHelper = async (file) => {
-  if (!file) return null;
-  if (cloudinaryConfigured()) {
-    try {
-      const result = await uploadToCloudinary(file.path, 'research', { resourceType: 'auto' });
-      return result.secure_url;
-    } catch (e) {
-      console.warn("Cloudinary upload failed:", e);
-    }
+const isDocumentFile = (file) => {
+  if (!file) return false;
+  const mime = String(file.mimetype || '').toLowerCase();
+  const ext = path.extname(file.originalname || file.filename || '').toLowerCase();
+  const docMimes = [
+    'application/pdf',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword',
+  ];
+  const docExts = ['.pdf', '.docx', '.doc'];
+  return docMimes.includes(mime) || docExts.includes(ext);
+};
+
+const cleanupUploadedFile = async (file) => {
+  if (file?.path) {
+    await fs.unlink(file.path).catch(() => {});
   }
-  return `/uploads/research/${file.filename}`;
+};
+
+const cleanupUploadedFiles = async (files) => {
+  if (!files) return;
+  if (Array.isArray(files)) {
+    await Promise.all(files.map(cleanupUploadedFile));
+  } else if (typeof files === 'object') {
+    const list = Object.values(files).flat().filter(Boolean);
+    await Promise.all(list.map(cleanupUploadedFile));
+  }
+};
+
+const uploadResearchFile = async (file, context = 'research_upload') => {
+  if (!file) return null;
+
+  if (!cloudinaryConfigured()) {
+    console.error('[Cloudinary Abstract Upload Failed]', {
+      context,
+      reason: 'Cloudinary environment variables not configured on server',
+      fileName: file.filename,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      sizeBytes: file.size,
+    });
+    await cleanupUploadedFile(file);
+    const err = new Error('Unable to upload your abstract document. Please try again.');
+    err.status = 500;
+    throw err;
+  }
+
+  const isDoc = isDocumentFile(file);
+  const uploadOptions = isDoc
+    ? { resourceType: 'raw', transform: false }
+    : { resourceType: 'auto' };
+
+  try {
+    const result = await uploadToCloudinary(file.path, 'research', uploadOptions);
+    return result.secure_url;
+  } catch (error) {
+    console.error('[Cloudinary Abstract Upload Failed]', {
+      context,
+      fileName: file.filename,
+      originalName: file.originalname,
+      mimeType: file.mimetype,
+      sizeBytes: file.size,
+      isDocument: isDoc,
+      cloudinaryMessage: error.message,
+      cloudinaryCode: error.http_code || error.code || null,
+    });
+    await cleanupUploadedFile(file);
+    const uploadErr = new Error('Unable to upload your abstract document. Please try again.');
+    uploadErr.status = 500;
+    throw uploadErr;
+  }
 };
 
 const validCategories = ['poster', 'oral', 'research_paper', 'case_report'];
@@ -30,8 +92,7 @@ const reviewRoles = ['SUPER_ADMIN', 'ADMIN', 'RESEARCH', 'SCIENTIFIC_CHAIRPERSON
 
 const toBoolean = (value) => value === true || value === 'true' || value === '1' || value === 1;
 
-const sanitizePayload = (body, fileOrFiles) => {
-  const files = fileOrFiles?.pdf ? fileOrFiles : fileOrFiles ? { pdf: [fileOrFiles] } : null;
+const sanitizePayload = (body) => {
   return {
     title: body.title?.trim(),
     authors: body.authors?.trim() || body.presentingAuthor || body.name,
@@ -52,8 +113,8 @@ const sanitizePayload = (body, fileOrFiles) => {
     track: body.track?.trim(),
     keywords: body.keywords?.trim(),
     abstractText: body.abstractText || body.abstract_text || 'See attached PDF',
-    pdfUrl: body.pdfUrl || body.pdf_url || (files?.pdf ? `/uploads/research/${files.pdf[0].filename}` : null),
-    declaration_url: body.declaration_url || (files?.declaration ? `/uploads/research/${files.declaration[0].filename}` : null),
+    pdfUrl: body.pdfUrl || body.pdf_url || null,
+    declaration_url: body.declaration_url || null,
     status: body.status || 'draft',
     awardNomination: toBoolean(body.awardNomination ?? body.award_nomination),
   };
@@ -238,16 +299,27 @@ const getResearch = asyncHandler(async (req, res) => {
 });
 
 const createResearch = asyncHandler(async (req, res) => {
-  const payload = sanitizePayload(req.body, req.file);
+  const payload = sanitizePayload(req.body);
   let error = validate(payload);
-  if (error) return res.status(400).json({ message: error });
+  if (error) {
+    await cleanupUploadedFile(req.file);
+    return res.status(400).json({ message: error });
+  }
 
   error = await validateLocationDb(payload);
-  if (error) return res.status(400).json({ message: error });
+  if (error) {
+    await cleanupUploadedFile(req.file);
+    return res.status(400).json({ message: error });
+  }
 
   if (req.file) {
-    const uploadedUrl = await uploadFileHelper(req.file);
-    if (uploadedUrl) payload.pdfUrl = uploadedUrl;
+    try {
+      const uploadedUrl = await uploadResearchFile(req.file, 'admin_create_abstract');
+      if (uploadedUrl) payload.pdfUrl = uploadedUrl;
+    } catch (err) {
+      await cleanupUploadedFile(req.file);
+      return res.status(err.status || 500).json({ message: err.message || 'Unable to upload your abstract document. Please try again.' });
+    }
   }
 
   const submission = await Research.create(payload);
@@ -257,66 +329,89 @@ const createResearch = asyncHandler(async (req, res) => {
 
 const submitResearch = asyncHandler(async (req, res) => {
   const payload = {
-    ...sanitizePayload(req.body, req.files),
+    ...sanitizePayload(req.body),
     status: 'submitted',
   };
   let error = validatePublicSubmission(payload, req.files);
-  if (error) return res.status(400).json({ message: error });
+  if (error) {
+    await cleanupUploadedFiles(req.files);
+    return res.status(400).json({ message: error });
+  }
 
   error = await validateLocationDb(payload);
-  if (error) return res.status(400).json({ message: error });
-
-  const driveUpload = await uploadResearchPdf({
-    file: req.files?.pdf?.[0],
-    category: payload.category,
-    title: payload.title,
-  });
-
-  const pdfCloudinaryUrl = await uploadFileHelper(req.files?.pdf?.[0]);
-  if (pdfCloudinaryUrl) {
-    payload.pdfUrl = pdfCloudinaryUrl;
-  } else if (driveUpload?.webViewLink) {
-    payload.pdfUrl = driveUpload.webViewLink;
+  if (error) {
+    await cleanupUploadedFiles(req.files);
+    return res.status(400).json({ message: error });
   }
 
-  const declUpload = await uploadResearchPdf({
-    file: req.files?.declaration?.[0],
-    category: payload.category,
-    title: payload.title,
-    suffix: 'declaration'
-  });
+  let driveUpload = null;
+  let declUpload = null;
 
-  const declCloudinaryUrl = await uploadFileHelper(req.files?.declaration?.[0]);
-  if (declCloudinaryUrl) {
-    payload.declaration_url = declCloudinaryUrl;
-  } else if (declUpload?.webViewLink) {
-    payload.declaration_url = declUpload.webViewLink;
+  try {
+    driveUpload = await uploadResearchPdf({
+      file: req.files?.pdf?.[0],
+      category: payload.category,
+      title: payload.title,
+    });
+
+    const pdfCloudinaryUrl = await uploadResearchFile(req.files?.pdf?.[0], 'public_abstract_pdf');
+    payload.pdfUrl = pdfCloudinaryUrl || driveUpload?.webViewLink || null;
+
+    declUpload = await uploadResearchPdf({
+      file: req.files?.declaration?.[0],
+      category: payload.category,
+      title: payload.title,
+      suffix: 'declaration'
+    });
+
+    const declCloudinaryUrl = await uploadResearchFile(req.files?.declaration?.[0], 'public_abstract_declaration');
+    payload.declaration_url = declCloudinaryUrl || declUpload?.webViewLink || null;
+
+    if (!payload.pdfUrl) {
+      throw new Error('Unable to upload your abstract document. Please try again.');
+    }
+
+    const submission = await Research.create(payload);
+    await logDecision(req, 'submitted_abstract', submission.id);
+    return res.status(201).json({
+      success: true,
+      submission,
+      drive: driveUpload || {
+        configured: false,
+        folder: `GHC2026/${payload.category === 'oral' ? 'Oral' : 'Poster'}`,
+        message: 'Google Drive service account is not configured; file was stored locally.',
+      },
+    });
+  } catch (uploadError) {
+    await cleanupUploadedFiles(req.files);
+    return res.status(uploadError.status || 500).json({
+      message: uploadError.message || 'Unable to upload your abstract document. Please try again.',
+    });
   }
-
-  const submission = await Research.create(payload);
-  await logDecision(req, 'submitted_abstract', submission.id);
-  return res.status(201).json({
-    success: true,
-    submission,
-    drive: driveUpload || {
-      configured: false,
-      folder: `GHC2026/${payload.category === 'oral' ? 'Oral' : 'Poster'}`,
-      message: 'Google Drive service account is not configured; file was stored locally.',
-    },
-  });
 });
 
 const updateResearch = asyncHandler(async (req, res) => {
   const existing = await Research.findById(req.params.id);
-  if (!existing) return res.status(404).json({ message: 'Research submission not found' });
+  if (!existing) {
+    await cleanupUploadedFile(req.file);
+    return res.status(404).json({ message: 'Research submission not found' });
+  }
 
-  const payload = sanitizePayload(req.body, req.file);
+  const payload = sanitizePayload(req.body);
   const error = validate(payload);
-  if (error) return res.status(400).json({ message: error });
+  if (error) {
+    await cleanupUploadedFile(req.file);
+    return res.status(400).json({ message: error });
+  }
 
   if (req.file) {
-    const uploadedUrl = await uploadFileHelper(req.file);
-    if (uploadedUrl) payload.pdfUrl = uploadedUrl;
+    try {
+      const uploadedUrl = await uploadResearchFile(req.file, 'admin_update_abstract');
+      if (uploadedUrl) payload.pdfUrl = uploadedUrl;
+    } catch (err) {
+      await cleanupUploadedFile(req.file);
+      return res.status(err.status || 500).json({ message: err.message || 'Unable to upload your abstract document. Please try again.' });
+    }
   }
 
   const submission = await Research.update(req.params.id, payload);
@@ -1247,30 +1342,50 @@ const submitRevision = asyncHandler(async (req, res) => {
     return res.status(tokenError.status).json({ message: tokenError.message, code: tokenError.code, contactEmail: getRevisionContact() });
   }
   const submission = await Research.findByToken(req.params.token);
-  if (!submission) return res.status(404).json({ message: 'Invalid revision link.', code: 'invalid' });
+  if (!submission) {
+    await cleanupUploadedFiles(req.files);
+    return res.status(404).json({ message: 'Invalid revision link.', code: 'invalid' });
+  }
   
-  if (!req.files?.pdf) return res.status(400).json({ message: 'Abstract PDF is required' });
+  if (!req.files?.pdf) {
+    await cleanupUploadedFiles(req.files);
+    return res.status(400).json({ message: 'Abstract PDF is required' });
+  }
   
-  const driveUpload = await uploadResearchPdf({
-    file: req.files?.pdf?.[0],
-    category: submission.category,
-    title: submission.title,
-    suffix: `v${(submission.currentVersion || 1) + 1}`
-  });
-  
-  const pdfCloudinaryUrl = await uploadFileHelper(req.files?.pdf?.[0]);
-  const pdfUrl = pdfCloudinaryUrl || driveUpload?.webViewLink || `/uploads/research/${req.files.pdf[0].filename}`;
-  
+  let driveUpload = null;
+  let pdfUrl = null;
   let declarationUrl = submission.declarationUrl;
-  if (req.files?.declaration) {
-    const declUpload = await uploadResearchPdf({
-      file: req.files?.declaration?.[0],
+
+  try {
+    driveUpload = await uploadResearchPdf({
+      file: req.files?.pdf?.[0],
       category: submission.category,
       title: submission.title,
-      suffix: `declaration_v${(submission.currentVersion || 1) + 1}`
+      suffix: `v${(submission.currentVersion || 1) + 1}`
     });
-    const declCloudinaryUrl = await uploadFileHelper(req.files?.declaration?.[0]);
-    declarationUrl = declCloudinaryUrl || declUpload?.webViewLink || `/uploads/research/${req.files.declaration[0].filename}`;
+    
+    const pdfCloudinaryUrl = await uploadResearchFile(req.files?.pdf?.[0], 'revision_abstract_pdf');
+    pdfUrl = pdfCloudinaryUrl || driveUpload?.webViewLink;
+
+    if (!pdfUrl) {
+      throw new Error('Unable to upload your abstract document. Please try again.');
+    }
+
+    if (req.files?.declaration) {
+      const declUpload = await uploadResearchPdf({
+        file: req.files?.declaration?.[0],
+        category: submission.category,
+        title: submission.title,
+        suffix: `declaration_v${(submission.currentVersion || 1) + 1}`
+      });
+      const declCloudinaryUrl = await uploadResearchFile(req.files?.declaration?.[0], 'revision_abstract_declaration');
+      declarationUrl = declCloudinaryUrl || declUpload?.webViewLink || submission.declarationUrl;
+    }
+  } catch (uploadErr) {
+    await cleanupUploadedFiles(req.files);
+    return res.status(uploadErr.status || 500).json({
+      message: uploadErr.message || 'Unable to upload your abstract document. Please try again.',
+    });
   }
   
   let newSubmission;

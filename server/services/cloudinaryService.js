@@ -13,14 +13,18 @@ const folderMap = {
 };
 
 const uploadToCloudinary = async (filePath, folder = 'ghc', options = {}) => {
+  const resourceType = options.resourceType || options.resource_type || 'auto';
+  const isRaw = resourceType === 'raw';
+  const shouldTransform = options.transform !== false && !isRaw;
+
   const uploadOptions = {
     folder: folderMap[folder] || folder,
-    resource_type: options.resourceType || 'auto',
-    quality: 'auto',
-    fetch_format: 'auto',
+    resource_type: resourceType,
   };
 
-  if (options.transform !== false) {
+  if (shouldTransform) {
+    uploadOptions.quality = 'auto';
+    uploadOptions.fetch_format = 'auto';
     uploadOptions.transformation = [{ width: 1600, crop: 'limit' }];
   }
 
