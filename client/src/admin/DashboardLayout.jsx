@@ -179,6 +179,7 @@ const NAV_SECTIONS = [
     title: "SCIENTIFIC",
     items: [
       { id: "scientific", label: "Scientific Dashboard", icon: Microscope, permissions: ["manage_scientific", "scientific.manage", "manage_abstracts", "review_abstracts"] },
+      { id: "scientific-team-lead", label: "Team Lead Dashboard", icon: ShieldCheck, permissions: ["manage_scientific", "scientific.manage", "manage_abstracts", "review_abstracts"] },
       { id: "scientific-team", label: "Scientific Team", icon: Users, permissions: ["users.manage", "manage_system", "manage_scientific", "manage_reviewers", "scientific.manage", "review_abstracts"] },
       { id: "abstract-report", label: "Abstract Report", icon: ClipboardCheck, permissions: ["manage_scientific", "scientific.manage", "manage_abstracts", "review_abstracts"] },
       { id: "research", label: "Abstract Management", icon: FileText, permissions: ["manage_abstracts", "research.manage", "abstracts.manage"], aliases: ["abstracts"] },
@@ -269,12 +270,20 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
       userRole === "AWARD JUDGE" ||
       (userPermissions.includes("award_nomination_view") && !isSuperAdmin));
 
+  const isTeamLead =
+    userRole === "SCIENTIFIC_TEAM_LEAD" ||
+    userRole === "TEAM_LEAD" ||
+    userPermissions.includes("assign_reviewers") ||
+    user?.email === "gauravjayadev@gmail.com";
+
   const isChairperson =
     userRole === "SCIENTIFIC_CHAIRPERSON" ||
     userRole === "CHAIRPERSON" ||
     userRole === "SCIENTIFIC_COMMITTEE_CHAIR";
+
   const isScientificOnly =
     (isChairperson ||
+      isTeamLead ||
       userRole === "SCIENTIFIC_REVIEWER" ||
       userRole === "REVIEWER" ||
       userRole === "RESEARCH") &&
@@ -316,10 +325,22 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
     : NAV_SECTIONS.map((section) => {
         if (isScientificOnly) {
           if (section.id !== "scientific") return null;
+          let allowedIds = [];
+          if (isTeamLead) {
+            // Team Leader Dashboard: dedicated standalone view with team reviewers & abstract reports
+            allowedIds = ["scientific-team-lead", "scientific-team", "abstract-report"];
+          } else if (isChairperson) {
+            // Scientific Chairperson Dashboard: chairperson oversight, abstract allocation, committee oversight (NO team lead dashboard)
+            allowedIds = ["scientific", "scientific-team", "abstract-report", "research", "scientific-reports"];
+          } else {
+            // Reviewer
+            allowedIds = ["reviews", "abstract-report"];
+          }
+
           return {
             ...section,
             items: section.items
-              .filter((item) => ["scientific", "scientific-team", "abstract-report"].includes(item.id))
+              .filter((item) => allowedIds.includes(item.id))
               .map((item) => ({
                 ...item,
                 navigationId: item.targetId || item.id,
@@ -329,6 +350,8 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
 
         const allowedItems = section.items.filter((item) => {
           if (item.id === "reviews" && isChairperson) return false;
+          if (item.id === "scientific-team-lead" && !isTeamLead && !isSuperAdmin) return false;
+          if (item.id === "scientific" && isTeamLead && !isSuperAdmin) return false;
           if (isSuperAdmin) return true;
           if (!item.permissions || item.permissions.length === 0) return true;
           return item.permissions.some((p) => userPermissions.includes(p));

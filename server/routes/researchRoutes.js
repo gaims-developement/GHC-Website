@@ -6,12 +6,15 @@ const {
   awardResearch,
   assignPresentation,
   assignReviewer,
+  assignTeam,
   createResearch,
 
   getSettings,
   getResearch,
+  getWorkflowRole,
   exportAbstractRankingsCsv,
   assignedReviews,
+  leadDecision,
   listAbstractRankings,
   listAwards,
   listAwardResults,
@@ -54,6 +57,7 @@ const {
   reinstateReviewer,
   getMyReviewerProfile,
 } = require('../controllers/researchController');
+const reviewerTeams = require('../controllers/reviewerTeamController');
 const { optionalAuth, requireAuth, requirePermission } = require('../middleware/authMiddleware');
 
 const researchUploadDir = path.join(__dirname, '..', 'uploads', 'research');
@@ -86,11 +90,28 @@ const upload = multer({
 
 const canManageResearch = requirePermission('manage_abstracts', 'research.manage');
 const canReviewResearch = requirePermission('review_abstracts', 'manage_abstracts', 'research.manage');
-const canManageReviewers = requirePermission('manage_reviewers');
+const canManageReviewers = requirePermission('manage_reviewers', 'assign_reviewers');
 const canAssignReviewers = requirePermission('assign_reviewers');
 const canPublishProgram = requirePermission('publish_scientific_program');
 const canManageAwards = requirePermission('manage_awards');
 const canManageJudges = requirePermission('manage_judges');
+
+const canViewTeams = requirePermission(
+  'manage_reviewers',
+  'assign_reviewers',
+  'review_abstracts',
+  'manage_abstracts',
+  'research.manage'
+);
+
+router.get('/teams', requireAuth, canViewTeams, reviewerTeams.listTeams);
+router.post('/teams', requireAuth, canManageReviewers, reviewerTeams.createTeam);
+router.patch('/teams/:id', requireAuth, canManageReviewers, reviewerTeams.updateTeam);
+router.delete('/teams/:id', requireAuth, canManageReviewers, reviewerTeams.deleteTeam);
+router.get('/teams/:id/members', requireAuth, canViewTeams, reviewerTeams.listTeamMembers);
+router.post('/teams/:id/members', requireAuth, canManageReviewers, reviewerTeams.addTeamMember);
+router.patch('/teams/:id/members/:reviewerId', requireAuth, canManageReviewers, reviewerTeams.updateTeamMember);
+router.delete('/teams/:id/members/:reviewerId', requireAuth, canManageReviewers, reviewerTeams.removeTeamMember);
 
 router.get('/', optionalAuth, listResearch);
 router.get('/stats', requireAuth, canManageResearch, researchStats);
@@ -136,12 +157,15 @@ router.get('/revision/:token', revisionRateLimiter, validateRevisionToken);
 router.post('/revision/:token', revisionRateLimiter, upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'declaration', maxCount: 1 }]), submitRevision);
 router.get('/participation/:token', revisionRateLimiter, validateParticipationToken);
 router.post('/participation/:token', revisionRateLimiter, confirmParticipation);
+router.get('/workflow-role', requireAuth, getWorkflowRole);
 router.get('/:id', optionalAuth, getResearch);
 router.post('/', requireAuth, canManageResearch, upload.single('pdf'), createResearch);
 router.put('/:id', requireAuth, canManageResearch, upload.single('pdf'), updateResearch);
 
-router.post('/:id/reviewers', requireAuth, canAssignReviewers, assignReviewer);
-router.delete('/:id/reviewers/:reviewerId', requireAuth, canAssignReviewers, removeReviewerAssignment);
+router.patch('/:id/assign-team', requireAuth, canManageResearch, assignTeam);
+router.post('/:id/lead-decision', requireAuth, leadDecision);
+router.post('/:id/reviewers', requireAuth, assignReviewer);
+router.delete('/:id/reviewers/:reviewerId', requireAuth, removeReviewerAssignment);
 router.patch('/:id/review', requireAuth, canReviewResearch, reviewResearch);
 router.post('/:id/reviews', requireAuth, canReviewResearch, submitScore);
 router.patch('/:id/status', requireAuth, canManageResearch, statusResearch);

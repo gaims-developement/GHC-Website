@@ -25,6 +25,7 @@ import EventReports from "./pages/EventReports";
 import Research from "./pages/Research";
 import Scientific from "./pages/Scientific";
 import ScientificTeam from "./pages/ScientificTeam";
+import ScientificTeamLead from "./pages/ScientificTeamLead";
 import ScientificDirectory from "./pages/ScientificDirectory";
 import Reviews from "./pages/Reviews";
 import Presentations from "./pages/Presentations";
@@ -129,7 +130,9 @@ const pages = {
   "event-reports": EventReports,
   research: Research,
   scientific: (props) => <Scientific {...props} initialTab="overview" />,
-  "scientific-team": (props) => <Scientific {...props} initialTab="team" />,
+  "scientific-team": ScientificTeam,
+  "scientific-team-lead": ScientificTeamLead,
+  "team-lead-dashboard": ScientificTeamLead,
   "abstract-report": (props) => <Scientific {...props} initialTab="abstract-report" />,
   "abstract-rankings": (props) => <Scientific {...props} initialTab="rankings" />,
   abstracts: Research,
@@ -264,6 +267,8 @@ const pageFromPath = () => {
   if (parts[1] === "events" && parts[2] === "create") return "events-create";
   if (parts[1] === "events" && parts[2]) return `event-${parts[2]}`;
   if (parts[1] === "scientific" && parts[2] === "reports") return "scientific-reports";
+  if (parts[1] === "scientific" && (parts[2] === "team-lead" || parts[2] === "lead")) return "scientific-team-lead";
+  if (parts[1] === "scientific-team-lead" || parts[1] === "team-lead-dashboard") return "scientific-team-lead";
   if (parts[1] === "scientific" && parts[2] === "team") return "scientific-team";
   if (parts[1] === "scientific" && parts[2] === "abstract-report") return "abstract-report";
   if (parts[1] === "scientific" && parts[2] === "abstract-rankings") return "abstract-rankings";
@@ -357,6 +362,17 @@ function AdminApp({ initialPage = "dashboard" }) {
           return;
         }
 
+        const isScientificTeamLead =
+          role === "SCIENTIFIC_TEAM_LEAD" ||
+          role === "TEAM_LEAD" ||
+          currentUser?.email === "gauravjayadev@gmail.com";
+
+        if (isScientificTeamLead && !isSuper && (activePage === "dashboard" || !activePage || activePage === "scientific")) {
+          setActivePage("scientific-team-lead");
+          window.history.replaceState(null, "", "/admin/scientific-team-lead");
+          return;
+        }
+
         const isScientific =
           role === "SCIENTIFIC_CHAIRPERSON" ||
           role === "CHAIRPERSON" ||
@@ -380,6 +396,23 @@ function AdminApp({ initialPage = "dashboard" }) {
     localStorage.setItem("ghc_admin_token", nextToken);
     setToken(nextToken);
     setUser(nextUser);
+    const role = (nextUser?.role || "").toUpperCase();
+    if (role === "SCIENTIFIC_TEAM_LEAD" || role === "TEAM_LEAD" || nextUser?.email === "gauravjayadev@gmail.com") {
+      setActivePage("scientific-team-lead");
+      window.history.replaceState(null, "", "/admin/scientific-team-lead");
+    } else if (role === "AWARD_JUDGE" || role === "JUDGE") {
+      setActivePage("dashboard");
+      window.history.replaceState(null, "", "/admin");
+    } else if (
+      role === "SCIENTIFIC_CHAIRPERSON" ||
+      role === "CHAIRPERSON" ||
+      role === "SCIENTIFIC_REVIEWER" ||
+      role === "REVIEWER" ||
+      role === "RESEARCH"
+    ) {
+      setActivePage("scientific");
+      window.history.replaceState(null, "", "/admin/scientific");
+    }
   };
 
   const handleLogout = async () => {
@@ -402,6 +435,7 @@ function AdminApp({ initialPage = "dashboard" }) {
     const path = pageId === "dashboard" ? "/admin" : pageId === "award-nominations" ? "/admin/award-nominations" : pageId === "workshop-applications" ? "/admin/workshop-applications" : pageId === "workshop-attendance" ? "/admin/workshop-attendance" : pageId === "workshop-certificates" ? "/admin/workshop-certificates" : pageId === "workshop-reports" ? "/admin/workshop-reports" : pageId === "teams-create" ? "/admin/teams/create" : pageId === "registrations-create" ? "/admin/registrations/create" : pageId.startsWith("registration-") ? pageId.replace(/^registration-(.+)$/, "/admin/registrations/$1") : pageId === "events-create" ? "/admin/events/create" : pageId.startsWith("event-") ? pageId.replace(/^event-(.+)$/, "/admin/events/$1") : pageId === "sponsors-create" ? "/admin/sponsors/create" : pageId.startsWith("sponsor-") ? pageId.replace(/^sponsor-(.+)$/, "/admin/sponsors/$1") : pageId.startsWith("team-")
       ? pageId.replace(/^team-([^-]+)-members$/, "/admin/teams/$1/members").replace(/^team-([^-]+)-modules$/, "/admin/teams/$1/modules").replace(/^team-([^-]+)$/, "/admin/teams/$1")
       : pageId === "scientific-reports" ? "/admin/scientific/reports"
+      : pageId === "scientific-team-lead" ? "/admin/scientific-team-lead"
       : pageId === "abstract-rankings" ? "/admin/scientific/abstract-rankings"
       : pageId === "sponsorship-reports" ? "/admin/sponsorship/reports"
       : pageId === "logistics-reports" ? "/admin/logistics/reports"

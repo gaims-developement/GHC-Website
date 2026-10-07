@@ -28,6 +28,17 @@ const normalize = (item) => item && ({
   reviewScore: item.review_score === null ? null : Number(item.review_score),
   reviewNotes: item.review_notes,
   reviewerId: item.reviewer_id,
+  teamId: item.team_id,
+  teamName: item.team_name,
+  workflowStage: item.workflow_stage || 'submitted',
+  leadReviewerId: item.lead_reviewer_id,
+  leadReviewNotes: item.lead_review_notes,
+  leadDecisionAt: item.lead_decision_at,
+  reviewerRevisionNotes: item.reviewer_revision_notes,
+  reviewerRecommendedAction: item.reviewer_recommended_action,
+  reviewerSubmittedAt: item.reviewer_submitted_at,
+  assignedReviewerId: item.assigned_reviewer_id,
+  assignedReviewerName: item.assigned_reviewer_name,
   awardNomination: Boolean(item.award_nomination),
   aiPercentage: item.ai_percentage !== null ? Number(item.ai_percentage) : null,
   plagiarismPercentage: item.plagiarism_percentage !== null ? Number(item.plagiarism_percentage) : null,
@@ -44,28 +55,66 @@ const normalize = (item) => item && ({
   updatedAt: item.updated_at,
 });
 
-const list = async ({ includeAll = false, reviewerId = null, limit = null, offset = 0, compact = false } = {}) => {
-  let where = includeAll ? '' : "WHERE status = 'accepted'";
+const list = async ({
+  includeAll = false,
+  reviewerId = null,
+  teamId = null,
+  leadTeamIds = null,
+  assignedReviewerId = null,
+  workflowStage = null,
+  unassignedOnly = false,
+  limit = null,
+  offset = 0,
+  compact = false,
+} = {}) => {
+  const whereClauses = [];
   const params = [];
-  
-  if (reviewerId) {
-    where = "WHERE reviewer_id = ?";
-    params.push(reviewerId);
+
+  if (!includeAll) {
+    whereClauses.push("a.status = 'accepted'");
   }
 
-  const fields = compact
-    ? `id, abstract_id, title, authors, corresponding_author, presenting_author, institution, email, phone, country, city_state, specialty, year_of_study, category_id, category, track, keywords, file_url, pdf_url, declaration_url, status, submission_status, final_score, review_score, review_notes, reviewer_id, award_nomination, ai_percentage, plagiarism_percentage, current_version, revision_requested_at, revision_deadline, revision_email_status, revision_last_email_sent_at, created_at, updated_at`
-    : '*';
+  if (reviewerId) {
+    whereClauses.push("(a.reviewer_id = ? OR EXISTS (SELECT 1 FROM abstract_review_assignments ara WHERE ara.abstract_id = a.id AND ara.reviewer_id = ?))");
+    params.push(reviewerId, reviewerId);
+  }
+
+  if (assignedReviewerId) {
+    whereClauses.push("EXISTS (SELECT 1 FROM abstract_review_assignments ara WHERE ara.abstract_id = a.id AND ara.reviewer_id = ?)");
+    params.push(assignedReviewerId);
+  }
+
+  if (unassignedOnly) {
+    whereClauses.push("a.team_id IS NULL");
+  } else if (teamId) {
+    whereClauses.push("a.team_id = ?");
+    params.push(teamId);
+  } else if (leadTeamIds && leadTeamIds.length > 0) {
+    whereClauses.push(`a.team_id IN (${leadTeamIds.map(() => '?').join(',')})`);
+    params.push(...leadTeamIds);
+  }
+
+  if (workflowStage) {
+    whereClauses.push("a.workflow_stage = ?");
+    params.push(workflowStage);
+  }
+
+  const where = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
   let paginationSql = '';
   if (limit) {
     paginationSql = ' LIMIT ? OFFSET ?';
     params.push(Number(limit), Number(offset || 0));
   }
-  
+
   const [rows] = await pool.query(
-    `SELECT ${fields} FROM abstracts ${where}
-     ORDER BY award_nomination DESC, category ASC, created_at DESC${paginationSql}`,
+    `SELECT a.*, rt.name AS team_name,
+       (SELECT ara.reviewer_id FROM abstract_review_assignments ara WHERE ara.abstract_id = a.id LIMIT 1) AS assigned_reviewer_id,
+       (SELECT u.name FROM abstract_review_assignments ara INNER JOIN reviewers r ON r.id = ara.reviewer_id INNER JOIN users u ON u.id = r.user_id WHERE ara.abstract_id = a.id LIMIT 1) AS assigned_reviewer_name
+     FROM abstracts a
+     LEFT JOIN reviewer_teams rt ON rt.id = a.team_id
+     ${where}
+     ORDER BY a.award_nomination DESC, a.category ASC, a.created_at DESC${paginationSql}`,
     params
   );
   return rows.map(normalize);
@@ -74,8 +123,22 @@ const list = async ({ includeAll = false, reviewerId = null, limit = null, offse
 const findById = async (id) => {
   const isNumeric = !isNaN(Number(id));
   const [rows] = isNumeric
-    ? await pool.query('SELECT * FROM abstracts WHERE id = ? OR abstract_id = ? LIMIT 1', [id, String(id)])
-    : await pool.query('SELECT * FROM abstracts WHERE abstract_id = ? LIMIT 1', [String(id)]);
+    ? await pool.query(`
+        SELECT a.*, rt.name AS team_name,
+          (SELECT ara.reviewer_id FROM abstract_review_assignments ara WHERE ara.abstract_id = a.id LIMIT 1) AS assigned_reviewer_id,
+          (SELECT u.name FROM abstract_review_assignments ara INNER JOIN reviewers r ON r.id = ara.reviewer_id INNER JOIN users u ON u.id = r.user_id WHERE ara.abstract_id = a.id LIMIT 1) AS assigned_reviewer_name
+        FROM abstracts a
+        LEFT JOIN reviewer_teams rt ON rt.id = a.team_id
+        WHERE a.id = ? OR a.abstract_id = ?
+        LIMIT 1`, [id, String(id)])
+    : await pool.query(`
+        SELECT a.*, rt.name AS team_name,
+          (SELECT ara.reviewer_id FROM abstract_review_assignments ara WHERE ara.abstract_id = a.id LIMIT 1) AS assigned_reviewer_id,
+          (SELECT u.name FROM abstract_review_assignments ara INNER JOIN reviewers r ON r.id = ara.reviewer_id INNER JOIN users u ON u.id = r.user_id WHERE ara.abstract_id = a.id LIMIT 1) AS assigned_reviewer_name
+        FROM abstracts a
+        LEFT JOIN reviewer_teams rt ON rt.id = a.team_id
+        WHERE a.abstract_id = ?
+        LIMIT 1`, [String(id)]);
   if (!rows.length) return null;
   const abstract = rows[0];
   const [versions] = await pool.query('SELECT * FROM abstract_versions WHERE abstract_id = ? ORDER BY version_number DESC', [Number(abstract.id)]);
@@ -583,4 +646,65 @@ const saveRevision = async (token, data) => {
   }
 };
 
-module.exports = { create, findById, findByToken, findRevisionToken, findParticipationToken, confirmParticipation, createParticipationToken, createVersion, requestRevision, saveRevision, markRevisionEmailStatus, list, review, setAward, setStatus, stats, update, updateIntegrity };
+const setTeam = async (id, teamId) => {
+  await pool.query(
+    `UPDATE abstracts SET team_id = ?, workflow_stage = CASE WHEN ? IS NULL THEN 'submitted' ELSE 'assigned_to_team' END WHERE id = ?`,
+    [teamId, teamId, id]
+  );
+  return findById(id);
+};
+
+const setWorkflowStage = async (id, stage, extra = {}) => {
+  const updates = ['workflow_stage = ?'];
+  const params = [stage];
+  if (extra.leadReviewerId !== undefined) {
+    updates.push('lead_reviewer_id = ?');
+    params.push(extra.leadReviewerId);
+  }
+  if (extra.leadReviewNotes !== undefined) {
+    updates.push('lead_review_notes = ?');
+    params.push(extra.leadReviewNotes);
+  }
+  if (extra.leadDecisionAt !== undefined) {
+    updates.push('lead_decision_at = ?');
+    params.push(extra.leadDecisionAt);
+  }
+  if (extra.reviewerRevisionNotes !== undefined) {
+    updates.push('reviewer_revision_notes = ?');
+    params.push(extra.reviewerRevisionNotes);
+  }
+  if (extra.reviewerRecommendedAction !== undefined) {
+    updates.push('reviewer_recommended_action = ?');
+    params.push(extra.reviewerRecommendedAction);
+  }
+  if (extra.reviewerSubmittedAt !== undefined) {
+    updates.push('reviewer_submitted_at = ?');
+    params.push(extra.reviewerSubmittedAt);
+  }
+  params.push(id);
+  await pool.query(`UPDATE abstracts SET ${updates.join(', ')} WHERE id = ?`, params);
+  return findById(id);
+};
+
+module.exports = {
+  create,
+  findById,
+  findByToken,
+  findRevisionToken,
+  findParticipationToken,
+  confirmParticipation,
+  createParticipationToken,
+  createVersion,
+  requestRevision,
+  saveRevision,
+  markRevisionEmailStatus,
+  list,
+  review,
+  setAward,
+  setStatus,
+  setTeam,
+  setWorkflowStage,
+  stats,
+  update,
+  updateIntegrity,
+};

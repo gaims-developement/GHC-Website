@@ -265,6 +265,7 @@ const rolePermissionMap = {
   MEDIA: ['dashboard.view', 'media.manage', 'upload_resources'],
   RESEARCH: ['research.manage', 'manage_abstracts', 'manage_reviewers', 'assign_reviewers', 'review_abstracts', 'manage_judges', 'publish_scientific_program'],
   SCIENTIFIC_CHAIRPERSON: ['research.manage', 'manage_abstracts', 'manage_reviewers', 'assign_reviewers', 'review_abstracts', 'manage_judges', 'publish_scientific_program'],
+  SCIENTIFIC_TEAM_LEAD: ['manage_abstracts', 'assign_reviewers', 'review_abstracts', 'manage_reviewers'],
   SCIENTIFIC_REVIEWER: ['review_abstracts'],
   REVIEWER: ['review_abstracts'],
   VOLUNTEER: ['dashboard.view', 'checkin.scan', 'attendance.manage', 'operations.view', 'manage_registrations', 'view_registrations', 'manage_checkins'],
@@ -1785,6 +1786,14 @@ const createResearchTables = async () => {
   await addColumnIfMissing('abstracts', 'revision_last_email_sent_at', 'DATETIME NULL');
   await addColumnIfMissing('abstracts', 'revision_token_status', 'VARCHAR(30) NULL');
   await addColumnIfMissing('abstracts', 'current_version', 'INT DEFAULT 1');
+  await addColumnIfMissing('abstracts', 'team_id', 'INT NULL');
+  await addColumnIfMissing('abstracts', 'workflow_stage', "VARCHAR(50) NOT NULL DEFAULT 'submitted'");
+  await addColumnIfMissing('abstracts', 'lead_reviewer_id', 'INT NULL');
+  await addColumnIfMissing('abstracts', 'lead_review_notes', 'TEXT NULL');
+  await addColumnIfMissing('abstracts', 'lead_decision_at', 'DATETIME NULL');
+  await addColumnIfMissing('abstracts', 'reviewer_revision_notes', 'TEXT NULL');
+  await addColumnIfMissing('abstracts', 'reviewer_recommended_action', 'VARCHAR(30) NULL');
+  await addColumnIfMissing('abstracts', 'reviewer_submitted_at', 'DATETIME NULL');
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS abstract_versions (
@@ -1860,6 +1869,35 @@ const createResearchTables = async () => {
       reinstatement_requested_at DATETIME NULL,
       UNIQUE KEY uq_reviewers_user_id (user_id),
       CONSTRAINT fk_reviewers_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reviewer_teams (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      name VARCHAR(150) NOT NULL,
+      description TEXT NULL,
+      created_by INT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_reviewer_teams_name (name),
+      KEY idx_reviewer_teams_created_by (created_by),
+      CONSTRAINT fk_reviewer_teams_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reviewer_team_members (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      team_id INT NOT NULL,
+      reviewer_id INT NOT NULL,
+      designation ENUM('LEAD', 'MEMBER') NOT NULL DEFAULT 'MEMBER',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_reviewer_team_member_reviewer (reviewer_id),
+      KEY idx_reviewer_team_members_team_order (team_id, designation, created_at),
+      CONSTRAINT fk_reviewer_team_members_team_id FOREIGN KEY (team_id) REFERENCES reviewer_teams(id) ON DELETE CASCADE,
+      CONSTRAINT fk_reviewer_team_members_reviewer_id FOREIGN KEY (reviewer_id) REFERENCES reviewers(id) ON DELETE CASCADE
     )
   `);
 

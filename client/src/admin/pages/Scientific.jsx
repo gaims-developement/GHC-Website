@@ -43,12 +43,12 @@ import {
   RotateCcw,
   ShieldAlert,
 } from "lucide-react";
-import ScientificTeam from "../components/scientific/ScientificTeam";
+import ReviewerTeams from "../components/scientific/ReviewerTeams";
 import { apiUrl } from "../../config/api";
 
 function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
   // ----------------------------------------------------
-  // Role Detection
+  // Role Detection & Hierarchical Workflow
   // ----------------------------------------------------
   const userRole = (user?.role || "").toUpperCase();
   const userPermissions = user?.permissions || [];
@@ -61,22 +61,40 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
     userPermissions.includes("manage_abstracts") ||
     userPermissions.includes("assign_reviewers");
 
-  // Reviewer role if explicitly reviewer or has review permission without admin rights
   const isStrictReviewer =
     !isChairpersonRole &&
     (userRole === "SCIENTIFIC_REVIEWER" ||
       userRole === "REVIEWER" ||
       userPermissions.includes("review_abstracts"));
 
-  // View mode switcher: Chairperson can toggle to test Reviewer workspace
+  const [workflowRole, setWorkflowRole] = useState({
+    isChairperson: isChairpersonRole,
+    isTeamLead: false,
+    isReviewer: isStrictReviewer,
+    reviewerId: null,
+    leadTeams: [],
+    memberTeams: [],
+    allTeams: [],
+  });
+
   const [viewMode, setViewMode] = useState(isStrictReviewer ? "reviewer" : "chairperson");
 
-  // Keep viewMode synced if role changes
   useEffect(() => {
-    if (isStrictReviewer) {
-      setViewMode("reviewer");
-    }
-  }, [isStrictReviewer]);
+    api
+      .get("/api/research/workflow-role")
+      .then((res) => {
+        const data = res.data || {};
+        setWorkflowRole(data);
+        if (data.isChairperson) {
+          // Keep chairperson view by default
+        } else if (data.isReviewer || isStrictReviewer) {
+          setViewMode("reviewer");
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch workflow role", err);
+      });
+  }, [api, isStrictReviewer]);
 
   // ----------------------------------------------------
   // Chairperson State
@@ -135,16 +153,63 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
   const [settingsStatus, setSettingsStatus] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Assignment Modal State
+  // Assignment Modal State (Chairperson -> Reviewer Team Allocation)
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [selectedAbstracts, setSelectedAbstracts] = useState([]);
-  const [selectedReviewerId, setSelectedReviewerId] = useState("");
-  const [assignmentSubmitting, setAssignmentSubmitting] = useState(false);
   const [assignSearch, setAssignSearch] = useState("");
+  const [assignFilter, setAssignFilter] = useState("unassigned"); // "unassigned" | "all"
+  const [teams, setTeams] = useState([]);
+  const [assigningTeamId, setAssigningTeamId] = useState(null);
 
   // Abstract Detail / Decision Modal State
   const [viewAbstract, setViewAbstract] = useState(null);
   const [decisionSubmitting, setDecisionSubmitting] = useState(false);
+
+  // Helper to open assign modal with a single pre-selected abstract or from bulk
+  const openAssignModalForAbstract = (abstractItem = null) => {
+    if (abstractItem?.id) {
+      setSelectedAbstracts([abstractItem.id]);
+    } else {
+      const unassigned = abstracts.filter((a) => !a.teamId).map((a) => a.id);
+      if (selectedAbstracts.length === 0 && unassigned.length > 0) {
+        setSelectedAbstracts(unassigned);
+      }
+    }
+    setAssignModalOpen(true);
+    api
+      .get("/api/research/teams")
+      .then((res) => {
+        if (res.data?.teams) setTeams(res.data.teams);
+      })
+      .catch(() => {});
+  };
+
+  const handleAssignToTeam = async (team) => {
+    if (selectedAbstracts.length === 0) {
+      alert("Please select at least one abstract to assign.");
+      return;
+    }
+    setAssigningTeamId(team.id);
+    try {
+      for (const abstractId of selectedAbstracts) {
+        await api.patch(`/api/research/${abstractId}/assign-team`, {
+          teamId: team.id,
+        });
+      }
+      const count = selectedAbstracts.length;
+      setSelectedAbstracts([]);
+      setAssignModalOpen(false);
+      await loadChairpersonData();
+      alert(
+        `✓ Successfully assigned ${count} abstract(s) to ${team.name}! They now appear in the ${team.name} Leader's dashboard.`
+      );
+    } catch (err) {
+      console.error("Failed to assign abstract to team:", err);
+      alert(err.response?.data?.message || "Failed to assign to team.");
+    } finally {
+      setAssigningTeamId(null);
+    }
+  };
 
   // ----------------------------------------------------
   // Reviewer State
@@ -178,16 +243,18 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
   const loadChairpersonData = useCallback(async () => {
     setLoading(true);
     try {
-      const [statsRes, abstractsRes, reviewersRes, settingsRes] = await Promise.all([
+      const [statsRes, abstractsRes, reviewersRes, settingsRes, teamsRes] = await Promise.all([
         api.get("/api/research/stats").catch(() => ({ data: { stats: {}, recentActivity: [] } })),
         api.get("/api/research?admin=1&compact=1&limit=75").catch(() => ({ data: { submissions: [] } })),
         api.get("/api/research/reviewers").catch(() => ({ data: { reviewers: [] } })),
         api.get("/api/research/settings").catch(() => ({ data: { settings: {} } })),
+        api.get("/api/research/teams").catch(() => ({ data: { teams: [] } })),
       ]);
 
       setStatsData(statsRes.data || { stats: {}, recentActivity: [] });
       setAbstracts(abstractsRes.data.submissions || []);
       setReviewers(reviewersRes.data.reviewers || []);
+      setTeams(teamsRes.data?.teams || []);
       if (settingsRes.data.settings) {
         setSettings((prev) => ({ ...prev, ...settingsRes.data.settings }));
       }
@@ -317,29 +384,6 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
     }
   };
 
-  // ----------------------------------------------------
-  // Chairperson Actions: Assign Reviewers
-  // ----------------------------------------------------
-  const handleAssignSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedReviewerId || selectedAbstracts.length === 0) return;
-    setAssignmentSubmitting(true);
-    try {
-      for (const abstractId of selectedAbstracts) {
-        await api.post(`/api/research/${abstractId}/reviewers`, {
-          reviewerId: selectedReviewerId,
-        });
-      }
-      setSelectedAbstracts([]);
-      setSelectedReviewerId("");
-      setAssignModalOpen(false);
-      await loadChairpersonData();
-    } catch (err) {
-      alert(err.response?.data?.message || "Failed to assign reviewer.");
-    } finally {
-      setAssignmentSubmitting(false);
-    }
-  };
 
   // ----------------------------------------------------
   // Chairperson Actions: Decisions
@@ -437,14 +481,24 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
   const reviewCompletionRate = Number(rawStats.reviewCompletion || 0);
   const unassignedCount = Number(rawStats.unassignedCount || abstracts.filter((a) => a.status === "submitted").length || 0);
 
+  const unassignedTeamCount = useMemo(() => {
+    return abstracts.filter((a) => !a.teamId && a.status !== "accepted" && a.status !== "rejected").length;
+  }, [abstracts]);
+
+  const leadApprovedCount = useMemo(() => {
+    return abstracts.filter((a) => a.workflowStage === "lead_approved").length;
+  }, [abstracts]);
+
   // Filtered Abstracts for Chairperson Directory
   const filteredAbstracts = useMemo(() => {
     return abstracts.filter((sub) => {
       const q = abstractSearch.toLowerCase().trim();
-      const matchesSearch = !q || [sub.title, sub.authors, sub.presentingAuthor, sub.institution, sub.track, sub.category, sub.keywords, sub.abstractId].join(" ").toLowerCase().includes(q);
+      const matchesSearch = !q || [sub.title, sub.authors, sub.presentingAuthor, sub.institution, sub.track, sub.category, sub.keywords, sub.abstractId, sub.teamName, sub.assignedReviewerName].join(" ").toLowerCase().includes(q);
       if (!matchesSearch) return false;
 
       if (abstractFilter === "all") return true;
+      if (abstractFilter === "unassigned_team") return !sub.teamId && sub.status !== "accepted" && sub.status !== "rejected";
+      if (abstractFilter === "lead_approved") return sub.workflowStage === "lead_approved";
       if (abstractFilter === "submitted") return sub.status === "submitted" || sub.status === "draft";
       if (abstractFilter === "under_review") return sub.status === "under_review";
       if (abstractFilter === "revision_requested") return sub.status === "revision_requested";
@@ -658,6 +712,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
   const reviewerPendingCount = reviewerAssignedCount - reviewerCompletedCount;
 
   // ====================================================
+  // ====================================================
   // RENDER: REVIEWER VIEW
   // ====================================================
   if (viewMode === "reviewer") {
@@ -665,7 +720,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
       const hasPendingApp = reviewerProfile?.reinstatement_status === "pending" || reinstatementSubmitted;
       return (
         <div className="admin-speakers-page" style={{ maxWidth: "800px", margin: "2rem auto", padding: "0 1rem" }}>
-          {isChairpersonRole && (
+          {(isChairpersonRole || workflowRole?.isChairperson) && (
             <div style={{ marginBottom: "1rem", textAlign: "right" }}>
               <button
                 type="button"
@@ -673,7 +728,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                 onClick={() => setViewMode("chairperson")}
                 style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
               >
-                <Sliders size={15} /> Switch to Chairperson View
+                <Sliders size={15} /> Exit Reviewer View
               </button>
             </div>
           )}
@@ -877,17 +932,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
             <p className="admin-muted" style={{ margin: 0 }}>Review the abstracts assigned to you and submit evaluations.</p>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            {isChairpersonRole && (
-              <button
-                type="button"
-                className="admin-secondary-button"
-                style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", fontWeight: 600 }}
-                onClick={() => setViewMode("chairperson")}
-              >
-                <Sliders size={15} /> Switch to Chairperson View
-              </button>
-            )}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
             <button
               type="button"
               className="admin-icon-button"
@@ -1185,6 +1230,17 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                     </div>
                   </div>
 
+                  {/* Workflow routing notice */}
+                  {reviewForm.recommendation === "revise" ? (
+                    <div style={{ padding: "0.75rem 1rem", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "0.5rem", fontSize: "0.85rem", color: "#92400e", marginBottom: "1.25rem" }}>
+                      <strong>Workflow Notice:</strong> Your revision request will be routed to your Team Lead for confirmation before an email with the revision token is dispatched to the author.
+                    </div>
+                  ) : (
+                    <div style={{ padding: "0.75rem 1rem", background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "0.5rem", fontSize: "0.85rem", color: "#475467", marginBottom: "1.25rem" }}>
+                      <strong>Workflow Notice:</strong> Your completed score & recommendation will be forwarded to your Team Lead for endorsement before the Chairperson makes the final decision.
+                    </div>
+                  )}
+
                   {/* Review Comments */}
                   <div style={{ marginBottom: "1.5rem" }}>
                     <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 600, color: "#374151", marginBottom: "0.4rem" }}>
@@ -1246,6 +1302,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
+
           {/* Scientific Team Button */}
           <button
             type="button"
@@ -1276,7 +1333,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
             type="button"
             className="admin-primary-button"
             style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", fontWeight: 700, fontSize: "0.85rem" }}
-            onClick={() => setAssignModalOpen(true)}
+            onClick={() => openAssignModalForAbstract()}
           >
             <UserPlus size={16} /> Assign Reviews
           </button>
@@ -1371,7 +1428,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                 type="button"
                 className="admin-primary-button"
                 style={{ fontSize: "0.8rem", padding: "0.4rem 0.85rem" }}
-                onClick={() => setAssignModalOpen(true)}
+                onClick={() => openAssignModalForAbstract()}
               >
                 Assign {unassignedCount} Unassigned <ArrowRight size={14} />
               </button>
@@ -1537,7 +1594,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                   type="button"
                   className="admin-primary-button"
                   style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
-                  onClick={() => setAssignModalOpen(true)}
+                  onClick={() => openAssignModalForAbstract()}
                 >
                   <UserPlus size={14} /> Assign New Work
                 </button>
@@ -1555,7 +1612,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                   <thead>
                     <tr>
                       <th>Reviewer</th>
-                      <th>Specialization</th>
+                      <th>Team &amp; Designation</th>
                       <th style={{ textAlign: "center" }}>Assigned</th>
                       <th style={{ textAlign: "center" }}>Completed</th>
                       <th style={{ textAlign: "center" }}>Pending</th>
@@ -1576,8 +1633,8 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                             <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>{rev.email}</span>
                           </td>
                           <td>
-                            <div style={{ fontSize: "0.85rem", color: "#374151" }}>{rev.specialization || "General Medicine"}</div>
-                            <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>{rev.institution || "-"}</span>
+                            <div style={{ fontSize: "0.85rem", color: "#374151" }}>{rev.team_name || "Unassigned"}</div>
+                            <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>{rev.team_designation === "LEAD" ? "Lead" : rev.team_designation === "MEMBER" ? "Member" : "No team designation"}</span>
                           </td>
                           <td style={{ textAlign: "center", fontWeight: 700 }}>{assigned}</td>
                           <td style={{ textAlign: "center", fontWeight: 700, color: "#059669" }}>{completed}</td>
@@ -1598,11 +1655,10 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                               className="admin-secondary-button"
                               style={{ padding: "0.3rem 0.6rem", fontSize: "0.75rem" }}
                               onClick={() => {
-                                setSelectedReviewerId(String(rev.id));
-                                setAssignModalOpen(true);
+                                openAssignModalForAbstract();
                               }}
                             >
-                              Assign
+                              Assign Reviews
                             </button>
                           </td>
                         </tr>
@@ -1655,7 +1711,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                 type="button"
                 className="admin-secondary-button"
                 style={{ fontSize: "0.85rem" }}
-                onClick={() => setAssignModalOpen(true)}
+                onClick={() => openAssignModalForAbstract()}
               >
                 <UserPlus size={15} /> Assign Selected
               </button>
@@ -1675,7 +1731,8 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
             <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
               {[
                 { id: "all", label: `All (${abstracts.length})` },
-                { id: "submitted", label: `Submitted (${newSubmissions})` },
+                { id: "unassigned_team", label: `⚠️ Needs Team Assignment (${unassignedTeamCount})` },
+                { id: "lead_approved", label: `⭐ Awaiting Verdict (${leadApprovedCount})` },
                 { id: "under_review", label: `Under Review (${underReview})` },
                 { id: "revision_requested", label: `Revisions (${revisionCount})` },
                 { id: "accepted", label: `Accepted (${acceptedCount})` },
@@ -1725,9 +1782,9 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                     <th>Code</th>
                     <th>Title of Research</th>
                     <th>Presenting Author</th>
-                    <th>Institution</th>
-                    <th>Category</th>
-                    <th>Status</th>
+                    <th>Reviewer Team</th>
+                    <th>Assigned Reviewer</th>
+                    <th>Workflow Stage</th>
                     <th>Score</th>
                     <th style={{ textAlign: "right" }}>Actions</th>
                   </tr>
@@ -1741,14 +1798,33 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                         </span>
                       </td>
                       <td>
-                        <strong title={sub.title} style={{ color: "#111827", maxWidth: "320px", display: "block" }}>
+                        <strong title={sub.title} style={{ color: "#111827", maxWidth: "280px", display: "block" }}>
                           {sub.title}
                         </strong>
-                        <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>{sub.track || "Scientific Track"}</span>
+                        <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>{sub.category || "Poster"} • {sub.track || "Scientific Track"}</span>
                       </td>
-                      <td>{sub.presentingAuthor || sub.correspondingAuthor || sub.authors || "Not specified"}</td>
-                      <td style={{ fontSize: "0.85rem", color: "#4b5563" }}>{sub.institution || "GAIMS"}</td>
-                      <td style={{ textTransform: "capitalize", fontSize: "0.85rem" }}>{sub.category || "Poster"}</td>
+                      <td>
+                        <div>{sub.presentingAuthor || sub.correspondingAuthor || sub.authors || "Not specified"}</div>
+                        <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>{sub.institution || "GAIMS"}</span>
+                      </td>
+                      <td>
+                        {sub.teamName ? (
+                          <span style={{ fontSize: "0.8rem", fontWeight: 600, color: "#6C4AB6", background: "rgba(108,74,182,0.08)", padding: "0.2rem 0.6rem", borderRadius: "999px", display: "inline-block" }}>
+                            👥 {sub.teamName}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: "0.8rem", color: "#9ca3af", fontStyle: "italic" }}>
+                            Unassigned
+                          </span>
+                        )}
+                      </td>
+                      <td style={{ fontSize: "0.85rem" }}>
+                        {sub.assignedReviewerName ? (
+                          <span style={{ fontWeight: 600, color: "#374151" }}>{sub.assignedReviewerName}</span>
+                        ) : (
+                          <span style={{ color: "#9ca3af", fontStyle: "italic" }}>-</span>
+                        )}
+                      </td>
                       <td>
                         <span
                           style={{
@@ -1759,18 +1835,32 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                             fontWeight: 700,
                             textTransform: "capitalize",
                             background:
-                              sub.status === "accepted" ? "#ecfdf5" :
-                              sub.status === "rejected" ? "#fef2f2" :
-                              sub.status === "under_review" ? "#fffbeb" :
+                              sub.workflowStage === "accepted" || sub.status === "accepted" ? "#ecfdf5" :
+                              sub.workflowStage === "rejected" || sub.status === "rejected" ? "#fef2f2" :
+                              sub.workflowStage === "lead_approved" ? "#fef3c7" :
+                              sub.workflowStage === "lead_revision_requested" ? "#fff7ed" :
+                              sub.workflowStage === "reviewer_reviewed" ? "#faf5ff" :
+                              sub.workflowStage === "assigned_to_reviewer" ? "#eff6ff" :
+                              sub.workflowStage === "assigned_to_team" ? "#f0fdf4" :
                               sub.status === "revision_requested" ? "#fff7ed" : "#f3f4f6",
                             color:
-                              sub.status === "accepted" ? "#059669" :
-                              sub.status === "rejected" ? "#dc2626" :
-                              sub.status === "under_review" ? "#d97706" :
+                              sub.workflowStage === "accepted" || sub.status === "accepted" ? "#059669" :
+                              sub.workflowStage === "rejected" || sub.status === "rejected" ? "#dc2626" :
+                              sub.workflowStage === "lead_approved" ? "#b45309" :
+                              sub.workflowStage === "lead_revision_requested" ? "#c2410c" :
+                              sub.workflowStage === "reviewer_reviewed" ? "#7c3aed" :
+                              sub.workflowStage === "assigned_to_reviewer" ? "#2563eb" :
+                              sub.workflowStage === "assigned_to_team" ? "#16a34a" :
                               sub.status === "revision_requested" ? "#ea580c" : "#4b5563",
                           }}
                         >
-                          {(sub.status || "submitted").replaceAll("_", " ")}
+                          {sub.workflowStage === "lead_approved" ? "⭐ Awaiting Verdict" :
+                           sub.workflowStage === "lead_revision_requested" ? "⚠️ Revision Flagged" :
+                           sub.workflowStage === "reviewer_reviewed" ? "Reviewed (Awaiting Lead)" :
+                           sub.workflowStage === "assigned_to_reviewer" ? "Under Review" :
+                           sub.workflowStage === "assigned_to_team" ? "Assigned to Team" :
+                           sub.workflowStage === "submitted" || !sub.teamId ? "Needs Team" :
+                           (sub.workflowStage || sub.status || "submitted").replaceAll("_", " ")}
                         </span>
                       </td>
                       <td style={{ fontWeight: 600 }}>
@@ -1778,6 +1868,17 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                       </td>
                       <td style={{ textAlign: "right" }}>
                         <div style={{ display: "inline-flex", gap: "0.4rem" }}>
+                          {!sub.teamId && (
+                            <button
+                              type="button"
+                              className="admin-secondary-button"
+                              style={{ padding: "0.35rem 0.65rem", fontSize: "0.75rem", fontWeight: 700, color: "#d97706", borderColor: "#fde68a" }}
+                              onClick={() => openAssignModalForAbstract(sub)}
+                              title="Assign to a Reviewer Team"
+                            >
+                              Assign Team
+                            </button>
+                          )}
                           <button
                             type="button"
                             className="admin-secondary-button"
@@ -1785,7 +1886,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                             onClick={() => openAbstractDetail(sub)}
                             title="View Abstract in Website"
                           >
-                            <Eye size={13} /> View Abstract
+                            <Eye size={13} /> View
                           </button>
                         </div>
                       </td>
@@ -2370,9 +2471,9 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
 
       {/* TAB: Scientific Committee Reviewers Team */}
       {activeTab === "team" && (
-        <ScientificTeam
+        <ReviewerTeams
           api={api}
-          isSuperAdmin={isSuperAdmin}
+          user={user}
           onReviewerUpdated={loadChairpersonData}
         />
       )}
@@ -2518,121 +2619,537 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
         </section>
       )}
 
-      {/* Review Assignment Workflow Modal */}
+      {/* Review Assignment Workflow Modal (Assign to Reviewer Team) */}
       {assignModalOpen && (
-        <div className="admin-modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: "1rem" }}>
-          <div className="admin-panel" style={{ width: "100%", maxWidth: "700px", maxHeight: "90vh", overflowY: "auto", margin: 0, padding: "2rem", borderRadius: "1.25rem", boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+        <div
+          className="admin-modal-overlay"
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1100,
+            padding: "1rem",
+          }}
+        >
+          <div
+            className="admin-panel"
+            style={{
+              width: "100%",
+              maxWidth: "860px",
+              maxHeight: "92vh",
+              overflowY: "auto",
+              margin: 0,
+              padding: "2rem",
+              borderRadius: "1.25rem",
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.3)",
+              background: "#ffffff",
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                marginBottom: "1.5rem",
+                paddingBottom: "1rem",
+                borderBottom: "1px solid #f3f4f6",
+              }}
+            >
               <div>
-                <h2 style={{ fontSize: "1.35rem", fontWeight: 800, margin: 0 }}>Assign Abstracts to Reviewer</h2>
-                <p className="admin-muted" style={{ margin: "0.2rem 0 0 0", fontSize: "0.85rem" }}>
-                  Select one or more abstracts and allocate them to a committee reviewer.
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.35rem",
+                    padding: "0.2rem 0.6rem",
+                    borderRadius: "999px",
+                    background: "rgba(108,74,182,0.08)",
+                    color: "#6C4AB6",
+                    fontSize: "0.75rem",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    marginBottom: "0.4rem",
+                  }}
+                >
+                  <Users size={13} /> Scientific Workflow Allocation
+                </div>
+                <h2 style={{ fontSize: "1.4rem", fontWeight: 800, margin: 0, color: "#111827" }}>
+                  Assign Abstracts to Reviewer Team
+                </h2>
+                <p className="admin-muted" style={{ margin: "0.25rem 0 0 0", fontSize: "0.85rem" }}>
+                  Select the abstracts below and click on a <strong>Reviewer Team</strong>. The abstracts will instantly land in that <strong>Team Leader's dashboard</strong> for reviewer assignment.
                 </p>
               </div>
-              <button type="button" className="admin-icon-button" onClick={() => setAssignModalOpen(false)}>
-                <X size={18} />
+              <button
+                type="button"
+                className="admin-icon-button"
+                onClick={() => setAssignModalOpen(false)}
+                disabled={assigningTeamId !== null}
+              >
+                <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleAssignSubmit}>
-              {/* Select Reviewer with live workload preview */}
-              <div style={{ marginBottom: "1.25rem" }}>
-                <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, color: "#374151", marginBottom: "0.4rem" }}>
-                  Select Reviewer (Workload Preview)
-                </label>
-                <select
-                  required
-                  value={selectedReviewerId}
-                  onChange={(e) => setSelectedReviewerId(e.target.value)}
-                  style={{ width: "100%", padding: "0.75rem", borderRadius: "0.5rem", border: "1px solid #d1d5db", fontSize: "0.9rem" }}
-                >
-                  <option value="">-- Choose a Reviewer --</option>
-                  {reviewers.map((r) => {
-                    const assigned = Number(r.assigned_count || 0);
-                    const completed = Number(r.completed_reviews || 0);
-                    const pending = Math.max(0, assigned - completed);
-                    return (
-                      <option key={r.id} value={r.id}>
-                        {r.name} ({r.specialization || "General"}) — {assigned} Assigned, {completed} Done, {pending} Pending
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-
-              {/* Select Abstracts */}
-              <div style={{ marginBottom: "1.5rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
-                  <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "#374151" }}>
-                    Select Abstracts ({selectedAbstracts.length} chosen)
+            {/* SECTION 1: Select Abstracts */}
+            <div style={{ marginBottom: "1.75rem" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "0.5rem",
+                  marginBottom: "0.6rem",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <label style={{ fontSize: "0.9rem", fontWeight: 700, color: "#374151" }}>
+                    1. Select Abstracts to Assign
                   </label>
-                  <input
-                    type="text"
-                    placeholder="Search abstracts..."
-                    value={assignSearch}
-                    onChange={(e) => setAssignSearch(e.target.value)}
-                    style={{ padding: "0.3rem 0.6rem", fontSize: "0.8rem", borderRadius: "6px", border: "1px solid #d1d5db" }}
-                  />
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      padding: "0.15rem 0.6rem",
+                      borderRadius: "999px",
+                      background: selectedAbstracts.length > 0 ? "#ede9fe" : "#f3f4f6",
+                      color: selectedAbstracts.length > 0 ? "#6C4AB6" : "#6b7280",
+                    }}
+                  >
+                    {selectedAbstracts.length} selected
+                  </span>
                 </div>
 
-                <div style={{ maxHeight: "240px", overflowY: "auto", border: "1px solid #e5e7eb", borderRadius: "0.5rem", padding: "0.5rem" }}>
-                  {abstracts
-                    .filter((a) => a.title?.toLowerCase().includes(assignSearch.toLowerCase()) || a.category?.toLowerCase().includes(assignSearch.toLowerCase()))
-                    .map((a) => {
-                      const isChecked = selectedAbstracts.includes(a.id);
-                      return (
-                        <div
-                          key={a.id}
+                {/* Filter and Search */}
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <div style={{ display: "flex", gap: "0.25rem" }}>
+                    <button
+                      type="button"
+                      onClick={() => setAssignFilter("unassigned")}
+                      style={{
+                        padding: "0.25rem 0.55rem",
+                        fontSize: "0.75rem",
+                        fontWeight: assignFilter === "unassigned" ? 700 : 500,
+                        borderRadius: "6px",
+                        border: assignFilter === "unassigned" ? "1px solid #6C4AB6" : "1px solid #e5e7eb",
+                        background: assignFilter === "unassigned" ? "rgba(108,74,182,0.08)" : "#fff",
+                        color: assignFilter === "unassigned" ? "#6C4AB6" : "#4b5563",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Needs Team ({abstracts.filter((a) => !a.teamId).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAssignFilter("all")}
+                      style={{
+                        padding: "0.25rem 0.55rem",
+                        fontSize: "0.75rem",
+                        fontWeight: assignFilter === "all" ? 700 : 500,
+                        borderRadius: "6px",
+                        border: assignFilter === "all" ? "1px solid #6C4AB6" : "1px solid #e5e7eb",
+                        background: assignFilter === "all" ? "rgba(108,74,182,0.08)" : "#fff",
+                        color: assignFilter === "all" ? "#6C4AB6" : "#4b5563",
+                        cursor: "pointer",
+                      }}
+                    >
+                      All ({abstracts.length})
+                    </button>
+                  </div>
+
+                  <input
+                    type="text"
+                    placeholder="Search by title, code..."
+                    value={assignSearch}
+                    onChange={(e) => setAssignSearch(e.target.value)}
+                    style={{
+                      padding: "0.3rem 0.6rem",
+                      fontSize: "0.8rem",
+                      borderRadius: "6px",
+                      border: "1px solid #d1d5db",
+                      width: "170px",
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Abstracts List Box */}
+              {(() => {
+                const filteredList = abstracts.filter((a) => {
+                  if (assignFilter === "unassigned" && a.teamId) return false;
+                  if (!assignSearch.trim()) return true;
+                  const query = assignSearch.toLowerCase();
+                  return (
+                    a.title?.toLowerCase().includes(query) ||
+                    a.abstractId?.toLowerCase().includes(query) ||
+                    a.category?.toLowerCase().includes(query) ||
+                    (a.presentingAuthor && a.presentingAuthor.toLowerCase().includes(query))
+                  );
+                });
+
+                return (
+                  <div>
+                    <div
+                      style={{
+                        maxHeight: "220px",
+                        overflowY: "auto",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "0.65rem",
+                        padding: "0.4rem",
+                        background: "#fafafa",
+                      }}
+                    >
+                      {filteredList.length === 0 ? (
+                        <div style={{ padding: "1.5rem", textAlign: "center", color: "#6b7280", fontSize: "0.85rem" }}>
+                          No abstracts found matching the current search or filter.
+                        </div>
+                      ) : (
+                        filteredList.map((a) => {
+                          const isChecked = selectedAbstracts.includes(a.id);
+                          return (
+                            <div
+                              key={a.id}
+                              onClick={() => {
+                                setSelectedAbstracts((prev) =>
+                                  isChecked ? prev.filter((id) => id !== a.id) : [...prev, a.id]
+                                );
+                              }}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.75rem",
+                                padding: "0.55rem 0.75rem",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                background: isChecked ? "rgba(108, 74, 182, 0.09)" : "#ffffff",
+                                border: isChecked ? "1px solid #c4b5fd" : "1px solid transparent",
+                                marginBottom: "0.25rem",
+                                transition: "all 0.15s ease",
+                              }}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {}}
+                                style={{ cursor: "pointer" }}
+                              />
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    fontSize: "0.85rem",
+                                    fontWeight: 700,
+                                    color: "#111827",
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  }}
+                                >
+                                  {a.title}
+                                </div>
+                                <div style={{ fontSize: "0.75rem", color: "#6b7280", display: "flex", alignItems: "center", gap: "0.4rem", flexWrap: "wrap", marginTop: "0.15rem" }}>
+                                  <span style={{ fontFamily: "monospace", fontWeight: 700, color: "#6C4AB6" }}>
+                                    {a.abstractId || `GHC-ABS-${String(a.id).padStart(5, "0")}`}
+                                  </span>
+                                  <span>•</span>
+                                  <span>{a.presentingAuthor || "Unknown Author"}</span>
+                                  <span>•</span>
+                                  <span>{a.category || "Poster"}</span>
+                                  {a.teamName && (
+                                    <>
+                                      <span>•</span>
+                                      <span style={{ color: "#059669", fontWeight: 600 }}>
+                                        Current: {a.teamName}
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    {/* Quick Selection Buttons */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.4rem", fontSize: "0.78rem" }}>
+                      <span style={{ color: "#6b7280" }}>
+                        Showing {filteredList.length} abstract(s)
+                      </span>
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        <button
+                          type="button"
                           onClick={() => {
-                            setSelectedAbstracts((prev) =>
-                              isChecked ? prev.filter((id) => id !== a.id) : [...prev, a.id]
-                            );
+                            const ids = filteredList.map((a) => a.id);
+                            setSelectedAbstracts((prev) => Array.from(new Set([...prev, ...ids])));
                           }}
                           style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.75rem",
-                            padding: "0.5rem 0.75rem",
-                            borderRadius: "6px",
+                            background: "none",
+                            border: "none",
+                            color: "#6C4AB6",
+                            fontWeight: 700,
                             cursor: "pointer",
-                            background: isChecked ? "rgba(108, 74, 182, 0.08)" : "transparent",
-                            transition: "background 0.15s ease",
+                            fontSize: "0.78rem",
+                            textDecoration: "underline",
                           }}
                         >
-                          <input type="checkbox" checked={isChecked} onChange={() => {}} />
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: "0.85rem", fontWeight: 600, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {a.title}
+                          Select All Shown
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAbstracts([])}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#ef4444",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            fontSize: "0.78rem",
+                          }}
+                        >
+                          Clear Selection
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* SECTION 2: The Reviewer Teams (Click to assign) */}
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+                <div>
+                  <label style={{ fontSize: "0.95rem", fontWeight: 800, color: "#111827", display: "block" }}>
+                    2. Choose Reviewer Team (Click a Team to Assign)
+                  </label>
+                  <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>
+                    {selectedAbstracts.length > 0
+                      ? `Click any team below to assign the ${selectedAbstracts.length} selected abstract(s):`
+                      : "Select at least one abstract above, then click a team below:"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Teams Cards Grid */}
+              {(() => {
+                const teamList =
+                  teams.length > 0
+                    ? teams
+                    : workflowRole?.allTeams?.length > 0
+                    ? workflowRole.allTeams
+                    : [];
+
+                if (teamList.length === 0) {
+                  return (
+                    <div
+                      style={{
+                        padding: "2rem",
+                        textAlign: "center",
+                        border: "2px dashed #e5e7eb",
+                        borderRadius: "0.85rem",
+                        background: "#fafafa",
+                      }}
+                    >
+                      <Users size={32} style={{ margin: "0 auto 0.5rem", opacity: 0.4 }} />
+                      <p style={{ margin: "0 0 0.5rem 0", fontWeight: 700, color: "#374151" }}>
+                        No Reviewer Teams Found
+                      </p>
+                      <p style={{ margin: "0 0 1rem 0", fontSize: "0.85rem", color: "#6b7280" }}>
+                        Please create reviewer teams first under the <strong>Scientific Team</strong> tab.
+                      </p>
+                      <button
+                        type="button"
+                        className="admin-primary-button"
+                        style={{ fontSize: "0.85rem" }}
+                        onClick={() => {
+                          setAssignModalOpen(false);
+                          setActiveTab("team");
+                          if (onNavigate) onNavigate("scientific-team");
+                        }}
+                      >
+                        Create Teams in Scientific Team →
+                      </button>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
+                      gap: "0.85rem",
+                    }}
+                  >
+                    {teamList.map((team) => {
+                      const leadMember = team.members?.find((m) => m.designation === "LEAD");
+                      const leadName =
+                        leadMember?.name || team.lead_name || team.leadName || "Not assigned yet";
+                      const memberCount =
+                        team.member_count !== undefined
+                          ? Number(team.member_count)
+                          : team.members?.length || 0;
+                      const isAssigningThis = assigningTeamId === team.id;
+                      const canClick = selectedAbstracts.length > 0 && assigningTeamId === null;
+
+                      return (
+                        <div
+                          key={team.id}
+                          onClick={() => {
+                            if (canClick) {
+                              handleAssignToTeam(team);
+                            } else if (selectedAbstracts.length === 0) {
+                              alert("Please select at least one abstract from Step 1 above before assigning.");
+                            }
+                          }}
+                          style={{
+                            border: "2px solid #e5e7eb",
+                            borderRadius: "0.85rem",
+                            padding: "1rem",
+                            cursor: canClick ? "pointer" : selectedAbstracts.length === 0 ? "pointer" : "wait",
+                            background: "#ffffff",
+                            transition: "all 0.18s ease",
+                            display: "flex",
+                            flexDirection: "column",
+                            justifyContent: "space-between",
+                            opacity: selectedAbstracts.length > 0 ? 1 : 0.75,
+                          }}
+                          onMouseEnter={(e) => {
+                            if (canClick) {
+                              e.currentTarget.style.borderColor = "#6C4AB6";
+                              e.currentTarget.style.boxShadow = "0 8px 24px rgba(108, 74, 182, 0.15)";
+                              e.currentTarget.style.transform = "translateY(-3px)";
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = "#e5e7eb";
+                            e.currentTarget.style.boxShadow = "none";
+                            e.currentTarget.style.transform = "translateY(0)";
+                          }}
+                        >
+                          <div>
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                marginBottom: "0.4rem",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: "1.05rem",
+                                  fontWeight: 800,
+                                  color: "#111827",
+                                  letterSpacing: "-0.01em",
+                                }}
+                              >
+                                👥 {team.name}
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: "0.72rem",
+                                  fontWeight: 700,
+                                  padding: "0.15rem 0.5rem",
+                                  borderRadius: "999px",
+                                  background: "rgba(108,74,182,0.08)",
+                                  color: "#6C4AB6",
+                                }}
+                              >
+                                {memberCount} {memberCount === 1 ? "Reviewer" : "Reviewers"}
+                              </span>
                             </div>
-                            <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>
-                              {a.abstractId || `GHC-ABS-${String(a.id).padStart(5, "0")}`} • Category: {a.category || "General"} • Status: {a.status}
-                            </span>
+
+                            <div
+                              style={{
+                                fontSize: "0.82rem",
+                                color: "#4b5563",
+                                marginBottom: "0.75rem",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.35rem",
+                              }}
+                            >
+                              <span style={{ fontWeight: 700, color: "#9333ea" }}>👑 Team Lead:</span>
+                              <strong style={{ color: "#1f2937" }}>{leadName}</strong>
+                            </div>
                           </div>
+
+                          <button
+                            type="button"
+                            disabled={!canClick && selectedAbstracts.length > 0}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (canClick) {
+                                handleAssignToTeam(team);
+                              } else if (selectedAbstracts.length === 0) {
+                                alert("Please select at least one abstract from Step 1 above before assigning.");
+                              }
+                            }}
+                            className="admin-primary-button"
+                            style={{
+                              width: "100%",
+                              justifyContent: "center",
+                              padding: "0.55rem 0.85rem",
+                              fontSize: "0.85rem",
+                              fontWeight: 700,
+                              marginTop: "0.5rem",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "0.4rem",
+                              background:
+                                selectedAbstracts.length > 0
+                                  ? "linear-gradient(135deg, #6C4AB6, #8b5cf6)"
+                                  : "#9ca3af",
+                              cursor: selectedAbstracts.length > 0 ? "pointer" : "default",
+                            }}
+                          >
+                            {isAssigningThis ? (
+                              <>
+                                <RefreshCw size={14} className="spin" /> Assigning...
+                              </>
+                            ) : (
+                              <>
+                                Assign to {team.name} <ArrowRight size={14} />
+                              </>
+                            )}
+                          </button>
                         </div>
                       );
                     })}
-                </div>
-              </div>
+                  </div>
+                );
+              })()}
+            </div>
 
-              {/* Submit Buttons */}
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem" }}>
-                <button
-                  type="button"
-                  className="admin-secondary-button"
-                  onClick={() => setAssignModalOpen(false)}
-                  disabled={assignmentSubmitting}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="admin-primary-button"
-                  disabled={assignmentSubmitting || !selectedReviewerId || selectedAbstracts.length === 0}
-                >
-                  {assignmentSubmitting ? "Assigning..." : `Assign ${selectedAbstracts.length} Abstract(s)`}
-                </button>
-              </div>
-            </form>
+            {/* Modal Footer */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginTop: "1.75rem",
+                paddingTop: "1rem",
+                borderTop: "1px solid #f3f4f6",
+              }}
+            >
+              <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>
+                💡 Abstracts assigned to a team will immediately populate the Team Leader's "Assign Reviewers" queue.
+              </span>
+              <button
+                type="button"
+                className="admin-secondary-button"
+                onClick={() => setAssignModalOpen(false)}
+                disabled={assigningTeamId !== null}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -2709,10 +3226,46 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                 </div>
               )}
 
-              {!viewAbstract.abstractText && !(viewAbstract.pdfUrl || viewAbstract.fileUrl || viewAbstract.pdf_url) && (
-                <div style={{ padding: "3rem", textAlign: "center", color: "#6b7280" }}>
-                  <FileText size={36} style={{ margin: "0 auto 0.5rem", opacity: 0.4 }} />
-                  <p style={{ margin: 0, fontWeight: 500 }}>No document or text preview was provided with this submission.</p>
+              {/* Workflow Stage & Lead Endorsement Highlight */}
+              {viewAbstract.workflowStage === "lead_approved" && (
+                <div style={{ padding: "1rem 1.25rem", background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)", border: "1px solid #fde68a", borderRadius: "0.75rem", flexShrink: 0 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.4rem" }}>
+                    <strong style={{ fontSize: "0.95rem", color: "#92400e" }}>
+                      ⭐ Review Complete & Endorsed by Team Lead — Ready for Chairperson Final Verdict
+                    </strong>
+                    <span style={{ fontSize: "0.85rem", fontWeight: 800, color: "#6C4AB6", background: "#ffffff", padding: "0.2rem 0.6rem", borderRadius: "6px" }}>
+                      Score: {viewAbstract.finalScore ?? "-"} / 50
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "0.85rem", color: "#78350f" }}>
+                    <div>Reviewer Recommendation: <strong>{viewAbstract.reviewerRecommendedAction || "Accept"}</strong></div>
+                    {viewAbstract.leadReviewNotes && (
+                      <div style={{ marginTop: "0.25rem" }}>
+                        Team Lead Endorsement Remarks: <em>"{viewAbstract.leadReviewNotes}"</em>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Unassigned to Team Warning Banner */}
+              {!viewAbstract.teamId && (
+                <div style={{ padding: "0.75rem 1rem", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "0.6rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
+                  <span style={{ fontSize: "0.85rem", color: "#92400e", fontWeight: 600 }}>
+                    ⚠️ This abstract is currently unassigned to any Reviewer Team.
+                  </span>
+                  <button
+                    type="button"
+                    className="admin-primary-button"
+                    style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}
+                    onClick={() => {
+                      const target = viewAbstract;
+                      setViewAbstract(null);
+                      openAssignModalForAbstract(target);
+                    }}
+                  >
+                    Assign to Reviewer Team
+                  </button>
                 </div>
               )}
             </div>
@@ -3048,6 +3601,8 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
           </div>
         </div>
       )}
+
+
     </div>
   );
 }

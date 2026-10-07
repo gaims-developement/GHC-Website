@@ -270,32 +270,147 @@ const validatePublicSubmission = (payload, files) => {
   return null;
 };
 
+const getReviewerForUser = async (userId) => {
+  if (!userId) return null;
+  const [[reviewer]] = await pool.query('SELECT * FROM reviewers WHERE user_id = ? LIMIT 1', [userId]);
+  return reviewer || null;
+};
+
+const getReviewerTeamInfoForUser = async (userId) => {
+  if (!userId) return null;
+  const reviewer = await getReviewerForUser(userId);
+  if (!reviewer) return null;
+
+  const [teamRows] = await pool.query(
+    `SELECT rt.id, rt.name, rt.description, rtm.designation
+     FROM reviewer_team_members rtm
+     INNER JOIN reviewer_teams rt ON rt.id = rtm.team_id
+     WHERE rtm.reviewer_id = ?`,
+    [reviewer.id]
+  );
+
+  const leadTeams = teamRows.filter((r) => r.designation === 'LEAD');
+  const memberTeams = teamRows.filter((r) => r.designation === 'MEMBER');
+  const leadTeamIds = leadTeams.map((r) => r.id);
+
+  return {
+    reviewer,
+    reviewerId: reviewer.id,
+    leadTeams,
+    memberTeams,
+    leadTeamIds,
+    isTeamLead: leadTeamIds.length > 0,
+  };
+};
+
 const listResearch = asyncHandler(async (req, res) => {
-  const isSuperOrAdmin = reviewRoles.includes(req.user?.role) || req.user?.permissions?.includes('manage_abstracts') || req.user?.permissions?.includes('assign_reviewers');
-  const includeAll = req.query.admin === '1' || isSuperOrAdmin;
-  const isReviewer = !isSuperOrAdmin && req.user?.permissions?.includes('review_abstracts');
-  const reviewerId = isReviewer ? req.user.id : null;
+  const isSuperOrAdmin =
+    (reviewRoles.includes(req.user?.role) ||
+    req.user?.permissions?.includes('manage_abstracts') ||
+    req.user?.permissions?.includes('assign_reviewers')) &&
+    req.user?.role !== 'SCIENTIFIC_TEAM_LEAD';
+
+  const teamInfo = await getReviewerTeamInfoForUser(req.user?.id);
+  const isTeamLead = Boolean(teamInfo?.isTeamLead) || req.user?.role === 'SCIENTIFIC_TEAM_LEAD';
+  const isReviewer = Boolean(teamInfo?.reviewerId) || req.user?.permissions?.includes('review_abstracts');
+
+  const requestedScope = req.query.scope; // 'chairperson' | 'lead' | 'reviewer' | 'unassigned'
   const limit = req.query.limit ? Math.min(Math.max(Number(req.query.limit || 50), 1), 200) : null;
   const page = Math.max(Number(req.query.page || 1), 1);
   const offset = limit ? (page - 1) * limit : 0;
   const compact = req.query.compact === '1';
 
-  const submissions = await Research.list({ includeAll, reviewerId, limit, offset, compact });
+  let listOptions = {
+    limit,
+    offset,
+    compact,
+    includeAll: false,
+  };
+
+  if (isSuperOrAdmin && requestedScope !== 'lead' && requestedScope !== 'reviewer') {
+    // Chairperson / Admin context: full visibility
+    listOptions.includeAll = true;
+    if (req.query.unassigned === '1' || requestedScope === 'unassigned') {
+      listOptions.unassignedOnly = true;
+    }
+    if (req.query.teamId) {
+      listOptions.teamId = Number(req.query.teamId);
+    }
+    if (req.query.workflowStage) {
+      listOptions.workflowStage = req.query.workflowStage;
+    }
+  } else if ((isTeamLead || (isSuperOrAdmin && requestedScope === 'lead')) && requestedScope !== 'reviewer') {
+    // Team Lead context: only abstracts in the lead's teams
+    listOptions.includeAll = true;
+    const allowedTeamIds = isSuperOrAdmin
+      ? (req.query.teamId ? [Number(req.query.teamId)] : ((await pool.query('SELECT id FROM reviewer_teams'))[0] || []).map((t) => t.id))
+      : teamInfo.leadTeamIds;
+
+    if (!allowedTeamIds || allowedTeamIds.length === 0) {
+      return res.json({ submissions: [], pagination: limit ? { page, limit, count: 0 } : null });
+    }
+
+    if (req.query.teamId) {
+      const selectedId = Number(req.query.teamId);
+      if (!isSuperOrAdmin && !allowedTeamIds.includes(selectedId)) {
+        return res.status(403).json({ message: 'You are not the Team Lead for this team.' });
+      }
+      listOptions.teamId = selectedId;
+    } else {
+      listOptions.leadTeamIds = allowedTeamIds;
+    }
+
+    if (req.query.workflowStage) {
+      listOptions.workflowStage = req.query.workflowStage;
+    }
+  } else if (isReviewer || (isSuperOrAdmin && requestedScope === 'reviewer')) {
+    // Reviewer context: strictly abstracts assigned to this reviewer
+    const effectiveReviewerId = teamInfo?.reviewerId || (await getReviewerForUser(req.user?.id))?.id;
+    if (!effectiveReviewerId) {
+      return res.json({ submissions: [], pagination: limit ? { page, limit, count: 0 } : null });
+    }
+    listOptions.includeAll = true;
+    listOptions.assignedReviewerId = effectiveReviewerId;
+    if (req.query.workflowStage) {
+      listOptions.workflowStage = req.query.workflowStage;
+    }
+  } else {
+    // Public read-only: accepted abstracts only
+    listOptions.includeAll = false;
+  }
+
+  const submissions = await Research.list(listOptions);
   res.json({ submissions, pagination: limit ? { page, limit, count: submissions.length } : null });
 });
 
 const getResearch = asyncHandler(async (req, res) => {
   const submission = await Research.findById(req.params.id);
   if (!submission) return res.status(404).json({ message: 'Research submission not found' });
-  
-  const isSuperOrAdmin = reviewRoles.includes(req.user?.role) || req.user?.permissions?.includes('manage_abstracts');
-  const isReviewer = !isSuperOrAdmin && req.user?.permissions?.includes('review_abstracts');
-  
-  if (isReviewer && submission.reviewerId !== req.user.id) {
-    return res.status(403).json({ message: 'You are not authorized to view this submission.' });
+
+  const isSuperOrAdmin =
+    (reviewRoles.includes(req.user?.role) ||
+    req.user?.permissions?.includes('manage_abstracts') ||
+    req.user?.permissions?.includes('assign_reviewers')) &&
+    req.user?.role !== 'SCIENTIFIC_TEAM_LEAD';
+
+  if (isSuperOrAdmin) {
+    return res.json({ submission });
   }
-  
-  return res.json({ submission });
+
+  const teamInfo = await getReviewerTeamInfoForUser(req.user?.id);
+  if (teamInfo?.isTeamLead && submission.teamId && teamInfo.leadTeamIds.includes(Number(submission.teamId))) {
+    return res.json({ submission });
+  }
+
+  if (teamInfo?.reviewerId && submission.assignedReviewerId === teamInfo.reviewerId) {
+    return res.json({ submission });
+  }
+
+  if (submission.status === 'accepted') {
+    return res.json({ submission });
+  }
+
+  return res.status(403).json({ message: 'You are not authorized to view this submission.' });
 });
 
 const createResearch = asyncHandler(async (req, res) => {
@@ -464,6 +579,9 @@ const statusResearch = asyncHandler(async (req, res) => {
   }
 
   const submission = await Research.setStatus(req.params.id, req.body.status);
+  await Research.setWorkflowStage(req.params.id, req.body.status, {
+    leadReviewNotes: req.body.notes || req.body.reviewNotes || existing.reviewNotes || null,
+  });
   await logDecision(req, 'status_decision', req.params.id, { status: req.body.status });
   const emailSent = await sendAbstractDecisionEmail(req, submission, req.body.status, req.body.notes || req.body.reviewNotes || existing.reviewNotes);
   return res.json({ submission, emailSent });
@@ -515,14 +633,14 @@ const saveCategory = asyncHandler(async (req, res) => {
   res.json({ id });
 });
 
-const getReviewerForUser = async (userId) => {
-  const [[reviewer]] = await pool.query('SELECT * FROM reviewers WHERE user_id = ? LIMIT 1', [userId]);
-  return reviewer;
-};
+
 
 const listReviewers = asyncHandler(async (_req, res) => {
   const [reviewers] = await pool.query(`
     SELECT r.*, u.name, u.email,
+      MAX(rt.id) AS team_id,
+      MAX(rt.name) AS team_name,
+      MAX(rtm.designation) AS team_designation,
       COUNT(DISTINCT ara.abstract_id) AS assigned_count,
       COUNT(DISTINCT ar.id) AS completed_reviews,
       SUM(CASE WHEN ar.recommendation = 'accept' THEN 1 ELSE 0 END) AS approved_count,
@@ -530,6 +648,8 @@ const listReviewers = asyncHandler(async (_req, res) => {
       SUM(CASE WHEN ar.recommendation = 'revise' THEN 1 ELSE 0 END) AS revision_count
     FROM reviewers r
     INNER JOIN users u ON u.id = r.user_id
+    LEFT JOIN reviewer_team_members rtm ON rtm.reviewer_id = r.id
+    LEFT JOIN reviewer_teams rt ON rt.id = rtm.team_id
     LEFT JOIN abstract_review_assignments ara ON ara.reviewer_id = r.id
     LEFT JOIN abstract_reviews ar ON ar.reviewer_id = r.id
     GROUP BY r.id
@@ -611,6 +731,7 @@ const saveReviewer = asyncHandler(async (req, res) => {
       `INSERT INTO reviewers (user_id, specialization, designation, institution, country, status)
        VALUES (?, ?, ?, ?, ?, 'active')
        ON DUPLICATE KEY UPDATE 
+         id=LAST_INSERT_ID(id),
          specialization=VALUES(specialization), 
          designation=VALUES(designation), 
          institution=VALUES(institution), 
@@ -694,15 +815,79 @@ const getMyReviewerProfile = asyncHandler(async (req, res) => {
 });
 
 const assignReviewer = asyncHandler(async (req, res) => {
-  await pool.query('INSERT IGNORE INTO abstract_review_assignments (abstract_id, reviewer_id) VALUES (?, ?)', [req.params.id, req.body.reviewerId || req.body.reviewer_id]);
-  await Research.setStatus(req.params.id, 'under_review');
-  await logDecision(req, 'assigned_reviewer', req.params.id, { reviewerId: req.body.reviewerId || req.body.reviewer_id });
-  res.json({ success: true });
+  const abstractId = req.params.id;
+  const reviewerId = Number(req.body.reviewerId || req.body.reviewer_id);
+  if (!reviewerId) return res.status(400).json({ message: 'Reviewer ID is required' });
+
+  const abstract = await Research.findById(abstractId);
+  if (!abstract) return res.status(404).json({ message: 'Abstract not found' });
+
+  const isSuperOrAdmin =
+    (reviewRoles.includes(req.user?.role) ||
+    req.user?.permissions?.includes('manage_abstracts') ||
+    req.user?.permissions?.includes('assign_reviewers')) &&
+    req.user?.role !== 'SCIENTIFIC_TEAM_LEAD';
+
+  const teamInfo = await getReviewerTeamInfoForUser(req.user?.id);
+  const isLeadOfTeam = teamInfo?.isTeamLead && abstract.teamId && teamInfo.leadTeamIds.includes(Number(abstract.teamId));
+
+  if (!isSuperOrAdmin && !isLeadOfTeam) {
+    return res.status(403).json({ message: 'Only the Chairperson or Team Lead can assign reviewers.' });
+  }
+
+  if (!isSuperOrAdmin && abstract.teamId) {
+    const [[membership]] = await pool.query(
+      'SELECT id FROM reviewer_team_members WHERE team_id = ? AND reviewer_id = ? LIMIT 1',
+      [abstract.teamId, reviewerId]
+    );
+    if (!membership) {
+      return res.status(400).json({ message: 'The selected reviewer is not a member of your team.' });
+    }
+  }
+
+  await pool.query('DELETE FROM abstract_review_assignments WHERE abstract_id = ?', [abstractId]);
+  await pool.query('INSERT INTO abstract_review_assignments (abstract_id, reviewer_id) VALUES (?, ?)', [abstractId, reviewerId]);
+
+  await Research.setStatus(abstractId, 'under_review');
+  await Research.setWorkflowStage(abstractId, 'assigned_to_reviewer', {
+    leadReviewerId: reviewerId,
+  });
+
+  await logDecision(req, 'assigned_reviewer', abstractId, { reviewerId, teamId: abstract.teamId });
+  const updated = await Research.findById(abstractId);
+  res.json({ success: true, submission: updated });
 });
 
 const removeReviewerAssignment = asyncHandler(async (req, res) => {
-  await pool.query('DELETE FROM abstract_review_assignments WHERE abstract_id = ? AND reviewer_id = ?', [req.params.id, req.params.reviewerId]);
-  await logDecision(req, 'removed_reviewer_assignment', req.params.id, { reviewerId: req.params.reviewerId });
+  const abstractId = req.params.id;
+  const reviewerId = Number(req.params.reviewerId);
+
+  const abstract = await Research.findById(abstractId);
+  if (!abstract) return res.status(404).json({ message: 'Abstract not found' });
+
+  const isSuperOrAdmin =
+    (reviewRoles.includes(req.user?.role) ||
+    req.user?.permissions?.includes('manage_abstracts') ||
+    req.user?.permissions?.includes('assign_reviewers')) &&
+    req.user?.role !== 'SCIENTIFIC_TEAM_LEAD';
+
+  const teamInfo = await getReviewerTeamInfoForUser(req.user?.id);
+  const isLeadOfTeam = teamInfo?.isTeamLead && abstract.teamId && teamInfo.leadTeamIds.includes(Number(abstract.teamId));
+
+  if (!isSuperOrAdmin && !isLeadOfTeam) {
+    return res.status(403).json({ message: 'Not authorized to modify assignments for this abstract.' });
+  }
+
+  await pool.query('DELETE FROM abstract_review_assignments WHERE abstract_id = ? AND reviewer_id = ?', [abstractId, reviewerId]);
+
+  const [remaining] = await pool.query('SELECT reviewer_id FROM abstract_review_assignments WHERE abstract_id = ?', [abstractId]);
+  if (remaining.length === 0) {
+    await Research.setWorkflowStage(abstractId, abstract.teamId ? 'assigned_to_team' : 'submitted', {
+      leadReviewerId: null,
+    });
+  }
+
+  await logDecision(req, 'removed_reviewer_assignment', abstractId, { reviewerId });
   res.status(204).send();
 });
 
@@ -735,6 +920,10 @@ const assignedReviews = asyncHandler(async (req, res) => {
       a.pdf_url,
       a.status, 
       a.submission_status,
+      a.team_id,
+      a.workflow_stage,
+      a.lead_review_notes,
+      a.reviewer_revision_notes,
       ar.id AS review_id,
       ar.total_score,
       ar.recommendation,
@@ -762,15 +951,34 @@ const submitScore = asyncHandler(async (req, res) => {
 
   const scores = ['scientificMerit', 'originality', 'methodology', 'presentationQuality', 'relevance'].map((key) => Number(req.body[key] || req.body[key.replace(/[A-Z]/g, (m) => `_${m.toLowerCase()}`)] || 0));
   const total = scores.reduce((sum, value) => sum + value, 0);
+  const recommendation = req.body.recommendation || 'accept';
+  const comments = req.body.comments || req.body.notes || '';
+
   await pool.query(
     `INSERT INTO abstract_reviews (abstract_id, reviewer_id, scientific_merit, originality, methodology, presentation_quality, relevance, comments, recommendation, total_score)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON DUPLICATE KEY UPDATE scientific_merit=VALUES(scientific_merit), originality=VALUES(originality), methodology=VALUES(methodology), presentation_quality=VALUES(presentation_quality), relevance=VALUES(relevance), comments=VALUES(comments), recommendation=VALUES(recommendation), total_score=VALUES(total_score), reviewed_at=CURRENT_TIMESTAMP`,
-    [req.params.id, reviewerId, ...scores, req.body.comments || null, req.body.recommendation || 'revise', total]
+    [req.params.id, reviewerId, ...scores, comments || null, recommendation, total]
   );
   await pool.query('UPDATE abstracts SET final_score = (SELECT AVG(total_score) FROM abstract_reviews WHERE abstract_id = ?) WHERE id = ?', [req.params.id, req.params.id]);
-  await logDecision(req, 'submitted_review', req.params.id, { reviewerId, recommendation: req.body.recommendation, total });
-  res.json({ totalScore: total });
+
+  if (recommendation === 'revise') {
+    // Reviewer flagged revision -> Moves to Team Lead for confirmation before author email is dispatched
+    await Research.setWorkflowStage(req.params.id, 'lead_revision_requested', {
+      reviewerRevisionNotes: comments,
+      reviewerRecommendedAction: 'revise',
+      reviewerSubmittedAt: new Date(),
+    });
+  } else {
+    // Reviewer recommended accept or reject -> Moves to Team Lead for endorsement
+    await Research.setWorkflowStage(req.params.id, 'reviewer_reviewed', {
+      reviewerRecommendedAction: recommendation,
+      reviewerSubmittedAt: new Date(),
+    });
+  }
+
+  await logDecision(req, 'submitted_review', req.params.id, { reviewerId, recommendation, total });
+  res.json({ totalScore: total, recommendation });
 });
 
 const listReviews = asyncHandler(async (req, res) => {
@@ -1186,60 +1394,42 @@ const emailParticipants = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "Emails sent successfully (simulated)." });
 });
 
-const requestRevision = asyncHandler(async (req, res) => {
-  const submission = await Research.findById(req.params.id);
-  if (!submission) return res.status(404).json({ message: 'Research submission not found' });
+const executeRevisionRequest = async ({ req, abstractId, notes, createdBy }) => {
+  const submission = await Research.findById(abstractId);
+  if (!submission) {
+    const error = new Error('Research submission not found');
+    error.status = 404;
+    throw error;
+  }
   
   if (['accepted', 'rejected'].includes(submission.status)) {
-    return res.status(403).json({ message: 'Final review decision cannot be changed.' });
+    const error = new Error('Final review decision cannot be changed.');
+    error.status = 403;
+    throw error;
   }
   
   const token = crypto.randomBytes(32).toString('hex');
   const expires = new Date(Date.now() + Number(process.env.REVISION_TOKEN_TTL_DAYS || 7) * 24 * 60 * 60 * 1000);
-  const notes = req.body?.notes || req.body?.comments || req.body?.revisionNotes || '';
   const authorEmail = submission.email;
   const link = `${getPublicAppUrl()}/abstract/revise/${token}`;
 
   await Research.requestRevision(submission.id, token, expires, {
     applicantEmail: authorEmail,
     abstractVersion: submission.currentVersion || 1,
-    createdBy: req.user?.id || null,
-    comments: notes,
+    createdBy: createdBy || null,
+    comments: notes || '',
   });
+
+  await Research.setWorkflowStage(submission.id, 'revision_requested', {
+    leadReviewNotes: notes || '',
+    leadDecisionAt: new Date(),
+  });
+
   await logDecision(req, 'revision_link_generated', submission.id, { expiresAt: expires, version: submission.currentVersion || 1 });
   
   let emailSent = false;
   if (authorEmail) {
     try {
-      const subject = `Revision Requested: ${submission.title}`;
-      const html = `
-        <div style="font-family: Arial, sans-serif; color: #1e293b; max-width: 620px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
-          <div style="border-bottom: 2px solid #6C4AB6; padding-bottom: 12px; margin-bottom: 20px;">
-            <strong style="color: #6C4AB6; font-size: 18px; text-transform: uppercase; letter-spacing: 0.05em;">Global Healthcare Conclave 2026</strong>
-          </div>
-          <h2 style="color: #1e293b; margin-top: 0; font-size: 20px;">Revision Requested for Your Research Abstract</h2>
-          <p style="font-size: 14px; line-height: 1.5;">Dear ${submission.presentingAuthor || submission.authors || 'Author'},</p>
-          <p style="font-size: 14px; line-height: 1.5;">The Scientific Committee has reviewed your submission to <strong>Global Healthcare Conclave 2026</strong>:</p>
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; margin: 16px 0;">
-            <div style="font-size: 12px; color: #64748b; text-transform: uppercase; font-weight: 700;">Abstract Code: ${submission.abstractId || `GHC-ABS-${String(submission.id).padStart(5, '0')}`}</div>
-            <div style="font-size: 15px; font-weight: bold; color: #0f172a; margin-top: 4px;">${submission.title}</div>
-          </div>
-          ${notes ? `
-          <div style="background: #fffbeb; border-left: 4px solid #d97706; padding: 14px 16px; margin: 18px 0; border-radius: 4px;">
-            <strong style="color: #b45309; display: block; font-size: 13px; text-transform: uppercase; letter-spacing: 0.03em;">Reviewer & Committee Feedback / Required Changes:</strong>
-            <p style="margin: 8px 0 0 0; color: #334155; font-size: 14px; white-space: pre-wrap; line-height: 1.5;">${notes}</p>
-          </div>` : ''}
-          <p style="font-size: 14px; line-height: 1.5;">Please revise your manuscript/abstract addressing the feedback above and submit your updated version within <strong>14 days</strong> using the button below:</p>
-          <div style="text-align: center; margin: 28px 0;">
-            <a href="${link}" style="background: #6C4AB6; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 15px; display: inline-block;">
-              Submit Revised Abstract
-            </a>
-          </div>
-          <p style="font-size: 12px; color: #64748b;">If the button does not work, visit: <a href="${link}" style="color: #6C4AB6;">${link}</a></p>
-          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
-          <p style="font-size: 12px; color: #94a3b8; margin: 0;">Scientific Committee Secretariat • Global Healthcare Conclave 2026</p>
-        </div>
-      `;
       const revisionPoints = buildRevisionPointVariables(notes);
       await sendTemplateEmail('abstract_revision_required', authorEmail, {
         fullName: submission.presentingAuthor || submission.authors || 'Author',
@@ -1249,7 +1439,7 @@ const requestRevision = asyncHandler(async (req, res) => {
         title: submission.title,
         abstractCode: submission.abstractId || `GHC-ABS-${String(submission.id).padStart(5, '0')}`,
         category: submission.category || '',
-        revisionInstructions: notes,
+        revisionInstructions: notes || '',
         ...revisionPoints,
         revisionLink: link,
         revision_link: link,
@@ -1269,7 +1459,131 @@ const requestRevision = asyncHandler(async (req, res) => {
   }
   
   await logDecision(req, 'requested_revision', submission.id, { email: authorEmail, emailSent, notes });
-  res.json({ success: true, link, emailSent, recipient: authorEmail, expiresAt: expires });
+  return { submission, link, emailSent, recipient: authorEmail, expiresAt: expires };
+};
+
+const requestRevision = asyncHandler(async (req, res) => {
+  const notes = req.body?.notes || req.body?.comments || req.body?.revisionNotes || '';
+  const result = await executeRevisionRequest({
+    req,
+    abstractId: req.params.id,
+    notes,
+    createdBy: req.user?.id || null,
+  });
+  res.json({ success: true, ...result });
+});
+
+const assignTeam = asyncHandler(async (req, res) => {
+  const isSuperOrAdmin =
+    (reviewRoles.includes(req.user?.role) ||
+    req.user?.permissions?.includes('manage_abstracts')) &&
+    req.user?.role !== 'SCIENTIFIC_TEAM_LEAD';
+  if (!isSuperOrAdmin) {
+    return res.status(403).json({ message: 'Only the Chairperson can assign abstracts to teams.' });
+  }
+
+  const abstractId = req.params.id;
+  const rawTeamId = req.body.teamId ?? req.body.team_id;
+  const teamId = rawTeamId ? Number(rawTeamId) : null;
+
+  const existing = await Research.findById(abstractId);
+  if (!existing) return res.status(404).json({ message: 'Abstract not found' });
+
+  if (teamId) {
+    const [[team]] = await pool.query('SELECT id, name FROM reviewer_teams WHERE id = ? LIMIT 1', [teamId]);
+    if (!team) return res.status(404).json({ message: 'Selected reviewer team does not exist' });
+  }
+
+  const updated = await Research.setTeam(abstractId, teamId);
+  await logDecision(req, teamId ? 'assigned_abstract_team' : 'unassigned_abstract_team', abstractId, { teamId });
+  res.json({ success: true, submission: updated });
+});
+
+const leadDecision = asyncHandler(async (req, res) => {
+  const abstractId = req.params.id;
+  const { action, notes = '' } = req.body;
+
+  const abstract = await Research.findById(abstractId);
+  if (!abstract) return res.status(404).json({ message: 'Abstract not found' });
+
+  const isSuperOrAdmin =
+    (reviewRoles.includes(req.user?.role) ||
+    req.user?.permissions?.includes('manage_abstracts')) &&
+    req.user?.role !== 'SCIENTIFIC_TEAM_LEAD';
+
+  const teamInfo = await getReviewerTeamInfoForUser(req.user?.id);
+  const isLeadOfTeam = teamInfo?.isTeamLead && abstract.teamId && teamInfo.leadTeamIds.includes(Number(abstract.teamId));
+
+  if (!isSuperOrAdmin && !isLeadOfTeam) {
+    return res.status(403).json({ message: 'Only Team Leads or Chairperson can record lead decisions.' });
+  }
+
+  if (action === 'approve_revision') {
+    const revisionResult = await executeRevisionRequest({
+      req,
+      abstractId,
+      notes: notes || abstract.reviewerRevisionNotes || '',
+      createdBy: req.user?.id,
+    });
+    await Research.setWorkflowStage(abstractId, 'revision_requested', {
+      leadReviewNotes: notes,
+      leadDecisionAt: new Date(),
+    });
+    await logDecision(req, 'lead_approved_revision', abstractId, { notes });
+    return res.json({
+      success: true,
+      action: 'revision_requested',
+      emailSent: revisionResult.emailSent,
+      recipient: revisionResult.recipient,
+      link: revisionResult.link,
+    });
+  }
+
+  if (action === 'reject_revision') {
+    await Research.setWorkflowStage(abstractId, 'assigned_to_reviewer', {
+      leadReviewNotes: notes,
+      leadDecisionAt: new Date(),
+    });
+    await logDecision(req, 'lead_rejected_revision_request', abstractId, { notes });
+    return res.json({ success: true, action: 'revision_rejected' });
+  }
+
+  if (action === 'endorse_review' || action === 'approve_review' || action === 'endorse_to_chair') {
+    await Research.setWorkflowStage(abstractId, 'lead_approved', {
+      leadReviewNotes: notes,
+      leadDecisionAt: new Date(),
+    });
+    await logDecision(req, 'lead_endorsed_review', abstractId, { notes });
+    return res.json({ success: true, action: 'lead_approved' });
+  }
+
+  return res.status(400).json({ message: `Unknown lead action: ${action}` });
+});
+
+const getWorkflowRole = asyncHandler(async (req, res) => {
+  const isSuperOrAdmin =
+    (reviewRoles.includes(req.user?.role) ||
+    req.user?.permissions?.includes('manage_abstracts') ||
+    req.user?.permissions?.includes('assign_reviewers')) &&
+    req.user?.role !== 'SCIENTIFIC_TEAM_LEAD';
+
+  const teamInfo = await getReviewerTeamInfoForUser(req.user?.id);
+  const reviewerId = teamInfo?.reviewerId || null;
+  const leadTeams = teamInfo?.leadTeams || [];
+  const memberTeams = teamInfo?.memberTeams || [];
+
+  const [allTeams] = await pool.query('SELECT id, name, description FROM reviewer_teams ORDER BY name ASC');
+
+  res.json({
+    isChairperson: isSuperOrAdmin,
+    isTeamLead: leadTeams.length > 0 || req.user?.role === 'SCIENTIFIC_TEAM_LEAD',
+    isReviewer: Boolean(reviewerId),
+    reviewerId,
+    leadTeams,
+    memberTeams,
+    allTeams,
+    reviewerStatus: teamInfo?.reviewer?.status || 'none',
+  });
 });
 
 const resendRevisionEmail = asyncHandler(async (req, res) => {
@@ -1471,12 +1785,15 @@ const confirmParticipation = asyncHandler(async (req, res) => {
 module.exports = {
   assignPresentation,
   assignReviewer,
+  assignTeam,
   awardResearch,
   createResearch,
   getSettings,
   getResearch,
+  getWorkflowRole,
   exportAbstractRankingsCsv,
   assignedReviews,
+  leadDecision,
   listAbstractRankings,
   listAwards: listRows('awards', 'awards', 'name ASC'),
   listAwardResults: listRows('award_results', 'results', 'score DESC'),

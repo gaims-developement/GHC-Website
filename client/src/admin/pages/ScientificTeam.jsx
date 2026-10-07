@@ -1,7 +1,7 @@
-import ScientificTeamComponent from "../components/scientific/ScientificTeam";
+import ReviewerTeams from "../components/scientific/ReviewerTeams";
 
 function ScientificTeam(props) {
-  return <ScientificTeamComponent {...props} isSuperAdmin={true} />;
+  return <ReviewerTeams {...props} />;
 }
 
 export default ScientificTeam;
