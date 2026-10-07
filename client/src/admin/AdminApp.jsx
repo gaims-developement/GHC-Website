@@ -362,10 +362,16 @@ function AdminApp({ initialPage = "dashboard" }) {
           return;
         }
 
+        const isChairperson =
+          role === "SCIENTIFIC_CHAIRPERSON" ||
+          role === "CHAIRPERSON" ||
+          role === "SCIENTIFIC_COMMITTEE_CHAIR";
+
         const isScientificTeamLead =
-          role === "SCIENTIFIC_TEAM_LEAD" ||
-          role === "TEAM_LEAD" ||
-          currentUser?.email === "gauravjayadev@gmail.com";
+          !isChairperson &&
+          (role === "SCIENTIFIC_TEAM_LEAD" ||
+            role === "TEAM_LEAD" ||
+            currentUser?.email === "gauravjayadev@gmail.com");
 
         if (isScientificTeamLead && !isSuper && (activePage === "dashboard" || !activePage || activePage === "scientific")) {
           setActivePage("scientific-team-lead");
@@ -374,12 +380,18 @@ function AdminApp({ initialPage = "dashboard" }) {
         }
 
         const isScientific =
-          role === "SCIENTIFIC_CHAIRPERSON" ||
-          role === "CHAIRPERSON" ||
+          isChairperson ||
           role === "SCIENTIFIC_REVIEWER" ||
           role === "REVIEWER" ||
           role === "RESEARCH";
-        if (isScientific && !isSuper && (activePage === "dashboard" || !activePage)) {
+        if (
+          isScientific &&
+          !isSuper &&
+          (activePage === "dashboard" ||
+            !activePage ||
+            (isChairperson &&
+              (activePage === "scientific-team-lead" || activePage === "team-lead-dashboard")))
+        ) {
           setActivePage("scientific");
           window.history.replaceState(null, "", "/admin/scientific");
         }
@@ -397,15 +409,21 @@ function AdminApp({ initialPage = "dashboard" }) {
     setToken(nextToken);
     setUser(nextUser);
     const role = (nextUser?.role || "").toUpperCase();
-    if (role === "SCIENTIFIC_TEAM_LEAD" || role === "TEAM_LEAD" || nextUser?.email === "gauravjayadev@gmail.com") {
+    const isChairperson =
+      role === "SCIENTIFIC_CHAIRPERSON" ||
+      role === "CHAIRPERSON" ||
+      role === "SCIENTIFIC_COMMITTEE_CHAIR";
+
+    if (isChairperson) {
+      setActivePage("scientific");
+      window.history.replaceState(null, "", "/admin/scientific");
+    } else if (role === "SCIENTIFIC_TEAM_LEAD" || role === "TEAM_LEAD" || nextUser?.email === "gauravjayadev@gmail.com") {
       setActivePage("scientific-team-lead");
       window.history.replaceState(null, "", "/admin/scientific-team-lead");
     } else if (role === "AWARD_JUDGE" || role === "JUDGE") {
       setActivePage("dashboard");
       window.history.replaceState(null, "", "/admin");
     } else if (
-      role === "SCIENTIFIC_CHAIRPERSON" ||
-      role === "CHAIRPERSON" ||
       role === "SCIENTIFIC_REVIEWER" ||
       role === "REVIEWER" ||
       role === "RESEARCH"

@@ -330,6 +330,17 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
               <Users size={15} /> Scientific Team
             </button>
 
+            {workflowRole.isChairperson && onNavigate && (
+              <button
+                type="button"
+                className="admin-primary-button"
+                onClick={() => onNavigate("scientific")}
+                style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", fontWeight: 700 }}
+              >
+                <Microscope size={15} /> Scientific Dashboard
+              </button>
+            )}
+
             <button
               type="button"
               className="admin-secondary-button"

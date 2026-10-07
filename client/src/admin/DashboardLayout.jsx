@@ -270,16 +270,17 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
       userRole === "AWARD JUDGE" ||
       (userPermissions.includes("award_nomination_view") && !isSuperAdmin));
 
-  const isTeamLead =
-    userRole === "SCIENTIFIC_TEAM_LEAD" ||
-    userRole === "TEAM_LEAD" ||
-    userPermissions.includes("assign_reviewers") ||
-    user?.email === "gauravjayadev@gmail.com";
-
   const isChairperson =
     userRole === "SCIENTIFIC_CHAIRPERSON" ||
     userRole === "CHAIRPERSON" ||
     userRole === "SCIENTIFIC_COMMITTEE_CHAIR";
+
+  const isTeamLead =
+    !isChairperson &&
+    (userRole === "SCIENTIFIC_TEAM_LEAD" ||
+      userRole === "TEAM_LEAD" ||
+      userPermissions.includes("assign_reviewers") ||
+      user?.email === "gauravjayadev@gmail.com");
 
   const isScientificOnly =
     (isChairperson ||
@@ -326,12 +327,12 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
         if (isScientificOnly) {
           if (section.id !== "scientific") return null;
           let allowedIds = [];
-          if (isTeamLead) {
+          if (isChairperson) {
+            // Scientific Chairperson Dashboard: chairperson oversight, abstract allocation, committee oversight (NO team lead dashboard)
+            allowedIds = ["scientific", "scientific-team", "abstract-report"];
+          } else if (isTeamLead) {
             // Team Leader Dashboard: dedicated standalone view with team reviewers & abstract reports
             allowedIds = ["scientific-team-lead", "scientific-team", "abstract-report"];
-          } else if (isChairperson) {
-            // Scientific Chairperson Dashboard: chairperson oversight, abstract allocation, committee oversight (NO team lead dashboard)
-            allowedIds = ["scientific", "scientific-team", "abstract-report", "research", "scientific-reports"];
           } else {
             // Reviewer
             allowedIds = ["reviews", "abstract-report"];
@@ -351,7 +352,7 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
         const allowedItems = section.items.filter((item) => {
           if (item.id === "reviews" && isChairperson) return false;
           if (item.id === "scientific-team-lead" && !isTeamLead && !isSuperAdmin) return false;
-          if (item.id === "scientific" && isTeamLead && !isSuperAdmin) return false;
+          if (item.id === "scientific" && isTeamLead && !isSuperAdmin && !isChairperson) return false;
           if (isSuperAdmin) return true;
           if (!item.permissions || item.permissions.length === 0) return true;
           return item.permissions.some((p) => userPermissions.includes(p));
