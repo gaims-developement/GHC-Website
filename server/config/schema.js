@@ -3138,7 +3138,7 @@ const seedCoreArchitectureData = async () => {
     await pool.query(
       `INSERT INTO languages (code, name, is_active, is_default)
        VALUES (?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE name = VALUES(name), is_active = VALUES(is_active)`,
+       ON DUPLICATE KEY UPDATE name = VALUES(name)`,
       language
     );
   }
@@ -3167,14 +3167,8 @@ const seedAuthData = async () => {
       `INSERT INTO modules (name, slug, description, module_key, label, permission_key, route_key, icon, display_order, active)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
-         name = VALUES(name),
-         slug = VALUES(slug),
-         label = VALUES(label),
          permission_key = VALUES(permission_key),
-         route_key = VALUES(route_key),
-         icon = VALUES(icon),
-         display_order = VALUES(display_order),
-         active = VALUES(active)`,
+         route_key = VALUES(route_key)`,
       [label, moduleKey, null, moduleKey, label, permissionKey, routeKey, icon, displayOrder, active]
     );
   }
@@ -3336,39 +3330,20 @@ const seedWorkshops = async () => {
       [w.title, `%${w.title.split(' ')[0]}%`]
     );
 
-    if (existing.length > 0) {
-      await pool.query(
-        `UPDATE workshops SET
-          title = ?, faculty = ?, organizer = ?, description = ?, full_description = ?,
-          workshop_type = ?, capacity = ?, duration = ?, venue = ?, date = ?, price = ?,
-          certificate_available = ?, is_registration_open = ?, status = 'published', display_order = ?
-         WHERE id = ?`,
-        [
-          w.title, w.faculty, w.organizer, w.description, w.fullDescription,
-          w.workshopType, w.capacity, w.duration, w.venue, w.date, w.price,
-          w.certificateAvailable, w.isRegistrationOpen, w.displayOrder, existing[0].id
-        ]
-      );
-    } else {
-      await pool.query(
-        `INSERT INTO workshops
-          (title, faculty, organizer, description, full_description, workshop_type, capacity, registered_count, duration, venue, date, price, certificate_available, is_registration_open, featured, status, display_order)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, 1, 'published', ?)`,
-        [
-          w.title, w.faculty, w.organizer, w.description, w.fullDescription,
-          w.workshopType, w.capacity, w.duration, w.venue, w.date, w.price,
-          w.certificateAvailable, w.isRegistrationOpen, w.displayOrder
-        ]
-      );
-    }
-  }
+    // Existing rows are owned by the CMS; never overwrite them on restart/redeploy.
+    if (existing.length > 0) continue;
 
-  await pool.query(
-    "UPDATE workshops SET venue = 'New Delhi' WHERE venue LIKE '%AIIMS%' OR venue LIKE '%SET Facility%'"
-  ).catch(() => {});
-  await pool.query(
-    "UPDATE workshops SET organizer = 'New Delhi' WHERE organizer LIKE '%AIIMS%' OR organizer LIKE '%SET Facility%'"
-  ).catch(() => {});
+    await pool.query(
+      `INSERT INTO workshops
+        (title, faculty, organizer, description, full_description, workshop_type, capacity, registered_count, duration, venue, date, price, certificate_available, is_registration_open, featured, status, display_order)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, 1, 'published', ?)`,
+      [
+        w.title, w.faculty, w.organizer, w.description, w.fullDescription,
+        w.workshopType, w.capacity, w.duration, w.venue, w.date, w.price,
+        w.certificateAvailable, w.isRegistrationOpen, w.displayOrder
+      ]
+    );
+  }
 };
 
 const seedResearch = async () => {
@@ -3813,7 +3788,7 @@ const seedAwardNominationData = async () => {
   await pool.query(
     `INSERT INTO email_templates (template_key, subject, body, is_active)
      VALUES (?, ?, ?, 1)
-     ON DUPLICATE KEY UPDATE subject = VALUES(subject), body = VALUES(body), is_active = 1`,
+     ON DUPLICATE KEY UPDATE template_key = template_key`,
     [
       'workshop_registration_confirmation',
       'Your GHC Workshop Registration is Confirmed — {{workshopName}}',
@@ -3988,7 +3963,7 @@ const seedAwardNominationData = async () => {
   await pool.query(
     `INSERT INTO email_templates (template_key, subject, body, is_active)
      VALUES (?, ?, ?, 1)
-     ON DUPLICATE KEY UPDATE subject = VALUES(subject), body = VALUES(body), is_active = 1`,
+     ON DUPLICATE KEY UPDATE template_key = template_key`,
     [
       'workshop_application_received',
       'Your GHC Workshop Application Has Been Received — {{applicationId}}',

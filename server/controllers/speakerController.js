@@ -2,13 +2,35 @@ const Speaker = require('../models/speakerModel');
 const { pool } = require('../config/db');
 const ActivityLog = require('../models/activityLogModel');
 const asyncHandler = require('../utils/asyncHandler');
+const { uploadToCloudinary } = require('../services/cloudinaryService');
 const { applyEventScope, getCurrentEventId } = require('../utils/eventScope');
 
 const validStatuses = ['draft', 'confirmed', 'cancelled', 'published'];
 
 const toBoolean = (value) => value === true || value === 'true' || value === '1' || value === 1;
 
-const sanitizePayload = (body, file) => ({
+const cloudinaryConfigured = () =>
+  Boolean(
+    (process.env.CLOUDINARY_NAME || process.env.CLOUDINARY_CLOUD_NAME) &&
+    (process.env.CLOUDINARY_KEY || process.env.CLOUDINARY_API_KEY) &&
+    (process.env.CLOUDINARY_SECRET || process.env.CLOUDINARY_API_SECRET)
+  );
+
+// Local disk is wiped on every redeploy, so CMS uploads must live in Cloudinary.
+const fileUrlFromUpload = async (file, options = {}) => {
+  if (!file) return null;
+  if (!cloudinaryConfigured()) return `/uploads/speakers/${file.filename}`;
+
+  try {
+    const result = await uploadToCloudinary(file.path, 'speakers', options);
+    return result.secure_url;
+  } catch (error) {
+    console.warn(`Cloudinary upload failed for speakers (${file.filename}), falling back to local storage:`, error.message);
+    return `/uploads/speakers/${file.filename}`;
+  }
+};
+
+const sanitizePayload = async (body, file) => ({
   name: body.name?.trim(),
   fullName: (body.fullName || body.full_name || body.name)?.trim(),
   designation: body.designation?.trim(),
@@ -25,7 +47,7 @@ const sanitizePayload = (body, file) => ({
   specialRequirements: body.specialRequirements || body.special_requirements,
   email: body.email?.trim(),
   phone: body.phone?.trim(),
-  photoUrl: file ? `/uploads/speakers/${file.filename}` : body.photoUrl || body.photo_url,
+  photoUrl: (await fileUrlFromUpload(file)) || body.photoUrl || body.photo_url,
   linkedinUrl: body.linkedinUrl || body.linkedin_url,
   twitterUrl: body.twitterUrl || body.twitter_url,
   websiteUrl: body.websiteUrl || body.website_url,
@@ -57,7 +79,7 @@ const getSpeaker = asyncHandler(async (req, res) => {
 });
 
 const createSpeaker = asyncHandler(async (req, res) => {
-  const payload = sanitizePayload(req.body, req.file);
+  const payload = await sanitizePayload(req.body, req.file);
   const error = validate(payload);
   if (error) return res.status(400).json({ message: error });
 
@@ -70,7 +92,7 @@ const updateSpeaker = asyncHandler(async (req, res) => {
   const existing = await Speaker.findById(req.params.id, req);
   if (!existing) return res.status(404).json({ message: 'Speaker not found' });
 
-  const payload = sanitizePayload(req.body, req.file);
+  const payload = await sanitizePayload(req.body, req.file);
   const error = validate(payload);
   if (error) return res.status(400).json({ message: error });
 
@@ -257,7 +279,7 @@ const rescheduleSession = asyncHandler(async (req, res) => {
 });
 
 const saveResource = asyncHandler(async (req, res) => {
-  const fileUrl = req.file ? `/uploads/speakers/${req.file.filename}` : req.body.fileUrl || req.body.file_url;
+  const fileUrl = (await fileUrlFromUpload(req.file, { resourceType: 'auto', transform: false })) || req.body.fileUrl || req.body.file_url;
   const [result] = await pool.query('INSERT INTO session_resources (session_id, resource_name, resource_type, file_url) VALUES (?, ?, ?, ?)', [req.body.sessionId || req.body.session_id, req.body.resourceName || req.body.resource_name, req.body.resourceType || req.body.resource_type, fileUrl]);
   await ActivityLog.logActivity({ userId: req.user?.id, action: 'uploaded_resource', module: 'resources', recordId: String(result.insertId) });
   res.status(201).json({ id: result.insertId, fileUrl });

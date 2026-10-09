@@ -2,10 +2,32 @@ const Workshop = require('../models/workshopModel');
 const templates = require('../services/emailTemplates');
 const { sendMail } = require('../services/mailService');
 const asyncHandler = require('../utils/asyncHandler');
+const { uploadToCloudinary } = require('../services/cloudinaryService');
 
 const validStatuses = ['draft', 'published', 'closed'];
 
 const toBoolean = (value) => value === true || value === 'true' || value === '1' || value === 1;
+
+const cloudinaryConfigured = () =>
+  Boolean(
+    (process.env.CLOUDINARY_NAME || process.env.CLOUDINARY_CLOUD_NAME) &&
+    (process.env.CLOUDINARY_KEY || process.env.CLOUDINARY_API_KEY) &&
+    (process.env.CLOUDINARY_SECRET || process.env.CLOUDINARY_API_SECRET)
+  );
+
+// Local disk is wiped on every redeploy, so CMS uploads must live in Cloudinary.
+const fileUrlFromUpload = async (file, options = {}) => {
+  if (!file) return null;
+  if (!cloudinaryConfigured()) return `/uploads/workshops/${file.filename}`;
+
+  try {
+    const result = await uploadToCloudinary(file.path, 'workshops', options);
+    return result.secure_url;
+  } catch (error) {
+    console.warn(`Cloudinary upload failed for workshops (${file.filename}), falling back to local storage:`, error.message);
+    return `/uploads/workshops/${file.filename}`;
+  }
+};
 
 const toDateValue = (value) => {
   if (!value) return null;
@@ -29,7 +51,7 @@ const parseFaq = (value) => {
   }
 };
 
-const sanitizePayload = (body, file) => ({
+const sanitizePayload = async (body, file) => ({
   title: body.title?.trim(),
   workshopCode: body.workshopCode || body.workshop_code || body.workshopId || null,
   slug: (body.slug?.trim() || slugify(body.title)),
@@ -47,7 +69,7 @@ const sanitizePayload = (body, file) => ({
   venue: body.venue?.trim(),
   date: toDateValue(body.date),
   price: body.price ?? 0,
-  imageUrl: file ? `/uploads/workshops/${file.filename}` : body.imageUrl || body.image_url,
+  imageUrl: (await fileUrlFromUpload(file)) || body.imageUrl || body.image_url,
   featured: toBoolean(body.featured),
   status: body.status || 'draft',
   displayOrder: body.displayOrder ?? body.display_order ?? 0,
@@ -75,7 +97,7 @@ const getWorkshop = asyncHandler(async (req, res) => {
 });
 
 const createWorkshop = asyncHandler(async (req, res) => {
-  const payload = sanitizePayload(req.body, req.file);
+  const payload = await sanitizePayload(req.body, req.file);
   const error = validate(payload);
   if (error) return res.status(400).json({ message: error });
 
@@ -87,7 +109,7 @@ const updateWorkshop = asyncHandler(async (req, res) => {
   const existing = await Workshop.findById(req.params.id);
   if (!existing) return res.status(404).json({ message: 'Workshop not found' });
 
-  const payload = sanitizePayload(req.body, req.file);
+  const payload = await sanitizePayload(req.body, req.file);
   const error = validate(payload);
   if (error) return res.status(400).json({ message: error });
 

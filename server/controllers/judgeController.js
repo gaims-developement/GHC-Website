@@ -630,7 +630,18 @@ const publicSubmitNomination = asyncHandler(async (req, res) => {
   // Process CV upload
   const cvFile = req.files?.cvFile?.[0] || req.files?.cv?.[0];
   if (cvFile) {
-    cvUrl = `/uploads/${cvFile.filename}`;
+    if (cloudinaryConfigured()) {
+      try {
+        const uploadRes = await uploadToCloudinary(cvFile.path, 'documents', { resourceType: 'auto', transform: false });
+        cvUrl = uploadRes.secure_url;
+        cvCloudinaryId = uploadRes.public_id;
+      } catch (err) {
+        console.warn('Cloudinary upload failed for nomination CV, using local file:', err.message);
+        cvUrl = `/uploads/${cvFile.filename}`;
+      }
+    } else {
+      cvUrl = `/uploads/${cvFile.filename}`;
+    }
   }
 
   // Process Photo upload
