@@ -90,6 +90,11 @@ const validCategories = ['poster', 'oral', 'research_paper', 'case_report'];
 const validStatuses = ['draft', 'submitted', 'under_review', 'revision_requested', 'revised_submitted', 'accepted', 'rejected', 'withdrawn'];
 const reviewRoles = ['SUPER_ADMIN', 'ADMIN', 'RESEARCH', 'SCIENTIFIC_CHAIRPERSON', 'CHAIRPERSON', 'SCIENTIFIC_COMMITTEE_CHAIR'];
 
+// Chairperson (or admin) — the only users allowed to dispatch revision emails to authors.
+const isChairUser = (req) =>
+  (reviewRoles.includes(req.user?.role) || req.user?.permissions?.includes('manage_abstracts')) &&
+  req.user?.role !== 'SCIENTIFIC_TEAM_LEAD';
+
 const toBoolean = (value) => value === true || value === 'true' || value === '1' || value === 1;
 
 const sanitizePayload = (body) => {
@@ -1463,6 +1468,9 @@ const executeRevisionRequest = async ({ req, abstractId, notes, createdBy }) => 
 };
 
 const requestRevision = asyncHandler(async (req, res) => {
+  if (!isChairUser(req)) {
+    return res.status(403).json({ message: 'Only the Scientific Chairperson can send revision emails to authors.' });
+  }
   const notes = req.body?.notes || req.body?.comments || req.body?.revisionNotes || '';
   const result = await executeRevisionRequest({
     req,
@@ -1518,25 +1526,39 @@ const leadDecision = asyncHandler(async (req, res) => {
     return res.status(403).json({ message: 'Only Team Leads or Chairperson can record lead decisions.' });
   }
 
-  if (action === 'approve_revision') {
-    const revisionResult = await executeRevisionRequest({
-      req,
-      abstractId,
-      notes: notes || abstract.reviewerRevisionNotes || '',
-      createdBy: req.user?.id,
-    });
-    await Research.setWorkflowStage(abstractId, 'revision_requested', {
-      leadReviewNotes: notes,
+  // Team Lead edits the reviewer's revision instructions without sending anything yet.
+  if (action === 'save_revision_draft') {
+    if (!isSuperOrAdmin && abstract.workflowStage !== 'lead_revision_requested') {
+      return res.status(409).json({ message: 'This revision request is no longer awaiting Team Lead review.' });
+    }
+    await Research.setWorkflowStage(abstractId, abstract.workflowStage, { leadReviewNotes: notes });
+    await logDecision(req, 'lead_saved_revision_draft', abstractId, { notes });
+    return res.json({ success: true, action: 'draft_saved' });
+  }
+
+  // Team Lead approves the revision request: it goes to the Chairperson, who sends the author email.
+  if (action === 'approve_revision' || action === 'forward_revision_to_chair') {
+    if (!isSuperOrAdmin && abstract.workflowStage !== 'lead_revision_requested') {
+      return res.status(409).json({ message: 'This revision request is no longer awaiting Team Lead review.' });
+    }
+    await Research.setWorkflowStage(abstractId, 'chair_revision_pending', {
+      leadReviewNotes: notes || abstract.leadReviewNotes || abstract.reviewerRevisionNotes || '',
       leadDecisionAt: new Date(),
     });
-    await logDecision(req, 'lead_approved_revision', abstractId, { notes });
-    return res.json({
-      success: true,
-      action: 'revision_requested',
-      emailSent: revisionResult.emailSent,
-      recipient: revisionResult.recipient,
-      link: revisionResult.link,
+    await logDecision(req, 'lead_forwarded_revision_to_chair', abstractId, { notes });
+    return res.json({ success: true, action: 'chair_revision_pending', emailSent: false });
+  }
+
+  // Chairperson sends the revision request back to the Team Lead for rework.
+  if (action === 'return_revision_to_lead') {
+    if (!isSuperOrAdmin) {
+      return res.status(403).json({ message: 'Only the Chairperson can return a revision request to the Team Lead.' });
+    }
+    await Research.setWorkflowStage(abstractId, 'lead_revision_requested', {
+      leadReviewNotes: notes || abstract.leadReviewNotes || '',
     });
+    await logDecision(req, 'chair_returned_revision_to_lead', abstractId, { notes });
+    return res.json({ success: true, action: 'lead_revision_requested' });
   }
 
   if (action === 'reject_revision') {
@@ -1587,6 +1609,9 @@ const getWorkflowRole = asyncHandler(async (req, res) => {
 });
 
 const resendRevisionEmail = asyncHandler(async (req, res) => {
+  if (!isChairUser(req)) {
+    return res.status(403).json({ message: 'Only the Scientific Chairperson can send revision emails to authors.' });
+  }
   const submission = await Research.findById(req.params.id);
   if (!submission) return res.status(404).json({ message: 'Research submission not found' });
   if (submission.status !== 'revision_requested') {

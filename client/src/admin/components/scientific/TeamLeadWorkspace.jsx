@@ -143,21 +143,33 @@ export default function TeamLeadWorkspace({
   const handleApproveRevision = async (abstractId, notes) => {
     setDecisionSubmitting(true);
     try {
-      const res = await api.post(`/api/research/${abstractId}/lead-decision`, {
+      await api.post(`/api/research/${abstractId}/lead-decision`, {
         action: "approve_revision",
         notes,
       });
-      alert(
-        res.data?.emailSent
-          ? "Revision request confirmed and email with secure revision link dispatched to author!"
-          : "Revision status confirmed. Link generated."
-      );
+      alert("Revision request forwarded to the Scientific Chairperson for final approval. The author will be emailed once the Chairperson sends it.");
       setRevisionModalAbstract(null);
       setRevisionNotes("");
       await loadTeamData();
       if (onRefreshParent) onRefreshParent();
     } catch (err) {
       alert(err.response?.data?.message || "Failed to confirm revision request.");
+    } finally {
+      setDecisionSubmitting(false);
+    }
+  };
+
+  const handleSaveRevisionDraft = async (abstractId, notes) => {
+    setDecisionSubmitting(true);
+    try {
+      await api.post(`/api/research/${abstractId}/lead-decision`, {
+        action: "save_revision_draft",
+        notes,
+      });
+      await loadTeamData();
+      alert("Revision instructions saved.");
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to save revision instructions.");
     } finally {
       setDecisionSubmitting(false);
     }
@@ -534,10 +546,10 @@ export default function TeamLeadWorkspace({
                       }}
                       onClick={() => {
                         setRevisionModalAbstract(abs);
-                        setRevisionNotes(abs.reviewerRevisionNotes || "");
+                        setRevisionNotes(abs.leadReviewNotes || abs.reviewerRevisionNotes || "");
                       }}
                     >
-                      <Send size={14} /> Confirm & Dispatch Revision Email
+                      <Send size={14} /> Review Revision Request
                     </button>
                   </div>
                 </div>
@@ -714,11 +726,13 @@ export default function TeamLeadWorkspace({
                           background:
                             abs.workflowStage === "lead_approved" ? "#ecfdf5" :
                             abs.workflowStage === "lead_revision_requested" ? "#fff7ed" :
+                            abs.workflowStage === "chair_revision_pending" ? "#fef3c7" :
                             abs.workflowStage === "reviewer_reviewed" ? "#faf5ff" :
                             abs.workflowStage === "assigned_to_reviewer" ? "#eff6ff" : "#f3f4f6",
                           color:
                             abs.workflowStage === "lead_approved" ? "#059669" :
                             abs.workflowStage === "lead_revision_requested" ? "#c2410c" :
+                            abs.workflowStage === "chair_revision_pending" ? "#b45309" :
                             abs.workflowStage === "reviewer_reviewed" ? "#7c3aed" :
                             abs.workflowStage === "assigned_to_reviewer" ? "#2563eb" : "#4b5563",
                           textTransform: "capitalize",
@@ -822,7 +836,7 @@ export default function TeamLeadWorkspace({
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 700, color: "#ea580c" }}>
-                Confirm Revision Request
+                Review Revision Request
               </h3>
               <button type="button" className="admin-icon-button" onClick={() => setRevisionModalAbstract(null)}>
                 <X size={18} />
@@ -830,7 +844,7 @@ export default function TeamLeadWorkspace({
             </div>
 
             <p style={{ fontSize: "0.85rem", color: "#4b5563", margin: "0 0 1rem 0" }}>
-              Reviewer has flagged this abstract for revision. You can edit the revision feedback instructions below. Upon confirmation, an email with a secure submission link will be dispatched to <strong>{revisionModalAbstract.email || "the author"}</strong>.
+              Reviewer has flagged this abstract for revision. Edit the instructions below and save as often as you need. When you approve, the request is forwarded to the <strong>Scientific Chairperson</strong>, who sends the final revision email to <strong>{revisionModalAbstract.email || "the author"}</strong>.
             </p>
 
             <div style={{ marginBottom: "1.25rem" }}>
@@ -857,11 +871,19 @@ export default function TeamLeadWorkspace({
               <button
                 type="button"
                 disabled={decisionSubmitting}
+                className="admin-secondary-button"
+                onClick={() => handleSaveRevisionDraft(revisionModalAbstract.id, revisionNotes)}
+              >
+                Save Changes
+              </button>
+              <button
+                type="button"
+                disabled={decisionSubmitting}
                 className="admin-primary-button"
                 style={{ background: "#ea580c", borderColor: "#ea580c" }}
                 onClick={() => handleApproveRevision(revisionModalAbstract.id, revisionNotes)}
               >
-                {decisionSubmitting ? "Dispatching..." : "Send Revision Email to Author"}
+                {decisionSubmitting ? "Forwarding..." : "Approve & Forward to Chairperson"}
               </button>
             </div>
           </div>

@@ -489,6 +489,10 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
     return abstracts.filter((a) => a.workflowStage === "lead_approved").length;
   }, [abstracts]);
 
+  const chairRevisionPendingCount = useMemo(() => {
+    return abstracts.filter((a) => a.workflowStage === "chair_revision_pending").length;
+  }, [abstracts]);
+
   // Filtered Abstracts for Chairperson Directory
   const filteredAbstracts = useMemo(() => {
     return abstracts.filter((sub) => {
@@ -499,6 +503,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
       if (abstractFilter === "all") return true;
       if (abstractFilter === "unassigned_team") return !sub.teamId && sub.status !== "accepted" && sub.status !== "rejected";
       if (abstractFilter === "lead_approved") return sub.workflowStage === "lead_approved";
+      if (abstractFilter === "chair_revision_pending") return sub.workflowStage === "chair_revision_pending";
       if (abstractFilter === "submitted") return sub.status === "submitted" || sub.status === "draft";
       if (abstractFilter === "under_review") return sub.status === "under_review";
       if (abstractFilter === "revision_requested") return sub.status === "revision_requested";
@@ -584,7 +589,12 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
     const authorName = item.presenting_author || matchingAbstract?.presentingAuthor || item.authors || "Author";
     const title = item.title || matchingAbstract?.title || "";
     const code = item.abstractCode || matchingAbstract?.abstractId || `GHC-ABS-${String(abstractId).padStart(5, "0")}`;
-    const defaultNotes = item.comments || item.review_notes || "";
+    const fromTeamLead = (matchingAbstract?.workflowStage || item.workflowStage) === "chair_revision_pending";
+    const reviewerNotes = matchingAbstract?.reviewerRevisionNotes || item.reviewerRevisionNotes || "";
+    const leadNotes = matchingAbstract?.leadReviewNotes || item.leadReviewNotes || "";
+    const defaultNotes = fromTeamLead
+      ? leadNotes || reviewerNotes
+      : item.comments || item.review_notes || "";
 
     setRevisionModalTarget({
       abstractId,
@@ -592,6 +602,9 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
       code,
       email: authorEmail,
       authorName,
+      fromTeamLead,
+      reviewerNotes,
+      leadNotes,
     });
     setRevisionNotes(defaultNotes);
     setRevisionFeedbackAlert("");
@@ -620,6 +633,25 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
       }, 2000);
     } catch (err) {
       alert(err.response?.data?.message || "Failed to send revision request email.");
+    } finally {
+      setRevisionSending(false);
+    }
+  };
+
+  const handleReturnRevisionToLead = async () => {
+    if (!revisionModalTarget) return;
+    setRevisionSending(true);
+    try {
+      await api.post(`/api/research/${revisionModalTarget.abstractId}/lead-decision`, {
+        action: "return_revision_to_lead",
+        notes: revisionNotes,
+      });
+      setRevisionModalTarget(null);
+      setRevisionFeedbackAlert("");
+      alert("Revision request returned to the Team Lead with your notes.");
+      await loadChairpersonData();
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to return revision request to Team Lead.");
     } finally {
       setRevisionSending(false);
     }
@@ -1522,7 +1554,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
       {/* Chairperson Section Navigation Tabs */}
       <div style={{ display: "flex", gap: "0.5rem", borderBottom: "1px solid #e5e7eb", marginBottom: "1.5rem" }}>
         {[
-          { id: "overview", label: "Reviewer Workload & Activity", icon: Users },
+          { id: "overview", label: "Recent Scientific Activity", icon: Users },
           { id: "abstracts", label: `All Submitted Abstracts (${abstracts.length})`, icon: FileText },
           { id: "abstract-report", label: `Abstract Report (${abstractReviews.length})`, icon: ClipboardCheck },
           { id: "rankings", label: "Abstract Rankings", icon: Trophy },
@@ -1566,110 +1598,9 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
         })}
       </div>
 
-      {/* TAB 1: Reviewer Workload & Activity */}
+      {/* TAB 1: Recent Scientific Activity */}
       {activeTab === "overview" && (
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "1.5rem", alignItems: "start" }}>
-          {/* Reviewer Workload Table */}
-          <section className="admin-panel" style={{ margin: 0 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", flexWrap: "wrap", gap: "0.5rem" }}>
-              <div>
-                <h2 style={{ fontSize: "1.15rem", fontWeight: 700, margin: 0 }}>Reviewer Workload & Velocity</h2>
-                <p className="admin-muted" style={{ margin: "0.2rem 0 0 0", fontSize: "0.85rem" }}>
-                  Monitor allocation, pending evaluations, and completion rate across committee reviewers.
-                </p>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <button
-                  type="button"
-                  className="admin-secondary-button"
-                  style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
-                  onClick={() => {
-                    setActiveTab("team");
-                    if (onNavigate) onNavigate("scientific-team");
-                  }}
-                >
-                  <Users size={14} /> Scientific Team
-                </button>
-                <button
-                  type="button"
-                  className="admin-primary-button"
-                  style={{ fontSize: "0.8rem", padding: "0.4rem 0.75rem", display: "inline-flex", alignItems: "center", gap: "0.35rem" }}
-                  onClick={() => openAssignModalForAbstract()}
-                >
-                  <UserPlus size={14} /> Assign New Work
-                </button>
-              </div>
-            </div>
-
-            {reviewers.length === 0 ? (
-              <div style={{ padding: "2.5rem", textAlign: "center", color: "#6b7280" }}>
-                <Users size={32} style={{ margin: "0 auto 0.5rem", opacity: 0.5 }} />
-                <p style={{ margin: 0 }}>No scientific reviewers registered yet in the reviewers directory.</p>
-              </div>
-            ) : (
-              <div className="speaker-table-wrap">
-                <table className="speaker-table">
-                  <thead>
-                    <tr>
-                      <th>Reviewer</th>
-                      <th>Team &amp; Designation</th>
-                      <th style={{ textAlign: "center" }}>Assigned</th>
-                      <th style={{ textAlign: "center" }}>Completed</th>
-                      <th style={{ textAlign: "center" }}>Pending</th>
-                      <th>Progress</th>
-                      <th style={{ textAlign: "right" }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {reviewers.map((rev) => {
-                      const assigned = Number(rev.assigned_count || 0);
-                      const completed = Number(rev.completed_reviews || 0);
-                      const pending = Math.max(0, assigned - completed);
-                      const completion = assigned > 0 ? Math.round((completed / assigned) * 100) : 0;
-                      return (
-                        <tr key={rev.id}>
-                          <td>
-                            <div style={{ fontWeight: 700, color: "#111827" }}>{rev.name}</div>
-                            <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>{rev.email}</span>
-                          </td>
-                          <td>
-                            <div style={{ fontSize: "0.85rem", color: "#374151" }}>{rev.team_name || "Unassigned"}</div>
-                            <span style={{ fontSize: "0.75rem", color: "#9ca3af" }}>{rev.team_designation === "LEAD" ? "Lead" : rev.team_designation === "MEMBER" ? "Member" : "No team designation"}</span>
-                          </td>
-                          <td style={{ textAlign: "center", fontWeight: 700 }}>{assigned}</td>
-                          <td style={{ textAlign: "center", fontWeight: 700, color: "#059669" }}>{completed}</td>
-                          <td style={{ textAlign: "center", fontWeight: 700, color: pending > 3 ? "#dc2626" : "#d97706" }}>
-                            {pending}
-                          </td>
-                          <td style={{ width: "120px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                              <div style={{ flex: 1, height: "6px", background: "#e5e7eb", borderRadius: "999px", overflow: "hidden" }}>
-                                <div style={{ height: "100%", width: `${completion}%`, background: "#6C4AB6", borderRadius: "999px" }} />
-                              </div>
-                              <span style={{ fontSize: "0.75rem", fontWeight: 700, color: "#6b7280" }}>{completion}%</span>
-                            </div>
-                          </td>
-                          <td style={{ textAlign: "right" }}>
-                            <button
-                              type="button"
-                              className="admin-secondary-button"
-                              style={{ padding: "0.3rem 0.6rem", fontSize: "0.75rem" }}
-                              onClick={() => {
-                                openAssignModalForAbstract();
-                              }}
-                            >
-                              Assign Reviews
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "1.5rem", alignItems: "start" }}>
           {/* Recent Scientific Activity */}
           <section className="admin-panel" style={{ margin: 0 }}>
             <h2 style={{ fontSize: "1.1rem", fontWeight: 700, margin: "0 0 1rem 0" }}>Recent Scientific Activity</h2>
@@ -1733,6 +1664,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                 { id: "all", label: `All (${abstracts.length})` },
                 { id: "unassigned_team", label: `⚠️ Needs Team Assignment (${unassignedTeamCount})` },
                 { id: "lead_approved", label: `⭐ Awaiting Verdict (${leadApprovedCount})` },
+                { id: "chair_revision_pending", label: `✉️ Revisions to Approve (${chairRevisionPendingCount})` },
                 { id: "under_review", label: `Under Review (${underReview})` },
                 { id: "revision_requested", label: `Revisions (${revisionCount})` },
                 { id: "accepted", label: `Accepted (${acceptedCount})` },
@@ -1839,6 +1771,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                               sub.workflowStage === "rejected" || sub.status === "rejected" ? "#fef2f2" :
                               sub.workflowStage === "lead_approved" ? "#fef3c7" :
                               sub.workflowStage === "lead_revision_requested" ? "#fff7ed" :
+                              sub.workflowStage === "chair_revision_pending" ? "#fef3c7" :
                               sub.workflowStage === "reviewer_reviewed" ? "#faf5ff" :
                               sub.workflowStage === "assigned_to_reviewer" ? "#eff6ff" :
                               sub.workflowStage === "assigned_to_team" ? "#f0fdf4" :
@@ -1848,6 +1781,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                               sub.workflowStage === "rejected" || sub.status === "rejected" ? "#dc2626" :
                               sub.workflowStage === "lead_approved" ? "#b45309" :
                               sub.workflowStage === "lead_revision_requested" ? "#c2410c" :
+                              sub.workflowStage === "chair_revision_pending" ? "#b45309" :
                               sub.workflowStage === "reviewer_reviewed" ? "#7c3aed" :
                               sub.workflowStage === "assigned_to_reviewer" ? "#2563eb" :
                               sub.workflowStage === "assigned_to_team" ? "#16a34a" :
@@ -1856,6 +1790,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                         >
                           {sub.workflowStage === "lead_approved" ? "⭐ Awaiting Verdict" :
                            sub.workflowStage === "lead_revision_requested" ? "⚠️ Revision Flagged" :
+                           sub.workflowStage === "chair_revision_pending" ? "✉️ Revision to Approve" :
                            sub.workflowStage === "reviewer_reviewed" ? "Reviewed (Awaiting Lead)" :
                            sub.workflowStage === "assigned_to_reviewer" ? "Under Review" :
                            sub.workflowStage === "assigned_to_team" ? "Assigned to Team" :
@@ -3248,6 +3183,20 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                 </div>
               )}
 
+              {viewAbstract.workflowStage === "chair_revision_pending" && (
+                <div style={{ padding: "1rem 1.25rem", background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)", border: "1px solid #fde68a", borderRadius: "0.75rem", flexShrink: 0 }}>
+                  <strong style={{ fontSize: "0.95rem", color: "#92400e", display: "block", marginBottom: "0.4rem" }}>
+                    ✉️ Revision Approved by Team Lead — Awaiting Your Approval to Email the Author
+                  </strong>
+                  <div style={{ fontSize: "0.85rem", color: "#78350f" }}>
+                    {viewAbstract.leadReviewNotes && (
+                      <div>Team Lead Instructions: <em style={{ whiteSpace: "pre-wrap" }}>"{viewAbstract.leadReviewNotes}"</em></div>
+                    )}
+                    <div style={{ marginTop: "0.25rem" }}>Use <strong>Request Revision</strong> below to review, edit and send the email.</div>
+                  </div>
+                </div>
+              )}
+
               {/* Unassigned to Team Warning Banner */}
               {!viewAbstract.teamId && (
                 <div style={{ padding: "0.75rem 1rem", background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "0.6rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
@@ -3543,6 +3492,19 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
             </div>
 
             <form onSubmit={handleSendRevisionEmail}>
+              {revisionModalTarget.fromTeamLead && (
+                <div style={{ marginBottom: "1.25rem", display: "grid", gap: "0.6rem" }}>
+                  <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: "0.6rem", padding: "0.75rem 1rem", fontSize: "0.8rem", color: "#374151" }}>
+                    <strong style={{ display: "block", marginBottom: "0.25rem" }}>Reviewer's original comment</strong>
+                    <span style={{ whiteSpace: "pre-wrap" }}>{revisionModalTarget.reviewerNotes || "—"}</span>
+                  </div>
+                  <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "0.6rem", padding: "0.75rem 1rem", fontSize: "0.8rem", color: "#78350f" }}>
+                    <strong style={{ display: "block", marginBottom: "0.25rem" }}>Team Lead's approved instructions</strong>
+                    <span style={{ whiteSpace: "pre-wrap" }}>{revisionModalTarget.leadNotes || "—"}</span>
+                  </div>
+                </div>
+              )}
+
               {/* Revision Instructions / Feedback Textarea */}
               <div style={{ marginBottom: "1.25rem" }}>
                 <label style={{ display: "block", fontSize: "0.85rem", fontWeight: 700, color: "#374151", marginBottom: "0.4rem" }}>
@@ -3588,6 +3550,16 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                 >
                   Cancel
                 </button>
+                {revisionModalTarget.fromTeamLead && (
+                  <button
+                    type="button"
+                    className="admin-secondary-button"
+                    onClick={handleReturnRevisionToLead}
+                    disabled={revisionSending}
+                  >
+                    Return to Team Lead
+                  </button>
+                )}
                 <button
                   type="submit"
                   className="admin-primary-button"

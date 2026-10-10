@@ -182,16 +182,16 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
         action,
         notes: revisionNotes,
       });
-      const isApproved = action === "approve_revision";
+      if (action === "save_revision_draft") {
+        await loadTeamData();
+        alert("✓ Revision instructions saved. You can continue editing before forwarding to the Chairperson.");
+        return;
+      }
       setRevisionModalAbstract(null);
       setRevisionNotes("");
       await loadTeamData();
-      if (isApproved) {
-        alert(
-          res.data?.emailSent
-            ? `✓ Revision approved! Notification email with secure revision link sent to author.`
-            : `✓ Revision approved! Status updated to Revision Requested.`
-        );
+      if (action === "approve_revision") {
+        alert(res.data?.message || "✓ Revision request forwarded to the Scientific Chairperson for final approval. The author will be emailed once the Chairperson sends it.");
       } else {
         alert("✓ Revision request dismissed. Abstract returned to reviewer.");
       }
@@ -666,10 +666,10 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
                       style={{ fontSize: "0.85rem", background: "#d97706", borderColor: "#d97706", display: "inline-flex", alignItems: "center", gap: "0.4rem" }}
                       onClick={() => {
                         setRevisionModalAbstract(abs);
-                        setRevisionNotes(abs.reviewerRevisionNotes || "");
+                        setRevisionNotes(abs.leadReviewNotes || abs.reviewerRevisionNotes || "");
                       }}
                     >
-                      <Send size={14} /> Review & Approve Revision Email
+                      <Send size={14} /> Review Revision Request
                     </button>
                   </div>
                 </div>
@@ -857,6 +857,7 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
                             abs.workflowStage === "rejected" ? "#fee2e2" :
                             abs.workflowStage === "lead_approved" ? "#fef3c7" :
                             abs.workflowStage === "lead_revision_requested" ? "#fff7ed" :
+                            abs.workflowStage === "chair_revision_pending" ? "#fef3c7" :
                             abs.workflowStage === "reviewer_reviewed" ? "#ede9fe" :
                             abs.workflowStage === "assigned_to_reviewer" ? "#eff6ff" : "#f0fdf4",
                           color:
@@ -864,12 +865,14 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
                             abs.workflowStage === "rejected" ? "#b91c1c" :
                             abs.workflowStage === "lead_approved" ? "#b45309" :
                             abs.workflowStage === "lead_revision_requested" ? "#c2410c" :
+                            abs.workflowStage === "chair_revision_pending" ? "#b45309" :
                             abs.workflowStage === "reviewer_reviewed" ? "#6C4AB6" :
                             abs.workflowStage === "assigned_to_reviewer" ? "#1d4ed8" : "#15803d",
                         }}
                       >
                         {abs.workflowStage === "lead_approved" ? "⭐ Endorsed to Chair" :
                          abs.workflowStage === "lead_revision_requested" ? "⚠️ Revision Flagged" :
+                         abs.workflowStage === "chair_revision_pending" ? "Revision Awaiting Chair" :
                          abs.workflowStage === "reviewer_reviewed" ? "Reviewed (Awaiting Lead)" :
                          abs.workflowStage === "assigned_to_reviewer" ? "Under Evaluation" :
                          abs.workflowStage === "assigned_to_team" ? "Assigned to Team" :
@@ -1060,7 +1063,7 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
           <div className="admin-panel" style={{ maxWidth: "620px", width: "100%", borderRadius: "1.25rem", background: "#ffffff", padding: "1.75rem" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 800, color: "#d97706" }}>
-                Approve Author Revision Request
+                Review Revision Request
               </h3>
               <button type="button" className="admin-icon-button" onClick={() => setRevisionModalAbstract(null)}>
                 <X size={18} />
@@ -1068,7 +1071,7 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
             </div>
 
             <p style={{ fontSize: "0.85rem", color: "#4b5563", margin: "0 0 1rem 0" }}>
-              Approving this request will immediately dispatch an official conference email to <strong>{revisionModalAbstract.email || "the author"}</strong> with a secure, single-use link allowing them to upload revised abstract files.
+              Edit the reviewer's instructions below and save as often as you need. When you approve, the request is forwarded to the <strong>Scientific Chairperson</strong>, who reviews it and sends the final revision email to <strong>{revisionModalAbstract.email || "the author"}</strong>.
             </p>
 
             <div style={{ marginBottom: "1.25rem" }}>
@@ -1101,12 +1104,20 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
                 </button>
                 <button
                   type="button"
+                  className="admin-secondary-button"
+                  disabled={decisionSubmitting}
+                  onClick={() => handleRevisionDecision("save_revision_draft")}
+                >
+                  Save Changes
+                </button>
+                <button
+                  type="button"
                   className="admin-primary-button"
                   style={{ background: "#d97706", borderColor: "#d97706" }}
                   disabled={decisionSubmitting}
                   onClick={() => handleRevisionDecision("approve_revision")}
                 >
-                  {decisionSubmitting ? "Dispatching..." : "Approve & Send Email"}
+                  {decisionSubmitting ? "Forwarding..." : "Approve & Forward to Chairperson"}
                 </button>
               </div>
             </div>
