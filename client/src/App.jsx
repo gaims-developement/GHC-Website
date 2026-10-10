@@ -10,7 +10,7 @@ import { apiUrl } from "./config/api";
 import { GHC_FAVICON_PATH, GHC_LOGO_PATH } from "./config/branding";
 import MobileRadialNav from "./components/MobileRadialNav";
 import GlobeCanvas from "./components/GlobeCanvas";
-import { createWorkshopSlug } from "./data/workshops";
+import { createWorkshopSlug, formatWorkshopDate } from "./data/workshops";
 import "./premium.css";
 import "./home-redesign.css";
 import {
@@ -1150,7 +1150,7 @@ function WorkshopsExperience() {
 
           return (
             <motion.article
-              key={workshop.title || workshop.id}
+              key={workshop.id ?? workshop.title}
               className="w-[85vw] max-w-[360px] sm:max-w-none sm:w-[410px] md:w-[450px] flex-shrink-0 snap-start bg-white rounded-[2.25rem] shadow-[0_8px_30px_rgba(16,24,40,0.04)] border border-gray-100 p-5 sm:p-8 flex flex-col justify-between hover:border-[#173B8F]/30 hover:shadow-[0_20px_40px_-10px_rgba(16,24,40,0.08)] transition-all duration-300 relative overflow-hidden group"
               whileHover={{ y: -6 }}
             >
@@ -2757,6 +2757,12 @@ function PricingSection() {
             >
               Register Now <ArrowRight className="h-5 w-5" />
             </a>
+            <p className="mt-4 flex items-start gap-2 text-left text-xs leading-relaxed text-gray-400 font-medium">
+              <Clock3 className="h-4 w-4 shrink-0 text-[#00E5E5] mt-0.5" />
+              <span>
+                Payments are securely processed by our registration partner, Clirnet. Once your payment is complete, please allow 1–2 working days for payment verification and receipt of your delegate confirmation email.
+              </span>
+            </p>
           </div>
         </motion.article>
       </div>
