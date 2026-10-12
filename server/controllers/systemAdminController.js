@@ -1,6 +1,7 @@
 const { pool } = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendTemplateEmail, verifyConnection } = require('../services/mailService');
+const { buildConfirmationEmail } = require('../services/delegateEmailService');
 
 const limit = (value, fallback = 50) => Math.min(Math.max(Number(value) || fallback, 1), 200);
 
@@ -277,9 +278,23 @@ const testEmailTemplate = asyncHandler(async (req, res) => {
       amount: 'INR 5,000',
       ticketName: 'Delegate Pass - Full Conference',
     };
-    const variables = { ...defaults, ...sampleVariables };
+    let variables = { ...defaults, ...sampleVariables };
+    let attachments = [];
 
-    await sendTemplateEmail(template.template_key, email, variables);
+    // The delegate confirmation is an image-based design: its artwork, QR code and links are generated per
+    // delegate, so a test send has to build the full email rather than fill in sample text variables.
+    if (template.template_key === 'delegate_registration_confirmation') {
+      const built = await buildConfirmationEmail({
+        fullName: sampleVariables.fullName || defaults.fullName,
+        registrationId: sampleVariables.registrationId || 'GHC26-DEL-00000',
+        email,
+        checkinToken: 'GHCDEL-TEST-EMAIL-NOT-A-DELEGATE',
+      });
+      variables = built.variables;
+      attachments = built.attachments;
+    }
+
+    await sendTemplateEmail(template.template_key, email, variables, { attachments });
     res.json({ success: true, message: `Test email sent to ${email} using '${template.template_key}' template.` });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to send test email', error: error.message || String(error) });

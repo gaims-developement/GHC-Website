@@ -7,6 +7,12 @@ const apiLimiter = rateLimit({
   limit: Number(process.env.RATE_LIMIT_MAX || 300),
   standardHeaders: true,
   legacyHeaders: false,
+  // On-site attendance marking and QR check-in (admin-only routes) send many quick requests from one venue IP.
+  skip: (req) =>
+    (req.method === 'PATCH' && /^\/delegates\/\d+\/attendance$/.test(req.path)) ||
+    (req.method === 'POST' && req.path === '/delegates/check-in') ||
+    // Bulk confirmation emails are sent one request per delegate.
+    (req.method === 'POST' && /^\/delegates\/\d+\/send-confirmation$/.test(req.path)),
 });
 
 const authLimiter = rateLimit({

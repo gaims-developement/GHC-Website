@@ -175,6 +175,15 @@ const NAV_SECTIONS = [
     ],
   },
   {
+    id: "delegates",
+    title: "DELEGATES",
+    items: [
+      // "delegates.manage" is granted to no role: only Super Admin / Admin (who see every item) get these.
+      { id: "delegates", label: "Delegate List", icon: ClipboardList, permissions: ["delegates.manage"], aliases: ["csv import", "registration id"] },
+      { id: "delegate-attendance", label: "Attendance", icon: UserCheck, permissions: ["delegates.manage"], aliases: ["present", "check in"] },
+    ],
+  },
+  {
     id: "scientific",
     title: "SCIENTIFIC",
     items: [

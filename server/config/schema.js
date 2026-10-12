@@ -1,3 +1,6 @@
+const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const bcrypt = require('bcryptjs');
 const { pool } = require('./db');
 
@@ -3641,6 +3644,64 @@ const createNewsletterTables = async () => {
   `);
 };
 
+const newCheckinToken = () => `GHCDEL-${crypto.randomBytes(18).toString('base64url')}`;
+
+const createDelegateTables = async () => {
+  // name_key is the normalized name; its UNIQUE index guarantees a name is never imported twice.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS delegates (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      registration_id VARCHAR(32) NULL UNIQUE,
+      full_name VARCHAR(255) NOT NULL,
+      name_key VARCHAR(255) NOT NULL,
+      email VARCHAR(255),
+      phone VARCHAR(50),
+      institution VARCHAR(255),
+      category VARCHAR(150),
+      city VARCHAR(150),
+      is_present BOOLEAN NOT NULL DEFAULT FALSE,
+      attended_at DATETIME NULL,
+      attendance_marked_by INT NULL,
+      import_batch VARCHAR(40) NULL,
+      created_by INT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_delegates_name_key (name_key),
+      INDEX idx_delegates_present (is_present)
+    )
+  `);
+  await addColumnIfMissing('delegates', 'confirmation_sent_at', 'DATETIME NULL');
+  await addColumnIfMissing('delegates', 'confirmation_send_count', 'INT NOT NULL DEFAULT 0');
+  await addColumnIfMissing('delegates', 'confirmation_last_attempt_at', 'DATETIME NULL');
+  await addColumnIfMissing('delegates', 'confirmation_last_error', 'TEXT NULL');
+
+  await addColumnIfMissing('delegates', 'checkin_token', 'VARCHAR(64) NULL');
+  await addIndexIfMissing('delegates', 'uq_delegates_checkin_token', 'UNIQUE KEY uq_delegates_checkin_token (checkin_token)');
+  // Every delegate needs a private, unguessable token: it is what the QR code in their email encodes.
+  const [missingTokens] = await pool.query('SELECT id FROM delegates WHERE checkin_token IS NULL');
+  for (const { id } of missingTokens) {
+    await pool.query('UPDATE delegates SET checkin_token = ? WHERE id = ? AND checkin_token IS NULL', [newCheckinToken(), id]);
+  }
+
+  const templateBody = fs.readFileSync(path.join(__dirname, '..', 'assets', 'email', 'delegate-confirmation.html'), 'utf8');
+  const templateSubject = 'Registration Confirmed — Global Healthcare Conclave 2026 ({{registrationId}})';
+  // Inserted once; afterwards the template is owned by the CMS and never overwritten on restart.
+  await pool.query(
+    `INSERT INTO email_templates (template_key, subject, body, is_active)
+     VALUES (?, ?, ?, 1)
+     ON DUPLICATE KEY UPDATE template_key = template_key`,
+    ['delegate_registration_confirmation', templateSubject, templateBody]
+  );
+  // Upgrade older shipped versions of this template (identified by the version marker in the HTML file).
+  const versionMarker = (templateBody.match(/<!-- (ghc-delegate-confirmation-v\d+) -->/) || [])[1];
+  if (versionMarker) {
+    await pool.query(
+      "UPDATE email_templates SET subject = ?, body = ? WHERE template_key = 'delegate_registration_confirmation' AND body NOT LIKE ?",
+      [templateSubject, templateBody, `%${versionMarker}%`]
+    );
+  }
+};
+
 const seedAwardNominationData = async () => {
   // Ensure default award categories exist in awards table
   const [existingAwards] = await pool.query('SELECT COUNT(*) AS count FROM awards');
@@ -4121,6 +4182,7 @@ const initializeDatabase = async () => {
     await createCoreArchitectureTables();
     await createCommitteeTables();
     await createNewsletterTables();
+    await createDelegateTables();
     await seedAuthData();
     await seedCoreArchitectureData();
     await seedSpeakers();
@@ -4167,5 +4229,6 @@ module.exports = {
   seedTickets,
   createCommitteeTables,
   createNewsletterTables,
+  createDelegateTables,
   rolePermissionMap,
 };

@@ -118,9 +118,12 @@ const formatAttachments = (attachments = []) => {
     }
     if (att.contentType || att.content_type) {
       formatted.content_type = att.contentType || att.content_type;
+      formatted.contentType = formatted.content_type; // Resend SDK + nodemailer field name
     }
     if (att.cid || att.content_id) {
       formatted.content_id = att.cid || att.content_id;
+      formatted.contentId = formatted.content_id; // Resend SDK: sends as an inline (cid:) attachment
+      formatted.cid = formatted.content_id; // nodemailer (SMTP)
     }
     return formatted;
   });
@@ -243,7 +246,7 @@ const htmlToText = (html = '') =>
 /**
  * Template email rendering, variable interpolation, and persistent logging
  */
-const sendTemplateEmail = async (templateKey, to, variables = {}) => {
+const sendTemplateEmail = async (templateKey, to, variables = {}, { attachments = [] } = {}) => {
   let logId = null;
   let subject = 'No Subject';
   const recipient = Array.isArray(to) ? to.join(', ') : to;
@@ -283,6 +286,7 @@ const sendTemplateEmail = async (templateKey, to, variables = {}) => {
       subject,
       text: textBody,
       html: htmlBody,
+      attachments,
       provider: forceResend ? 'resend' : undefined,
     });
 
