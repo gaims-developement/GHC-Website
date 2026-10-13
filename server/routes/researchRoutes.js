@@ -58,6 +58,7 @@ const {
   getMyReviewerProfile,
 } = require('../controllers/researchController');
 const reviewerTeams = require('../controllers/reviewerTeamController');
+const { hasAllowedExtension } = require('../utils/uploadSafety');
 const { optionalAuth, requireAuth, requirePermission } = require('../middleware/authMiddleware');
 
 const researchUploadDir = path.join(__dirname, '..', 'uploads', 'research');
@@ -67,7 +68,7 @@ const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, researchUploadDir),
   filename: (_req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `research-${uniqueSuffix}${path.extname(file.originalname)}`);
+    cb(null, `research-${uniqueSuffix}${path.extname(file.originalname).toLowerCase()}`);
   },
 });
 
@@ -83,7 +84,7 @@ const upload = multer({
       'image/png',
       'image/jpg',
     ];
-    cb(null, allowed.includes(file.mimetype));
+    cb(null, allowed.includes(file.mimetype) && hasAllowedExtension(file, ['.pdf', '.docx', '.doc', '.jpg', '.jpeg', '.png']));
   },
   limits: { fileSize: Number(process.env.MAX_RESEARCH_UPLOAD_SIZE || 10 * 1024 * 1024) },
 });

@@ -6,6 +6,7 @@ const Settings = require('../models/settingsModel');
 const Trailer = require('../models/trailerModel');
 const User = require('../models/userModel');
 const asyncHandler = require('../utils/asyncHandler');
+const { getJwtSecret } = require('../config/jwt');
 
 const number = (value) => Number(value || 0);
 const allowedSorts = {
@@ -35,7 +36,7 @@ const parseJson = (value, fallback) => {
 const signToken = (user, extra = {}) =>
   jwt.sign(
     { ...User.serialize(user), ...extra },
-    process.env.JWT_SECRET || 'change-this-secret',
+    getJwtSecret(),
     { expiresIn: process.env.JWT_EXPIRES_IN || '15m' }
   );
 
@@ -284,11 +285,51 @@ const deleteTeam = asyncHandler(async (req, res) => {
   res.status(204).send();
 });
 
+const forbidden = (message) => {
+  const error = new Error(message);
+  error.statusCode = 403;
+  return error;
+};
+
+// Only a Super Admin may hand out the Super Admin role.
+const assertRoleAssignable = async (req, roleId) => {
+  const [[role]] = await pool.query('SELECT name FROM roles WHERE id = ? LIMIT 1', [Number(roleId)]);
+  if (!role) {
+    const error = new Error('Role not found');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (role.name === 'SUPER_ADMIN' && req.user?.role !== 'SUPER_ADMIN') {
+    throw forbidden('Only a Super Admin can assign the Super Admin role');
+  }
+};
+
+// Member routes act on users.id, so the target must belong to the team in the URL.
+const assertTeamMember = async (req) => {
+  const [[member]] = await pool.query(
+    `SELECT roles.name AS role
+     FROM team_members
+     INNER JOIN users ON users.id = team_members.user_id
+     LEFT JOIN roles ON roles.id = users.role_id
+     WHERE team_members.team_id = ? AND team_members.user_id = ? LIMIT 1`,
+    [req.params.id, req.params.userId]
+  );
+  if (!member) {
+    const error = new Error('Team member not found');
+    error.statusCode = 404;
+    throw error;
+  }
+  if (member.role === 'SUPER_ADMIN' && req.user?.role !== 'SUPER_ADMIN') {
+    throw forbidden('Super Admin accounts can only be managed by a Super Admin');
+  }
+};
+
 const createUser = asyncHandler(async (req, res) => {
   const { name, email, password, roleId, phone } = req.body;
   if (!name?.trim() || !email?.trim() || !password || !roleId) {
     return res.status(400).json({ message: 'Name, email, password and role are required' });
   }
+  await assertRoleAssignable(req, roleId);
 
   const passwordHash = await bcrypt.hash(password, 12);
   const id = await User.create({ name: name.trim(), email: email.trim(), phone: phone?.trim() || null, passwordHash, roleId: Number(roleId) });
@@ -301,6 +342,7 @@ const addTeamMember = asyncHandler(async (req, res) => {
   if (!name?.trim() || !email?.trim() || !password || !roleId) {
     return res.status(400).json({ message: 'Name, email, password and role are required' });
   }
+  await assertRoleAssignable(req, roleId);
 
   const passwordHash = await bcrypt.hash(password, 12);
   const userId = await User.create({ name: name.trim(), email: email.trim(), phone: phone?.trim() || null, passwordHash, roleId: Number(roleId) });
@@ -319,6 +361,8 @@ const updateTeamMember = asyncHandler(async (req, res) => {
   if (!name?.trim() || !email?.trim() || !roleId) {
     return res.status(400).json({ message: 'Name, email and role are required' });
   }
+  await assertTeamMember(req);
+  await assertRoleAssignable(req, roleId);
 
   await User.update(req.params.userId, {
     name: name.trim(),
@@ -338,6 +382,7 @@ const updateTeamMember = asyncHandler(async (req, res) => {
 });
 
 const deactivateTeamMember = asyncHandler(async (req, res) => {
+  await assertTeamMember(req);
   await pool.query('UPDATE users SET is_active = FALSE WHERE id = ?', [req.params.userId]);
   await ActivityLog.logActivity({ userId: req.user.id, action: 'deactivated_member', module: 'teams', recordId: String(req.params.id), metadata: { memberUserId: Number(req.params.userId) } });
   res.json({ userId: Number(req.params.userId), isActive: false });
@@ -345,6 +390,7 @@ const deactivateTeamMember = asyncHandler(async (req, res) => {
 
 const resetTeamMemberPassword = asyncHandler(async (req, res) => {
   if (!req.body.password) return res.status(400).json({ message: 'Password is required' });
+  await assertTeamMember(req);
   const passwordHash = await bcrypt.hash(req.body.password, 12);
   await User.updatePassword(req.params.userId, passwordHash);
   await ActivityLog.logActivity({ userId: req.user.id, action: 'reset_member_password', module: 'teams', recordId: String(req.params.id), metadata: { memberUserId: Number(req.params.userId) } });
@@ -373,6 +419,13 @@ const removeTeamMember = asyncHandler(async (req, res) => {
 });
 
 const updateRolePermissions = asyncHandler(async (req, res) => {
+  if (req.user?.role !== 'SUPER_ADMIN') {
+    const [[role]] = await pool.query('SELECT name FROM roles WHERE id = ? LIMIT 1', [req.params.roleId]);
+    if (!role) return res.status(404).json({ message: 'Role not found' });
+    if (role.name === 'SUPER_ADMIN' || role.name === req.user?.role) {
+      return res.status(403).json({ message: 'You cannot change permissions for this role' });
+    }
+  }
   const permissionKeys = Array.from(new Set((Array.isArray(req.body.permissions) ? req.body.permissions : []).filter(Boolean)));
   const [permissions] = permissionKeys.length
     ? await pool.query('SELECT id, `key` FROM permissions WHERE `key` IN (?)', [permissionKeys])

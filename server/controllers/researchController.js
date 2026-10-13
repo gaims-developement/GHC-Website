@@ -308,6 +308,22 @@ const getReviewerTeamInfoForUser = async (userId) => {
   };
 };
 
+// Visitors without a review role only see the published abstract, never contact details or review data.
+const toPublicSubmission = (submission) => ({
+  id: submission.id,
+  abstractId: submission.abstractId,
+  title: submission.title,
+  authors: submission.authors,
+  presentingAuthor: submission.presentingAuthor,
+  institution: submission.institution,
+  country: submission.country,
+  category: submission.category,
+  track: submission.track,
+  keywords: submission.keywords,
+  abstractText: submission.abstractText,
+  status: submission.status,
+});
+
 const listResearch = asyncHandler(async (req, res) => {
   const isSuperOrAdmin =
     (reviewRoles.includes(req.user?.role) ||
@@ -325,6 +341,7 @@ const listResearch = asyncHandler(async (req, res) => {
   const offset = limit ? (page - 1) * limit : 0;
   const compact = req.query.compact === '1';
 
+  let publicView = false;
   let listOptions = {
     limit,
     offset,
@@ -382,9 +399,11 @@ const listResearch = asyncHandler(async (req, res) => {
   } else {
     // Public read-only: accepted abstracts only
     listOptions.includeAll = false;
+    publicView = true;
   }
 
-  const submissions = await Research.list(listOptions);
+  const rows = await Research.list(listOptions);
+  const submissions = publicView ? rows.map(toPublicSubmission) : rows;
   res.json({ submissions, pagination: limit ? { page, limit, count: submissions.length } : null });
 });
 
@@ -412,7 +431,7 @@ const getResearch = asyncHandler(async (req, res) => {
   }
 
   if (submission.status === 'accepted') {
-    return res.json({ submission });
+    return res.json({ submission: toPublicSubmission(submission) });
   }
 
   return res.status(403).json({ message: 'You are not authorized to view this submission.' });

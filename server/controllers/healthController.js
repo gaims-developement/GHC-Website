@@ -7,7 +7,7 @@ const getHealth = async (req, res) => {
     await pool.query('SELECT 1');
     database = 'available';
   } catch (error) {
-    database = error.message;
+    console.error('Health check database error:', error.message);
   }
 
   res.json({

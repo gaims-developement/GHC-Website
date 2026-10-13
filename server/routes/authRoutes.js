@@ -5,9 +5,11 @@ const crypto = require("crypto");
 const { pool } = require("../config/db");
 const ActivityLog = require("../models/activityLogModel");
 const User = require("../models/userModel");
+const { getJwtSecret, getRefreshSecret } = require("../config/jwt");
+const { authLimiter } = require("../middleware/productionMiddleware");
 const router = express.Router();
 
-const signToken = (user) => jwt.sign(User.serialize(user), process.env.JWT_SECRET || "change-this-secret", { expiresIn: process.env.JWT_EXPIRES_IN || "15m" });
+const signToken = (user) => jwt.sign(User.serialize(user), getJwtSecret(), { expiresIn: process.env.JWT_EXPIRES_IN || "15m" });
 
 const getTokenFromRequest = (req) => {
   const header = req.headers.authorization || "";
@@ -43,7 +45,7 @@ router.get("/me", async (req, res) => {
   }
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || "change-this-secret");
+    const payload = jwt.verify(token, getJwtSecret());
     const user = await User.findById(payload.id);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
@@ -56,7 +58,7 @@ router.get("/me", async (req, res) => {
   }
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", authLimiter, async (req, res) => {
   const routePath = `POST /api/auth/login`;
   try {
     const { email, password } = req.body;
@@ -75,7 +77,7 @@ router.post("/login", async (req, res) => {
 
     const serializedUser = User.serialize(user);
     const token = signToken(user);
-    const refreshToken = jwt.sign({ id: user.id, type: "refresh" }, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "change-this-secret", { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d" });
+    const refreshToken = jwt.sign({ id: user.id, type: "refresh" }, getRefreshSecret(), { expiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || "30d" });
     res.cookie("token", token, {
       httpOnly: true,
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -117,13 +119,16 @@ router.post("/login", async (req, res) => {
   }
 });
 
-router.post("/refresh", async (req, res) => {
+router.post("/refresh", authLimiter, async (req, res) => {
   const routePath = `POST /api/auth/refresh`;
   try {
     const incoming = req.cookies?.refresh_token || req.body.refreshToken;
-    const payload = jwt.verify(incoming, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET || "change-this-secret");
+    const payload = jwt.verify(incoming, getRefreshSecret());
+    if (payload.type !== "refresh") {
+      return res.status(401).json({ error: "Invalid refresh token" });
+    }
     const user = await User.findById(payload.id);
-    if (!user) {
+    if (!user || user.is_active === false || user.is_active === 0 || user.is_locked === true || user.is_locked === 1) {
       return res.status(401).json({ error: "Invalid refresh token" });
     }
 
@@ -137,7 +142,7 @@ router.post("/refresh", async (req, res) => {
     return res.json({ token, user: User.serialize(user) });
   } catch (err) {
     console.error(`[ROUTE ${routePath}]`, err.message, err.stack);
-    return res.status(401).json({ error: err.message || "Invalid refresh token" });
+    return res.status(401).json({ error: "Invalid refresh token" });
   }
 });
 
@@ -153,7 +158,7 @@ router.post("/logout", async (req, res) => {
     const token = getTokenFromRequest(req);
     if (token) {
       try {
-        const payload = jwt.verify(token, process.env.JWT_SECRET || "change-this-secret");
+        const payload = jwt.verify(token, getJwtSecret());
         await pool.query("DELETE FROM active_sessions WHERE session_token = ?", [tokenFingerprint(token)]);
         await pool.query(
           "INSERT INTO audit_logs (user_id, action, module, record_type, record_id, ip_address, user_agent) VALUES (?, ?, ?, ?, ?, ?, ?)",

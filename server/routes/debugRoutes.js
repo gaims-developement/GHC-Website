@@ -1,7 +1,11 @@
 const express = require('express');
 const { verifyConnection, getSenderConfig } = require('../services/mailService');
 
+const { requireAuth, requireRole } = require('../middleware/authMiddleware');
+
 const router = express.Router();
+
+router.use(requireAuth, requireRole('SUPER_ADMIN', 'SYSTEM_ADMIN'));
 
 // TODO: Remove temporary email diagnostic endpoint after Resend migration is verified.
 router.get('/email', async (_req, res) => {

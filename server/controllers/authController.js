@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const { pool } = require('../config/db');
 const User = require('../models/userModel');
 const asyncHandler = require('../utils/asyncHandler');
+const { getJwtSecret } = require('../config/jwt');
 
 const cookieOptions = {
   httpOnly: true,
@@ -19,7 +20,7 @@ const signToken = (user) =>
       role: user.role,
       permissions: user.permissions || [],
     },
-    process.env.JWT_SECRET || 'change-this-secret',
+    getJwtSecret(),
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
 

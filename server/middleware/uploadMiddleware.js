@@ -1,5 +1,6 @@
 const path = require('path');
 const multer = require('multer');
+const { hasAllowedExtension } = require('../utils/uploadSafety');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -7,13 +8,14 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    cb(null, `${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname)}`);
+    cb(null, `${file.fieldname}-${uniqueSuffix}${path.extname(file.originalname).toLowerCase()}`);
   },
 });
 
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
-  if (!allowedTypes.includes(file.mimetype) || /[<>:"|?*\x00-\x1F]/.test(file.originalname)) {
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.pdf'];
+  if (!allowedTypes.includes(file.mimetype) || !hasAllowedExtension(file, allowedExtensions) || /[<>:"|?*\x00-\x1F]/.test(file.originalname)) {
     return cb(new Error('Unsupported or unsafe upload'));
   }
   return cb(null, true);

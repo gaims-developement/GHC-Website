@@ -31,10 +31,15 @@ const getEnvOrigins = () => {
 const configuredClientUrls = getEnvOrigins();
 const CLIENT_URLS = [...new Set([...DEFAULT_CLIENT_URLS, ...configuredClientUrls])];
 
+const normalizeOrigin = (value) => String(value).trim().replace(/\/+$/, '').toLowerCase();
+const ALLOWED_ORIGINS = new Set(CLIENT_URLS.map(normalizeOrigin));
+
 const corsOptions = {
   origin(origin, callback) {
-    // Allow all origins to prevent blocking
-    return callback(null, true);
+    // Requests without an Origin header (server-to-server, curl, same-origin) are not subject to CORS.
+    if (!origin || ALLOWED_ORIGINS.has(normalizeOrigin(origin))) return callback(null, true);
+    console.warn(`CORS blocked origin: ${origin}`);
+    return callback(null, false);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],

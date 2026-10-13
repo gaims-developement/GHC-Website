@@ -89,7 +89,7 @@ router.patch('/:id/publish', requireAuth, canManageWorkshops, publishWorkshop);
 router.patch('/:id/close', requireAuth, canManageWorkshops, closeWorkshop);
 router.put('/:id', requireAuth, canManageWorkshops, upload.single('image'), updateWorkshop);
 router.delete('/:id', requireAuth, canManageWorkshops, deleteWorkshop);
-router.post('/:id/register-confirmed', optionalAuth, confirmWorkshopRegistration);
+router.post('/:id/register-confirmed', requireAuth, canConfirmApplications, confirmWorkshopRegistration);
 
 // 5. Dynamic Slug (Always at the end)
 router.get('/:slug', optionalAuth, getWorkshop);

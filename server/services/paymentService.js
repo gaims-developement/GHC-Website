@@ -5,6 +5,7 @@ const Razorpay = require('razorpay');
 const { pool } = require('../config/db');
 const { sendMail } = require('./mailService');
 const { applyEventScope } = require('../utils/eventScope');
+const { signResource } = require('../config/jwt');
 
 const GST_RATE = Number(process.env.GST_RATE || 0.18);
 const DEFAULT_PROVIDER = 'razorpay';
@@ -273,7 +274,7 @@ const sendPaymentEmail = async ({ registration, payment, invoiceBuffer, qrBuffer
 const verifyPayment = async ({ provider = DEFAULT_PROVIDER, orderId, paymentId, signature, req = null }) => {
   const paymentProvider = getProvider(provider);
   if (!paymentProvider.verifySignature({ orderId, paymentId, signature })) {
-    await pool.query("UPDATE payments SET status = 'failed', provider_payment_id = ? WHERE provider_order_id = ?", [paymentId || null, orderId]);
+    await pool.query("UPDATE payments SET status = 'failed', provider_payment_id = ? WHERE provider_order_id = ? AND status IN ('created', 'pending')", [paymentId || null, orderId]);
     const error = new Error('Payment verification failed');
     error.statusCode = 400;
     throw error;
@@ -317,8 +318,9 @@ const verifyPayment = async ({ provider = DEFAULT_PROVIDER, orderId, paymentId, 
     }));
     await connection.query('UPDATE registrations SET qr_code = ? WHERE id = ?', [qrData, registration.id]);
 
-    const invoiceUrl = `/api/payments/${payment.id}/invoice`;
-    const receiptUrl = `/api/payments/${payment.id}/ticket`;
+    const documentSignature = signResource('payment', payment.id);
+    const invoiceUrl = `/api/payments/${payment.id}/invoice?sig=${documentSignature}`;
+    const receiptUrl = `/api/payments/${payment.id}/ticket?sig=${documentSignature}`;
     await connection.query('UPDATE payments SET invoice_url = ?, receipt_url = ? WHERE id = ?', [invoiceUrl, receiptUrl, payment.id]);
 
     await connection.commit();

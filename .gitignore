@@ -19,3 +19,6 @@ server/uploads/*
 
 uploads/*
 !uploads/.gitkeep
+
+# Database exports contain applicant personal data
+server/backups/

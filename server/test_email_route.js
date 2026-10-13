@@ -1,10 +1,12 @@
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
+require('dotenv').config({ path: require('path').join(__dirname, '.env'), quiet: true });
+const { getJwtSecret } = require('./config/jwt');
 
 // Generate a dummy super admin token
 const token = jwt.sign(
   { id: 1, role: 'SUPER_ADMIN' },
-  process.env.JWT_SECRET || 'change-this-secret',
+  getJwtSecret(),
   { expiresIn: '1h' }
 );
 

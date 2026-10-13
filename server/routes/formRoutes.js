@@ -1,6 +1,8 @@
 const router = require('express').Router();
 const multer = require('multer');
 const path = require('path');
+const crypto = require('crypto');
+const { hasAllowedExtension } = require('../utils/uploadSafety');
 const {
   addNote,
   analytics,
@@ -22,11 +24,22 @@ const { optionalAuth, requireAuth, requirePermission } = require('../middleware/
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, path.join(__dirname, '..', 'uploads')),
-  filename: (_req, file, cb) => cb(null, `${Date.now()}-${file.originalname.replace(/\s+/g, '-')}`),
+  filename: (_req, file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${path.extname(file.originalname).toLowerCase()}`),
 });
+
+// Public form submissions: documents and images only.
+const formUploadExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.gif', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt', '.csv'];
 
 const upload = multer({
   storage,
+  fileFilter: (_req, file, cb) => {
+    if (!hasAllowedExtension(file, formUploadExtensions)) {
+      const error = new Error('Unsupported file type');
+      error.statusCode = 400;
+      return cb(error);
+    }
+    return cb(null, true);
+  },
   limits: { fileSize: Number(process.env.FORM_UPLOAD_LIMIT_MB || 20) * 1024 * 1024 },
 });
 

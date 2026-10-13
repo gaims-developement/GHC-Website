@@ -26,8 +26,9 @@ const {
   workshops,
 } = require('../controllers/mobileController');
 const { requireAuth, requirePermission } = require('../middleware/authMiddleware');
+const { authLimiter } = require('../middleware/productionMiddleware');
 
-router.post('/mobile/auth/login', login);
+router.post('/mobile/auth/login', authLimiter, login);
 router.get('/mobile/bootstrap', bootstrap);
 router.get('/mobile/me', profile);
 router.put('/mobile/me', profile);

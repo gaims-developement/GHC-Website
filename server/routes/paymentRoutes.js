@@ -13,7 +13,8 @@ const { requireAuth, requirePermission } = require('../middleware/authMiddleware
 
 const canManagePayments = requirePermission('manage_payments', 'analytics.view');
 
-router.post('/create-payment-intent', createPaymentIntent);
+// Test-only Stripe flow: the amount comes from the caller, so it is limited to payment admins.
+router.post('/create-payment-intent', requireAuth, canManagePayments, createPaymentIntent);
 router.post('/payments/create-order', createOrder);
 router.post('/payments/verify', verifyPayment);
 router.get('/payments/:id/invoice', getInvoice);

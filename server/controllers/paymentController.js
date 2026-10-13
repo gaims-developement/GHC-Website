@@ -2,6 +2,17 @@ const PaymentService = require('../services/paymentService');
 const ActivityLog = require('../models/activityLogModel');
 const asyncHandler = require('../utils/asyncHandler');
 const Stripe = require('stripe');
+const { rolePermissionMap } = require('../config/schema');
+const { verifyResourceSignature } = require('../config/jwt');
+
+// Invoice and ticket PDFs open either from the signed link issued at payment time or for payment admins.
+const canAccessPaymentDocument = (req) => {
+  if (verifyResourceSignature(req.query.sig, 'payment', req.params.id)) return true;
+  if (!req.user) return false;
+  if (req.user.role === 'SUPER_ADMIN') return true;
+  const permissions = [...(req.user.permissions || []), ...((rolePermissionMap || {})[req.user.role] || [])];
+  return permissions.includes('manage_payments') || permissions.includes('analytics.view');
+};
 
 const createPaymentIntent = asyncHandler(async (req, res) => {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -93,6 +104,7 @@ const validateCoupon = asyncHandler(async (req, res) => {
 });
 
 const getInvoice = asyncHandler(async (req, res) => {
+  if (!canAccessPaymentDocument(req)) return res.status(404).json({ message: 'Invoice not found' });
   const buffer = await PaymentService.getInvoice(req.params.id, req);
   if (!buffer) return res.status(404).json({ message: 'Invoice not found' });
   res.setHeader('Content-Type', 'application/pdf');
@@ -101,6 +113,7 @@ const getInvoice = asyncHandler(async (req, res) => {
 });
 
 const getTicket = asyncHandler(async (req, res) => {
+  if (!canAccessPaymentDocument(req)) return res.status(404).json({ message: 'Ticket not found' });
   const buffer = await PaymentService.getTicket(req.params.id, req);
   if (!buffer) return res.status(404).json({ message: 'Ticket not found' });
   res.setHeader('Content-Type', 'application/pdf');

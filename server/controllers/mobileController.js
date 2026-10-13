@@ -2,10 +2,11 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
+const { getJwtSecret } = require('../config/jwt');
 
 const signMobileToken = (mobileUser) => jwt.sign(
   { mobileUserId: mobileUser.id, registrationId: mobileUser.registration_id, type: 'mobile' },
-  process.env.JWT_SECRET || 'change-this-secret',
+  getJwtSecret(),
   { expiresIn: process.env.MOBILE_JWT_EXPIRES_IN || '30d' }
 );
 
@@ -26,7 +27,7 @@ const getMobileAuth = async (req) => {
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return null;
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'change-this-secret');
+    const payload = jwt.verify(token, getJwtSecret());
     if (payload.type !== 'mobile') return null;
     const [[user]] = await pool.query('SELECT * FROM mobile_users WHERE id = ?', [payload.mobileUserId]);
     return user || null;
@@ -58,8 +59,8 @@ const login = asyncHandler(async (req, res) => {
   if (!code || !email) return res.status(400).json({ message: 'Registration ID and email are required' });
 
   const [[registration]] = await pool.query(
-    'SELECT * FROM registrations WHERE (id = ? OR registration_id = ?) AND email = ? LIMIT 1',
-    [code, code, email]
+    'SELECT id, registration_id, full_name, email, phone, institution, designation, qr_code, attendance_status FROM registrations WHERE registration_id = ? AND email = ? LIMIT 1',
+    [code, email]
   );
   if (!registration) return res.status(401).json({ message: 'Registration not found' });
 
@@ -194,12 +195,17 @@ const bookmarkSpeaker = asyncHandler(async (req, res) => {
   res.json({ success: true });
 });
 
-const resources = asyncHandler(async (_req, res) => {
+const resources = asyncHandler(async (req, res) => {
+  const user = await getMobileAuth(req);
+  const [[registration]] = user ? await pool.query('SELECT email FROM registrations WHERE id = ?', [user.registration_id]) : [[]];
   const [[sessionResources], [speakerDocs], [eventResources], [certificates]] = await Promise.all([
     pool.query('SELECT sr.*, s.title AS session_title FROM session_resources sr LEFT JOIN sessions s ON s.id = sr.session_id ORDER BY sr.id DESC'),
     pool.query('SELECT sd.*, sp.full_name AS speaker_name FROM speaker_documents sd LEFT JOIN speakers sp ON sp.id = sd.speaker_id ORDER BY sd.id DESC'),
     pool.query('SELECT er.*, e.title AS event_title FROM event_resources er LEFT JOIN events e ON e.id = er.event_id ORDER BY er.id DESC'),
-    pool.query("SELECT id, certificate_id, recipient_name, recipient_email, certificate_url, issue_date FROM certificates WHERE status = 'generated' ORDER BY issue_date DESC LIMIT 100"),
+    // Certificates carry recipient names and emails: only the signed-in delegate's own are returned.
+    user
+      ? pool.query("SELECT id, certificate_id, recipient_name, recipient_email, certificate_url, issue_date FROM certificates WHERE status = 'generated' AND (registration_id = ? OR recipient_email = ?) ORDER BY issue_date DESC LIMIT 100", [user.registration_id, registration?.email || ''])
+      : Promise.resolve([[]]),
   ]);
   res.json({ sessionResources, speakerDocs, eventResources, certificates });
 });

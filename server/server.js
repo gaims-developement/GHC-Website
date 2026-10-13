@@ -29,6 +29,8 @@ const { notFound, errorHandler } = require('./middleware/errorHandler');
 const { apiLimiter, apiRequestLog, csrfProtection, sanitizeBody } = require('./middleware/productionMiddleware');
 const { trackMutations } = require('./middleware/activityMiddleware');
 const { startCronJobs, stopCronJobs } = require('./services/cronService');
+const { assertJwtConfig } = require('./config/jwt');
+const { setUploadHeaders } = require('./utils/uploadSafety');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -58,7 +60,7 @@ app.use('/api', sanitizeBody);
 app.use('/api', csrfProtection);
 app.use('/api', apiRequestLog);
 app.use('/api', trackMutations);
-app.use('/uploads', express.static(uploadsDir));
+app.use('/uploads', express.static(uploadsDir, { setHeaders: setUploadHeaders }));
 app.get('/uploads/speakers/:filename', (req, res, next) => {
   const filename = String(req.params.filename || '');
 
@@ -90,6 +92,7 @@ app.use(errorHandler);
 let server;
 
 const startServer = async () => {
+  assertJwtConfig();
   await testConnection();
   await initializeDatabase();
   const http = require('http');
