@@ -3846,14 +3846,9 @@ const seedAwardNominationData = async () => {
   }
 
   // Seed workshop email templates
-  await pool.query(
-    `INSERT INTO email_templates (template_key, subject, body, is_active)
-     VALUES (?, ?, ?, 1)
-     ON DUPLICATE KEY UPDATE template_key = template_key`,
-    [
-      'workshop_registration_confirmation',
-      'Your GHC Workshop Registration is Confirmed — {{workshopName}}',
-      `<!DOCTYPE html>
+  const workshopConfirmationSubject = 'Your GHC Workshop Registration is Confirmed — {{workshopName}}';
+  const workshopConfirmationBody = `<!DOCTYPE html>
+<!-- ghc-workshop-confirmation-v2 -->
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -3963,10 +3958,6 @@ const seedAwardNominationData = async () => {
                   </tr>
                   <tr>
                     <td style="padding: 4px 0; vertical-align: top; width: 22px; color: #059669; font-weight: bold;">✓</td>
-                    <td style="padding: 4px 0;"><strong>Identification:</strong> Please carry your GHC delegate pass badge and a valid institutional photo ID.</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 4px 0; vertical-align: top; width: 22px; color: #059669; font-weight: bold;">✓</td>
                     <td style="padding: 4px 0;"><strong>Reporting Time:</strong> Please arrive at the venue at least 15 minutes before the scheduled start time.</td>
                   </tr>
                   <tr>
@@ -4012,14 +4003,40 @@ const seedAwardNominationData = async () => {
             </td>
           </tr>
 
+          <!-- Identification Reminder -->
+          <tr>
+            <td style="padding: 20px 32px 24px 32px; background-color: #ffffff;">
+              <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #fff7ed; border: 1px solid #fdba74; border-left: 4px solid #ea580c; border-radius: 10px;">
+                <tr>
+                  <td style="padding: 14px 18px; color: #7c2d12;">
+                    <p style="margin: 0 0 4px 0; font-size: 14px; font-weight: 700;">&#9888;&#65039; Important: Carry Your ID</p>
+                    <p style="margin: 0; font-size: 13px; line-height: 1.55;">Please carry your <strong>GHC delegate pass badge</strong> and a <strong>valid institutional photo ID</strong>.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
         </table>
       </td>
     </tr>
   </table>
 </body>
-</html>`,
-    ]
+</html>`;
+  await pool.query(
+    `INSERT INTO email_templates (template_key, subject, body, is_active)
+     VALUES (?, ?, ?, 1)
+     ON DUPLICATE KEY UPDATE template_key = template_key`,
+    ['workshop_registration_confirmation', workshopConfirmationSubject, workshopConfirmationBody]
   );
+  // Upgrade older shipped versions of this template (identified by the version marker in the HTML).
+  const workshopConfirmationVersion = (workshopConfirmationBody.match(/<!-- (ghc-workshop-confirmation-v\d+) -->/) || [])[1];
+  if (workshopConfirmationVersion) {
+    await pool.query(
+      "UPDATE email_templates SET subject = ?, body = ? WHERE template_key = 'workshop_registration_confirmation' AND body NOT LIKE ?",
+      [workshopConfirmationSubject, workshopConfirmationBody, `%${workshopConfirmationVersion}%`]
+    );
+  }
 
   await pool.query(
     `INSERT INTO email_templates (template_key, subject, body, is_active)
