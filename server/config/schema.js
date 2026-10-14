@@ -4,7 +4,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const { pool } = require('./db');
 
-const roles = ['SUPER_ADMIN', 'SYSTEM_ADMIN', 'ADMIN', 'TEAM_ADMIN', 'FORM_MANAGER', 'EDITOR', 'VIEWER', 'MEDIA', 'RESEARCH', 'VOLUNTEER', 'CHECKIN', 'OPERATIONS', 'AWARD_JUDGE', 'JUDGE'];
+const roles = ['SUPER_ADMIN', 'SYSTEM_ADMIN', 'ADMIN', 'TEAM_ADMIN', 'FORM_MANAGER', 'EDITOR', 'VIEWER', 'MEDIA', 'RESEARCH', 'VOLUNTEER', 'CHECKIN', 'OPERATIONS', 'AWARD_JUDGE', 'JUDGE', 'SPONSOR'];
 
 const permissions = [
   ['dashboard.view', 'View CMS dashboard'],
@@ -130,6 +130,7 @@ const permissions = [
   ['workshop_attendance_manage', 'Mark and manage workshop attendance'],
   ['workshop_certificate_manage', 'Issue and manage workshop certificates'],
   ['workshop_reports_view', 'View workshop analytics and reports'],
+  ['sponsor_scan', 'Scan delegate QR codes at a sponsor booth'],
 ];
 
 const modules = [
@@ -273,6 +274,8 @@ const rolePermissionMap = {
   REVIEWER: ['review_abstracts'],
   VOLUNTEER: ['dashboard.view', 'checkin.scan', 'attendance.manage', 'operations.view', 'manage_registrations', 'view_registrations', 'manage_checkins'],
   CHECKIN: ['dashboard.view', 'checkin.scan', 'attendance.manage'],
+  // Sponsor booth accounts can only scan delegates.
+  SPONSOR: ['sponsor_scan'],
   OPERATIONS: ['dashboard.view', 'analytics.view', 'checkin.scan', 'attendance.manage', 'operations.view', 'certificates.manage'],
 };
 
@@ -3677,6 +3680,17 @@ const createDelegateTables = async () => {
 
   await addColumnIfMissing('delegates', 'checkin_token', 'VARCHAR(64) NULL');
   await addIndexIfMissing('delegates', 'uq_delegates_checkin_token', 'UNIQUE KEY uq_delegates_checkin_token (checkin_token)');
+
+  // One row per sponsor account per delegate; the unique key is what stops a second scan at the same booth.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS sponsor_scans (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      sponsor_user_id INT NOT NULL,
+      delegate_id INT NOT NULL,
+      scanned_at DATETIME NOT NULL,
+      UNIQUE KEY uq_sponsor_scans_sponsor_delegate (sponsor_user_id, delegate_id)
+    )
+  `);
   // Every delegate needs a private, unguessable token: it is what the QR code in their email encodes.
   const [missingTokens] = await pool.query('SELECT id FROM delegates WHERE checkin_token IS NULL');
   for (const { id } of missingTokens) {

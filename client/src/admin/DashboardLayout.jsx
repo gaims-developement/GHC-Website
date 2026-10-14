@@ -1,4 +1,5 @@
 import {
+  ScanLine,
   Activity,
   Bell,
   BellRing,
@@ -306,7 +307,15 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
       userRole === "WORKSHOP" ||
       (userPermissions.includes("workshop_application_view") && !isSuperAdmin && !isAwardJudge && !isScientificOnly));
 
-  const visibleSections = isAwardJudge
+  const visibleSections = userRole === "SPONSOR"
+    ? [
+        {
+          id: "sponsor-main",
+          title: "",
+          items: [{ id: "dashboard", label: "Scan Delegate", icon: ScanLine, navigationId: "dashboard" }],
+        },
+      ]
+    : isAwardJudge
     ? [
         {
           id: "judge-main",

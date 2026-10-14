@@ -14,6 +14,7 @@ import SpeakerResources from "./pages/SpeakerResources";
 import Cme from "./pages/Cme";
 import Workshops from "./pages/Workshops";
 import WorkshopTeamDashboard from "./pages/workshops/WorkshopTeamDashboard";
+import SponsorDashboard from "./pages/SponsorDashboard";
 import WorkshopApplications from "./pages/workshops/WorkshopApplications";
 import WorkshopAttendance from "./pages/workshops/WorkshopAttendance";
 import WorkshopCertificates from "./pages/workshops/WorkshopCertificates";
@@ -360,6 +361,13 @@ function AdminApp({ initialPage = "dashboard" }) {
           role === "AWARD JUDGE" ||
           (currentUser?.permissions?.includes("award_nomination_view") && !isSuper);
 
+        // Sponsor booth accounts only have the scanner, which lives on their dashboard.
+        if (role === "SPONSOR" && activePage !== "dashboard") {
+          setActivePage("dashboard");
+          window.history.replaceState(null, "", "/admin");
+          return;
+        }
+
         if (isJudge && activePage !== "dashboard" && activePage !== "award-nominations" && activePage !== "judge-nominations") {
           setActivePage("dashboard");
           window.history.replaceState(null, "", "/admin");
@@ -523,7 +531,9 @@ function AdminApp({ initialPage = "dashboard" }) {
     userRole === "WORKSHOP" ||
     (user?.permissions?.includes("workshop_application_view") && !isSuperUser && !isAwardJudgeUser);
 
-  const ResolvedDashboard = isAwardJudgeUser
+  const ResolvedDashboard = userRole === "SPONSOR"
+    ? SponsorDashboard
+    : isAwardJudgeUser
     ? AwardJudgeDashboard
     : isWorkshopTeamUser
     ? WorkshopTeamDashboard

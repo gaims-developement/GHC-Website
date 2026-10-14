@@ -181,4 +181,26 @@ const checkIn = asyncHandler(async (req, res) => {
   res.json({ result: result.affectedRows ? 'marked' : 'already', delegate: toDelegate(updated) });
 });
 
-module.exports = { checkIn, importDelegates, listDelegates, sendConfirmation, setAttendance };
+// Sponsor booth scan: each sponsor account can scan a given delegate once (used for booth coupons).
+const sponsorScan = asyncHandler(async (req, res) => {
+  const code = String(req.body?.code || '').trim();
+  if (!code) return res.status(400).json({ message: 'No QR code was provided.' });
+
+  const [[row]] = await pool.query('SELECT id, registration_id, full_name FROM delegates WHERE checkin_token = ? LIMIT 1', [code]);
+  if (!row) return res.status(404).json({ message: 'This QR code does not belong to any registered delegate.' });
+
+  // INSERT IGNORE on the unique (sponsor, delegate) key keeps simultaneous scans from both succeeding.
+  const [result] = await pool.query(
+    'INSERT IGNORE INTO sponsor_scans (sponsor_user_id, delegate_id, scanned_at) VALUES (?, ?, ?)',
+    [req.user.id, row.id, new Date()]
+  );
+  const [[scan]] = await pool.query('SELECT scanned_at FROM sponsor_scans WHERE sponsor_user_id = ? AND delegate_id = ?', [req.user.id, row.id]);
+  // Sponsors only get the name and registration ID, not the delegate's contact details.
+  res.json({
+    result: result.affectedRows ? 'scanned' : 'already',
+    delegate: { fullName: row.full_name, registrationId: row.registration_id },
+    scannedAt: scan?.scanned_at || null,
+  });
+});
+
+module.exports = { checkIn, importDelegates, listDelegates, sendConfirmation, setAttendance, sponsorScan };

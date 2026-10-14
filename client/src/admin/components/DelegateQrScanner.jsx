@@ -25,7 +25,20 @@ const beep = (ok) => {
 
 const formatTime = (value) => (value ? new Date(value).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : "");
 
-function DelegateQrScanner({ api, onCheckedIn }) {
+// Attendance check-in is the default; other screens (e.g. sponsor booths) pass their own endpoint and messages.
+const describeCheckIn = ({ delegate, result: status }) =>
+  status === "marked"
+    ? { tone: "success", title: `✓ ${delegate.fullName}`, detail: `${delegate.registrationId} — marked present` }
+    : { tone: "warning", title: `${delegate.fullName} is already checked in`, detail: `${delegate.registrationId} — marked present at ${formatTime(delegate.attendedAt)}` };
+
+function DelegateQrScanner({
+  api,
+  onCheckedIn,
+  endpoint = "/api/delegates/check-in",
+  title = "QR Check-in",
+  submitLabel = "Check in",
+  describeResult = describeCheckIn,
+}) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
@@ -43,23 +56,18 @@ function DelegateQrScanner({ api, onCheckedIn }) {
     if (busyRef.current) return;
     busyRef.current = true;
     try {
-      const response = await api.post("/api/delegates/check-in", { code });
-      const { delegate, result: status } = response.data;
-      onCheckedIn?.(delegate);
-      if (status === "marked") {
-        setResult({ tone: "success", title: `✓ ${delegate.fullName}`, detail: `${delegate.registrationId} — marked present` });
-        beep(true);
-      } else {
-        setResult({ tone: "warning", title: `${delegate.fullName} is already checked in`, detail: `${delegate.registrationId} — marked present at ${formatTime(delegate.attendedAt)}` });
-        beep(false);
-      }
+      const response = await api.post(endpoint, { code });
+      onCheckedIn?.(response.data.delegate);
+      const next = describeResult(response.data);
+      setResult(next);
+      beep(next.tone === "success");
     } catch (err) {
       setResult({ tone: "error", title: "Not recognised", detail: err.response?.data?.message || "Could not check this QR code. Please try again." });
       beep(false);
     } finally {
       busyRef.current = false;
     }
-  }, [api, onCheckedIn]);
+  }, [api, onCheckedIn, endpoint, describeResult]);
 
   const stop = useCallback(() => {
     clearInterval(timerRef.current);
@@ -135,7 +143,7 @@ function DelegateQrScanner({ api, onCheckedIn }) {
     <section className="admin-panel">
       <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
         <h2 style={{ margin: 0, fontSize: "1.1rem", display: "flex", alignItems: "center", gap: "0.4rem" }}>
-          <ScanLine size={20} /> QR Check-in
+          <ScanLine size={20} /> {title}
         </h2>
         <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {active && cameras.length > 1 && (
@@ -201,7 +209,7 @@ function DelegateQrScanner({ api, onCheckedIn }) {
           aria-label="QR code value"
           style={{ flex: 1, minWidth: 0, padding: "0.55rem 0.75rem", border: "1px solid #d1d5db", borderRadius: "0.5rem" }}
         />
-        <button className="admin-secondary-button" type="submit">Check in</button>
+        <button className="admin-secondary-button" type="submit">{submitLabel}</button>
       </form>
     </section>
   );
