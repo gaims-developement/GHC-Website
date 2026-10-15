@@ -73,6 +73,10 @@ const publicApply = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: 'This workshop is not published or accepting applications.' });
   }
 
+  if (workshop.isEnabled === false) {
+    return res.status(400).json({ message: 'This workshop is coming soon and is not accepting applications yet.' });
+  }
+
   if (workshop.isRegistrationOpen === false) {
     return res.status(400).json({ message: 'Applications for this workshop are currently closed.' });
   }

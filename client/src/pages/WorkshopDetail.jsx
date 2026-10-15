@@ -200,7 +200,10 @@ export default function WorkshopDetail() {
   const filledPercent = capacity ? Math.min(100, Math.round((registeredCount / capacity) * 100)) : 0;
   const isFull = capacity > 0 && remaining <= 0;
   const isRegistrationOpen = workshop.isRegistrationOpen !== false;
-  const canApply = isRegistrationOpen && !isFull;
+  // Workshops switched off in the CMS are shown as "Coming Soon" and cannot be applied for.
+  const isComingSoon = workshop.isEnabled === false;
+  const canApply = !isComingSoon && isRegistrationOpen && !isFull;
+  const closedLabel = isComingSoon ? "Coming Soon" : "Applications Closed";
   const applySlug = workshop.slug || createWorkshopSlug(workshop.title) || rawSlug || workshop.id;
   const applyHref = `/workshops/${encodeURIComponent(applySlug)}/apply`;
   const displayImage = resolveImage(workshop.imageUrl || workshop.image);
@@ -244,12 +247,14 @@ export default function WorkshopDetail() {
             </button>
             <span
               className={`inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-bold ${
-                !isRegistrationOpen || isFull
+                isComingSoon
+                  ? "bg-amber-50 text-amber-700 border border-amber-100"
+                  : !isRegistrationOpen || isFull
                   ? "bg-red-50 text-red-600 border border-red-100"
                   : "bg-emerald-50 text-emerald-700 border border-emerald-100"
               }`}
             >
-              {!isRegistrationOpen ? "Applications Closed" : isFull ? "Seats Full" : "Applications Open"}
+              {isComingSoon ? "Coming Soon" : !isRegistrationOpen ? "Applications Closed" : isFull ? "Seats Full" : "Applications Open"}
             </span>
           </div>
         </div>
@@ -487,7 +492,7 @@ export default function WorkshopDetail() {
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#667085]">Seat Capacity</span>
                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${canApply ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
-                  {canApply ? `${remaining} Seats Available` : "Seats Full"}
+                  {canApply ? `${remaining} Seats Available` : isComingSoon ? "Coming Soon" : isFull ? "Seats Full" : "Closed"}
                 </span>
               </div>
 
@@ -540,7 +545,7 @@ export default function WorkshopDetail() {
                 </Link>
               ) : (
                 <div className="w-full text-center py-3.5 px-4 rounded-2xl bg-gray-100 text-gray-400 font-bold text-sm">
-                  Applications Closed
+                  {closedLabel}
                 </div>
               )}
 
@@ -583,7 +588,7 @@ export default function WorkshopDetail() {
                 </Link>
               ) : (
                 <span className="w-full sm:w-auto inline-flex items-center justify-center px-10 py-4 rounded-full font-bold text-base bg-white/10 text-white/50 cursor-not-allowed border border-white/10">
-                  Applications Closed
+                  {closedLabel}
                 </span>
               )}
 
@@ -603,7 +608,7 @@ export default function WorkshopDetail() {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold text-[#101828] line-clamp-2 leading-tight break-words">{workshop.title}</p>
-          <p className="text-[11px] font-semibold text-emerald-600">{remaining} of {capacity} seats left</p>
+          <p className={`text-[11px] font-semibold ${isComingSoon ? "text-amber-600" : "text-emerald-600"}`}>{isComingSoon ? "Coming Soon" : `${remaining} of ${capacity} seats left`}</p>
         </div>
         {canApply ? (
           <Link
@@ -616,7 +621,7 @@ export default function WorkshopDetail() {
           </Link>
         ) : (
           <span className="px-4 py-2 rounded-xl text-xs font-bold bg-gray-100 text-gray-400">
-            Closed
+            {isComingSoon ? "Coming Soon" : "Closed"}
           </span>
         )}
       </div>

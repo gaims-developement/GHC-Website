@@ -1089,6 +1089,7 @@ function WorkshopsExperience() {
           slug: workshop.slug || createWorkshopSlug(workshop.title),
           remaining: Math.max(Number(workshop.availableSeats ?? (workshop.capacity - (workshop.registeredCount || 0))), 0),
           isRegistrationOpen: workshop.isRegistrationOpen !== false && workshop.is_registration_open !== false,
+          comingSoon: workshop.isEnabled === false,
           certificateAvailable: Boolean(workshop.certificateAvailable ?? workshop.certificate_available ?? true),
           organizer: workshop.organizer || workshop.faculty || "New Delhi",
           venue: workshop.venue || "New Delhi",
@@ -1146,6 +1147,7 @@ function WorkshopsExperience() {
         {workshopData?.map((workshop) => {
           const slug = workshop.slug || createWorkshopSlug(workshop.title);
           const isClosed = !workshop.isRegistrationOpen || workshop.remaining <= 0;
+          const { comingSoon } = workshop;
           const speakerName = workshop.faculty || workshop.organizer || "New Delhi Faculty";
 
           return (
@@ -1160,8 +1162,8 @@ function WorkshopsExperience() {
                   <span className="inline-flex items-center px-3.5 py-1.5 rounded-full text-xs font-semibold bg-blue-50 text-[#173B8F] truncate max-w-[220px]">
                     {workshop.workshopType || workshop.category || "Clinical Skills"}
                   </span>
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${isClosed ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'}`}>
-                    {isClosed ? 'Applications Closed' : 'Open'}
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold shrink-0 ${comingSoon ? 'bg-amber-50 text-amber-700' : isClosed ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'}`}>
+                    {comingSoon ? 'Coming Soon' : isClosed ? 'Applications Closed' : 'Open'}
                   </span>
                 </div>
 
@@ -1184,6 +1186,11 @@ function WorkshopsExperience() {
 
               {/* Info & Details Button pinned to bottom */}
               <div className="mt-6 pt-5 border-t border-gray-100 flex flex-col justify-between">
+                {comingSoon ? (
+                <div className="mb-6 flex min-h-[6rem] items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 p-4 text-center">
+                  <span className="font-['Outfit'] text-xl sm:text-2xl font-black tracking-[0.2em] text-amber-700">COMING SOON</span>
+                </div>
+                ) : (
                 <div className="grid grid-cols-2 gap-3 text-xs sm:text-sm text-[#475467] font-medium mb-6 bg-gray-50/80 p-4 rounded-2xl border border-gray-100 min-h-[6rem]">
                   <span className="flex items-center gap-2 min-w-0" title={workshop.displayDate}>
                     <CalendarDays className="h-4 w-4 text-[#00A6A6] shrink-0" />
@@ -1202,8 +1209,14 @@ function WorkshopsExperience() {
                     <span className="truncate">{workshop.certificateAvailable ? 'Certificate: Yes' : 'No Certificate'}</span>
                   </span>
                 </div>
+                )}
 
-                {/* ONLY Details Button */}
+                {/* ONLY Details Button (none while the workshop is Coming Soon) */}
+                {comingSoon ? (
+                <span className="w-full inline-flex items-center justify-center gap-2 py-3.5 px-5 rounded-2xl font-bold text-sm sm:text-base bg-gray-100 text-gray-400 cursor-not-allowed">
+                  Coming Soon
+                </span>
+                ) : (
                 <Link
                   to={`/workshops/${slug}`}
                   state={{ workshop }}
@@ -1213,6 +1226,7 @@ function WorkshopsExperience() {
                   Details
                   <ArrowRight className="h-4 w-4" />
                 </Link>
+                )}
               </div>
             </motion.article>
           );
@@ -1661,7 +1675,7 @@ function ResearchHub() {
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#173B8F] rounded-full blur-[80px] opacity-20 -mr-20 -mt-20"></div>
             <div className="relative z-10 w-16 h-16 rounded-2xl bg-[#173B8F]/20 border border-[#173B8F]/30 text-white flex items-center justify-center mb-6"><Microscope className="h-8 w-8" /></div>
             <h3 className="relative z-10 font-['Outfit'] text-2xl font-extrabold text-white mb-4">Submit Research</h3>
-            <p className="relative z-10 text-gray-300 font-medium leading-relaxed mb-8 flex-1">Open the structured submission flow for personal details, institution, category, title, authors, abstract and PDF upload.</p>
+            <p className="relative z-10 text-gray-300 font-medium leading-relaxed mb-8 flex-1">Open the structured submission flow for personal details, institution, category, title, authors, abstract and Word document upload (PDF not accepted).</p>
             <div className="relative z-10 mt-auto pt-6 border-t border-gray-800">
               <a href="/abstract-registration" className="inline-flex items-center gap-2 bg-white text-[#101828] px-8 py-3.5 rounded-full font-bold text-sm hover:bg-gray-100 transition-colors shadow-sm">Submit Abstract <ArrowRight className="h-4 w-4" /></a>
             </div>
@@ -2541,51 +2555,58 @@ function PastOrganisations() {
   );
 }
 
-const EARLY_BIRD_DEADLINE = new Date("2026-10-15T23:59:59+05:30").getTime();
+// Fallback only: the live deadline is set by the Super Admin in the CMS (Early Bird tab).
+const DEFAULT_EARLY_BIRD_DEADLINE = new Date("2026-10-20T23:59:59+05:30").getTime();
+
+const getTimeLeft = (deadline) => {
+  const diff = deadline - Date.now();
+  if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true };
+  return {
+    days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+    hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+    minutes: Math.floor((diff / (1000 * 60)) % 60),
+    seconds: Math.floor((diff / 1000) % 60),
+    isExpired: false,
+  };
+};
+
+const formatEarlyBirdDeadline = (deadline) =>
+  `${new Date(deadline).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  })} IST`;
 
 function PricingSection() {
   const [earlyBirdManualOff, setEarlyBirdManualOff] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(() => {
-    const diff = EARLY_BIRD_DEADLINE - Date.now();
-    if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true };
-    return {
-      days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-      hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-      minutes: Math.floor((diff / (1000 * 60)) % 60),
-      seconds: Math.floor((diff / 1000) % 60),
-      isExpired: false,
-    };
-  });
+  const [earlyBirdDeadline, setEarlyBirdDeadline] = useState(DEFAULT_EARLY_BIRD_DEADLINE);
+  const [timeLeft, setTimeLeft] = useState(() => getTimeLeft(DEFAULT_EARLY_BIRD_DEADLINE));
 
   useEffect(() => {
     axios
       .get(apiUrl("/api/settings/public"))
       .then((res) => {
-        if (res.data?.registration?.earlyBirdManualOff !== undefined) {
-          setEarlyBirdManualOff(Boolean(res.data.registration.earlyBirdManualOff));
+        const registration = res.data?.registration || {};
+        if (registration.earlyBirdManualOff !== undefined) {
+          setEarlyBirdManualOff(Boolean(registration.earlyBirdManualOff));
+        }
+        const deadline = Date.parse(registration.earlyBirdDeadline);
+        if (!Number.isNaN(deadline)) {
+          setEarlyBirdDeadline(deadline);
+          setTimeLeft(getTimeLeft(deadline));
         }
       })
       .catch(() => {});
   }, []);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      const diff = EARLY_BIRD_DEADLINE - Date.now();
-      if (diff <= 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
-      } else {
-        setTimeLeft({
-          days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-          minutes: Math.floor((diff / (1000 * 60)) % 60),
-          seconds: Math.floor((diff / 1000) % 60),
-          isExpired: false,
-        });
-      }
-    }, 1000);
-
+    const timer = setInterval(() => setTimeLeft(getTimeLeft(earlyBirdDeadline)), 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [earlyBirdDeadline]);
 
   const isEarlyBirdActive = !earlyBirdManualOff && !timeLeft.isExpired;
 
@@ -2731,7 +2752,7 @@ function PricingSection() {
                   </div>
                 </div>
                 <p className="text-[11px] text-gray-400 mt-3 font-medium">
-                  Ends on 15th October 2026 at 11:59 PM IST
+                  Ends on {formatEarlyBirdDeadline(earlyBirdDeadline)}
                 </p>
               </div>
             ) : (

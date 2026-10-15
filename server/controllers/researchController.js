@@ -178,6 +178,21 @@ const mapRevisionTokenError = (tokenRecord) => {
   if (tokenRecord.used_at || tokenRecord.status === 'used') {
     return { status: 410, message: 'This revision link has already been used.', code: 'used' };
   }
+  // Checked before expiry: accepting or rejecting an abstract revokes its open revision link.
+  if (tokenRecord.abstract_status === 'accepted') {
+    return {
+      status: 409,
+      message: 'Your abstract has already been accepted, so no revision is needed. Please check your email for the acceptance details.',
+      code: 'already_accepted',
+    };
+  }
+  if (tokenRecord.abstract_status === 'rejected') {
+    return {
+      status: 409,
+      message: 'A final decision has already been made on this abstract, so this revision link is no longer active. Please check your email for details.',
+      code: 'already_decided',
+    };
+  }
   if (tokenRecord.status !== 'active' || new Date(tokenRecord.expires_at) <= new Date()) {
     return {
       status: 410,
@@ -270,8 +285,8 @@ const validatePublicSubmission = (payload, files) => {
   if (!payload.institution) return 'Institution is required';
   if (!payload.title) return 'Title is required';
   if (!validCategories.includes(payload.category)) return 'Invalid category';
-  if (!files?.pdf) return 'Abstract PDF upload is required';
-  if (!files?.declaration) return 'Declaration form upload is required';
+  if (!files?.pdf) return 'Please upload your abstract as a Word document (.doc or .docx). PDF files are not accepted.';
+  if (!files?.declaration) return 'Please upload your signed declaration form as a Word document (.doc or .docx). PDF is not accepted.';
   return null;
 };
 
@@ -606,6 +621,9 @@ const statusResearch = asyncHandler(async (req, res) => {
   await Research.setWorkflowStage(req.params.id, req.body.status, {
     leadReviewNotes: req.body.notes || req.body.reviewNotes || existing.reviewNotes || null,
   });
+  if (['accepted', 'rejected'].includes(req.body.status)) {
+    await Research.revokeOpenRevisionTokens(req.params.id);
+  }
   await logDecision(req, 'status_decision', req.params.id, { status: req.body.status });
   const emailSent = await sendAbstractDecisionEmail(req, submission, req.body.status, req.body.notes || req.body.reviewNotes || existing.reviewNotes);
   return res.json({ submission, emailSent });
@@ -1707,7 +1725,8 @@ const submitRevision = asyncHandler(async (req, res) => {
   
   if (!req.files?.pdf) {
     await cleanupUploadedFiles(req.files);
-    return res.status(400).json({ message: 'Abstract PDF is required' });
+    // Also reached when the upload filter rejected an unsupported file type.
+    return res.status(400).json({ message: 'Please upload your revised abstract as a Word document (.doc or .docx). PDF files are not accepted.' });
   }
   
   let driveUpload = null;

@@ -133,7 +133,7 @@ const submissionGuidelinesData = [
     num: "05",
     title: "Abstract Submission Format",
     points: [
-      "File format: DOCX only (Maximum file size: 10 MB).",
+      "File format: Word document only (.doc or .docx). PDF files are not accepted. (Maximum file size: 10 MB).",
       "Font: Times New Roman, Font size: 12.",
       "Word count: 350–400 words (Tables, legends, and references are excluded from the abstract word count).",
       "Abstracts may include relevant tables and references.",
@@ -365,14 +365,15 @@ export default function AbstractRegister() {
 
   const handleFileUpload = (e, type) => {
     const file = e.target.files?.[0];
-    const isValidType = file && (file.type === "application/pdf" || file.type.includes("wordprocessingml") || file.type.includes("msword"));
-    
+    // Both the abstract and the signed declaration must be Word documents; PDF is not accepted.
+    const isValidType = Boolean(file) && /\.docx?$/i.test(file.name);
+
     if (isValidType) {
       if (type === 'pdf') setPdf(file);
       if (type === 'declaration') setDeclaration(file);
       setErrors((curr) => ({ ...curr, [type]: null }));
     } else {
-      setErrors((curr) => ({ ...curr, [type]: "Please upload a valid DOCX or PDF file" }));
+      setErrors((curr) => ({ ...curr, [type]: "PDF is not accepted. Please upload a Word document (.doc or .docx)." }));
     }
   };
 
@@ -391,7 +392,7 @@ export default function AbstractRegister() {
     }
     if (currentStep === 2) {
       if (!form.title.trim()) newErrors.title = "Abstract title is required";
-      if (!pdf) newErrors.pdf = "Please upload your abstract document (DOCX or PDF)";
+      if (!pdf) newErrors.pdf = "Please upload your abstract as a Word document (.doc or .docx). PDF files are not accepted.";
       if (!declaration) newErrors.declaration = "Please upload your signed declaration form";
     }
     if (currentStep === 3) {
@@ -1297,15 +1298,24 @@ export default function AbstractRegister() {
                     )}
                   </div>
 
+                  {/* PDF is not accepted for any upload */}
+                  <div role="note" className="flex items-start gap-3 rounded-2xl border-2 border-rose-300 bg-rose-50 px-5 py-4 text-rose-800">
+                    <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-extrabold uppercase tracking-wide">PDF files are NOT accepted</p>
+                      <p className="mt-1 text-sm font-medium">Upload your abstract and your signed declaration form as <strong>Word documents only (.doc or .docx)</strong>. PDF uploads will be rejected.</p>
+                    </div>
+                  </div>
+
                   {/* Abstract Document Upload */}
                   <div>
                     <label className="block text-sm font-semibold text-[#344054] mb-2">
-                      Upload Abstract Document (DOCX or PDF) <span className="text-rose-500">*</span>
+                      Upload Abstract Document (Word only, .doc or .docx) <span className="text-rose-500">*</span>
                     </label>
                     <div className={`border-2 border-dashed ${errors.pdf ? "border-rose-400 bg-rose-50/30" : "border-gray-300 hover:border-[#6C4AB6] hover:bg-[#6C4AB6]/5"} rounded-2xl p-8 text-center transition-all group relative cursor-pointer`}>
                       <input
                         type="file"
-                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                         onChange={(e) => handleFileUpload(e, 'pdf')}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                       />
@@ -1319,7 +1329,8 @@ export default function AbstractRegister() {
                         ) : (
                           <>
                             <h4 className="font-bold text-[#101828] mb-1 text-sm">Choose your Abstract document</h4>
-                            <p className="text-[#475467] text-xs">DOCX or PDF (Times New Roman 12 pt, 350–400 words, Max 10MB)</p>
+                            <p className="text-[#475467] text-xs">Word document only (.doc/.docx) · Times New Roman 12 pt, 350–400 words, Max 10MB</p>
+                            <p className="mt-1 text-xs font-bold text-rose-600">PDF is not accepted</p>
                           </>
                         )}
                       </div>
@@ -1344,7 +1355,7 @@ export default function AbstractRegister() {
                     <div className={`border-2 border-dashed ${errors.declaration ? "border-rose-400 bg-rose-50/30" : "border-gray-300 hover:border-[#6C4AB6] hover:bg-[#6C4AB6]/5"} rounded-2xl p-8 text-center transition-all group relative cursor-pointer`}>
                       <input
                         type="file"
-                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                         onChange={(e) => handleFileUpload(e, 'declaration')}
                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                       />
@@ -1358,7 +1369,8 @@ export default function AbstractRegister() {
                         ) : (
                           <>
                             <h4 className="font-bold text-[#101828] mb-1 text-sm">Choose signed declaration file</h4>
-                            <p className="text-[#475467] text-xs">Scanned PDF or DOCX (Max 10MB)</p>
+                            <p className="text-[#475467] text-xs">Word document only (.doc/.docx) · Max 10MB</p>
+                            <p className="mt-1 text-xs font-bold text-rose-600">PDF is not accepted</p>
                           </>
                         )}
                       </div>

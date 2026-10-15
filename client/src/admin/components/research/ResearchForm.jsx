@@ -39,7 +39,7 @@ function ResearchForm({ onCancel, onSubmit, submission }) {
     <form className="speaker-form workshop-form research-form" onSubmit={submit}>
       <div className="speaker-form-fields">
         <p className="admin-eyebrow">{submission?.id ? "Edit submission" : "Add submission"}</p>
-        <label>PDF upload<input type="file" accept="application/pdf" onChange={(event) => setPdf(event.target.files?.[0] || null)} /></label>
+        <label>Abstract document (Word only, .doc/.docx)<input type="file" accept=".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={(event) => setPdf(event.target.files?.[0] || null)} /></label>
         <div className="speaker-form-grid">
           <label>Title<input value={form.title} onChange={(event) => setValue("title", event.target.value)} required /></label>
           <label>Authors<input value={form.authors || ""} onChange={(event) => setValue("authors", event.target.value)} /></label>

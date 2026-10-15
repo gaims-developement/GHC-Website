@@ -280,6 +280,11 @@ const setStatus = async (id, status) => {
   return findById(id);
 };
 
+// A final decision (accepted/rejected) makes any open revision link pointless, so close it.
+const revokeOpenRevisionTokens = async (abstractId) => {
+  await pool.query("UPDATE abstract_revision_tokens SET status = 'revoked' WHERE abstract_id = ? AND status = 'active'", [abstractId]);
+};
+
 const setAward = async (id, awardNomination) => {
   await pool.query('UPDATE abstracts SET award_nomination = ? WHERE id = ?', [Boolean(awardNomination), id]);
   return findById(id);
@@ -687,6 +692,7 @@ const setWorkflowStage = async (id, stage, extra = {}) => {
 };
 
 module.exports = {
+  revokeOpenRevisionTokens,
   create,
   findById,
   findByToken,

@@ -26,6 +26,32 @@ const categories = [
 const inputClass =
   "mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 shadow-sm transition-all focus:border-transparent focus:outline-none focus:ring-2 focus:ring-[#6C4AB6]";
 
+// Defined outside the page component so React keeps the same form inputs between renders.
+const Shell = ({ children, onHome }) => (
+  <main className="abstract-revision-page min-h-screen bg-white font-['Outfit'] text-[#101828]" style={{ background: "#ffffff", color: "#101828" }}>
+    <div className="h-24 md:h-28" />
+    <div className="mx-auto max-w-5xl px-6">
+      <button onClick={onHome} className="inline-flex items-center gap-2 text-sm font-medium text-[#475467] transition-colors hover:text-[#101828]">
+        <ArrowLeft className="h-4 w-4 text-[#6C4AB6]" /> Back to Home
+      </button>
+    </div>
+    {children}
+  </main>
+);
+
+// The revised abstract and the declaration form must both be Word documents; the server refuses PDFs.
+const WORD_FILE_ACCEPT = ".doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+const isWordFile = (file) => /\.docx?$/i.test(file?.name || "");
+const PDF_NOT_ACCEPTED = "PDF is not accepted. Please upload a Word document (.doc or .docx).";
+
+// Revision links stop working once the committee makes a final decision; say so plainly.
+const linkErrorTitles = {
+  expired: "Expired Link",
+  used: "Link Already Used",
+  already_accepted: "Abstract Already Accepted",
+  already_decided: "Final Decision Made",
+};
+
 export default function AbstractRevision() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -65,7 +91,8 @@ export default function AbstractRevision() {
       } catch (err) {
         if (!active) return;
         setError({
-          title: err.response?.data?.code === "expired" ? "Expired Link" : err.response?.data?.code === "used" ? "Link Already Used" : "Invalid Link",
+          title: linkErrorTitles[err.response?.data?.code] || "Invalid Link",
+          code: err.response?.data?.code,
           message: err.response?.data?.message || "Invalid revision link.",
           contactEmail: err.response?.data?.contactEmail,
         });
@@ -87,7 +114,11 @@ export default function AbstractRevision() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!pdfFile) {
-      setError({ title: "Missing File", message: "Please upload the revised abstract PDF." });
+      setError({ title: "Missing File", message: `Please upload your revised abstract. ${PDF_NOT_ACCEPTED}` });
+      return;
+    }
+    if (!isWordFile(pdfFile) || (declarationFile && !isWordFile(declarationFile))) {
+      setError({ title: "Wrong File Type", message: PDF_NOT_ACCEPTED });
       return;
     }
 
@@ -115,21 +146,9 @@ export default function AbstractRevision() {
     }
   };
 
-  const Shell = ({ children }) => (
-    <main className="abstract-revision-page min-h-screen bg-white font-['Outfit'] text-[#101828]" style={{ background: "#ffffff", color: "#101828" }}>
-      <div className="h-24 md:h-28" />
-      <div className="mx-auto max-w-5xl px-6">
-        <button onClick={() => navigate("/")} className="inline-flex items-center gap-2 text-sm font-medium text-[#475467] transition-colors hover:text-[#101828]">
-          <ArrowLeft className="h-4 w-4 text-[#6C4AB6]" /> Back to Home
-        </button>
-      </div>
-      {children}
-    </main>
-  );
-
   if (loading) {
     return (
-      <Shell>
+      <Shell onHome={() => navigate("/")}>
         <section className="mx-auto flex min-h-[55vh] max-w-md items-center justify-center px-6 text-center">
           <div>
             <RefreshCw className="mx-auto h-10 w-10 animate-spin text-[#6C4AB6]" />
@@ -143,7 +162,7 @@ export default function AbstractRevision() {
 
   if (success) {
     return (
-      <Shell>
+      <Shell onHome={() => navigate("/")}>
         <section className="mx-auto max-w-lg px-6 py-16 text-center">
           <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
@@ -164,12 +183,18 @@ export default function AbstractRevision() {
 
   if (error && !abstractInfo) {
     return (
-      <Shell>
+      <Shell onHome={() => navigate("/")}>
         <section className="mx-auto max-w-lg px-6 py-16 text-center">
           <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-[0_8px_30px_rgba(0,0,0,0.04)]">
-            <div className="mx-auto flex h-18 w-18 items-center justify-center rounded-full bg-amber-100 text-amber-600">
-              <AlertTriangle className="h-11 w-11" />
-            </div>
+            {error.code === "already_accepted" ? (
+              <div className="mx-auto flex h-18 w-18 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                <CheckCircle2 className="h-11 w-11" />
+              </div>
+            ) : (
+              <div className="mx-auto flex h-18 w-18 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                <AlertTriangle className="h-11 w-11" />
+              </div>
+            )}
             <h1 className="mt-6 text-3xl font-extrabold">{error.title}</h1>
             <p className="mt-3 text-sm leading-6 text-[#475467]">{error.message}</p>
             {error.contactEmail && (
@@ -187,7 +212,7 @@ export default function AbstractRevision() {
   }
 
   return (
-    <Shell>
+    <Shell onHome={() => navigate("/")}>
       <section className="mx-auto max-w-5xl px-6 py-10 text-center">
         <div className="mb-6 flex flex-wrap items-center justify-center gap-2.5">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#e244b7]/25 bg-[#e244b7]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#e244b7]">
@@ -201,7 +226,7 @@ export default function AbstractRevision() {
           Revise Your <span className="bg-gradient-to-r from-[#6C4AB6] to-[#e244b7] bg-clip-text text-transparent">Abstract</span>
         </h1>
         <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#475467] sm:text-lg">
-          Review the committee feedback, update the supported abstract fields, and upload your revised PDF for evaluation.
+          Review the committee feedback, update the supported abstract fields, and upload your revised abstract as a Word document (.doc or .docx) for evaluation. PDF files are not accepted.
         </p>
       </section>
 
@@ -274,20 +299,30 @@ export default function AbstractRevision() {
               <textarea value={form.abstractText} onChange={(event) => updateForm("abstractText", event.target.value)} className={`${inputClass} min-h-40 resize-y leading-6`} />
             </label>
 
+            <div role="note" className="flex items-start gap-3 rounded-2xl border-2 border-rose-300 bg-rose-50 px-5 py-4 text-left text-rose-800">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              <div>
+                <p className="text-sm font-extrabold uppercase tracking-wide">PDF files are NOT accepted</p>
+                <p className="mt-1 text-sm font-medium">Upload your revised abstract and declaration form as <strong>Word documents only (.doc or .docx)</strong>. PDF uploads will be rejected.</p>
+              </div>
+            </div>
+
             <div className="grid gap-5 md:grid-cols-2">
               <label className="group relative block rounded-2xl border-2 border-dashed border-gray-300 bg-white p-7 text-center shadow-sm transition-all hover:border-[#6C4AB6]">
-                <input type="file" accept=".pdf,application/pdf" className="absolute inset-0 h-full w-full cursor-pointer opacity-0" onChange={(event) => setPdfFile(event.target.files?.[0] || null)} />
+                <input type="file" accept={WORD_FILE_ACCEPT} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" onChange={(event) => setPdfFile(event.target.files?.[0] || null)} />
                 <FileText className="mx-auto mb-4 h-10 w-10 text-gray-400 transition-colors group-hover:text-[#6C4AB6]" />
-                <p className="font-semibold text-[#101828]">{pdfFile ? pdfFile.name : "Upload Revised PDF"}</p>
-                <p className="mt-1 text-xs text-gray-500">Maximum size 10MB</p>
+                <p className="font-semibold text-[#101828]">{pdfFile ? pdfFile.name : "Upload Revised Abstract (Word)"}</p>
+                <p className="mt-1 text-xs text-gray-500">Word document only (.doc, .docx) · Maximum size 10MB</p>
+                <p className="mt-1 text-xs font-bold text-rose-600">PDF is not accepted</p>
                 <span className="mt-3 inline-block text-sm font-semibold text-[#6C4AB6]">{pdfFile ? "Replace File" : "Click or drag & drop"}</span>
               </label>
 
               <label className="group relative block rounded-2xl border-2 border-dashed border-gray-300 bg-white p-7 text-center shadow-sm transition-all hover:border-[#6C4AB6]">
-                <input type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="absolute inset-0 h-full w-full cursor-pointer opacity-0" onChange={(event) => setDeclarationFile(event.target.files?.[0] || null)} />
+                <input type="file" accept={WORD_FILE_ACCEPT} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" onChange={(event) => setDeclarationFile(event.target.files?.[0] || null)} />
                 <UploadCloud className="mx-auto mb-4 h-10 w-10 text-gray-400 transition-colors group-hover:text-[#6C4AB6]" />
                 <p className="font-semibold text-[#101828]">{declarationFile ? declarationFile.name : "Declaration Form"}</p>
-                <p className="mt-1 text-xs text-gray-500">Optional if unchanged</p>
+                <p className="mt-1 text-xs text-gray-500">Word document only (.doc, .docx) · Optional if unchanged</p>
+                <p className="mt-1 text-xs font-bold text-rose-600">PDF is not accepted</p>
                 <span className="mt-3 inline-block text-sm font-semibold text-[#6C4AB6]">{declarationFile ? "Replace File" : "Upload if needed"}</span>
               </label>
             </div>

@@ -3,6 +3,7 @@ const Settings = require('../models/settingsModel');
 
 const DEFAULT_ABSTRACT_WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/KX8RTHC6qCS5AwoDgXxq1D';
 const asyncHandler = require('../utils/asyncHandler');
+const { getEarlyBird, DEFAULT_EARLY_BIRD_DEADLINE } = require('../utils/earlyBird');
 
 const toBoolean = (value) => value === true || value === 'true' || value === '1' || value === 1;
 
@@ -62,12 +63,11 @@ const getSettings = asyncHandler(async (_req, res) => {
 const getPublicSettings = asyncHandler(async (_req, res) => {
   const result = await Settings.get();
   let earlyBirdManualOff = false;
+  let earlyBirdDeadline = DEFAULT_EARLY_BIRD_DEADLINE;
   try {
-    const [[cmsRow]] = await pool.query('SELECT setting_value FROM app_settings WHERE setting_key = "cms_controls" LIMIT 1');
-    if (cmsRow?.setting_value) {
-      const cms = typeof cmsRow.setting_value === 'string' ? JSON.parse(cmsRow.setting_value) : cmsRow.setting_value;
-      earlyBirdManualOff = Boolean(cms?.earlyBirdManualOff);
-    }
+    const earlyBird = await getEarlyBird();
+    earlyBirdManualOff = earlyBird.manualOff;
+    earlyBirdDeadline = earlyBird.deadline;
   } catch {
     earlyBirdManualOff = false;
   }
@@ -76,6 +76,7 @@ const getPublicSettings = asyncHandler(async (_req, res) => {
     registration: {
       abstractSubmissionOpen: result.settings.registration?.abstractSubmissionOpen ?? true,
       earlyBirdManualOff,
+      earlyBirdDeadline,
       abstractWhatsappGroupUrl: result.settings.registration?.abstractWhatsappGroupUrl || DEFAULT_ABSTRACT_WHATSAPP_GROUP_URL,
       abstractWhatsappGroupText: result.settings.registration?.abstractWhatsappGroupText || '',
     },

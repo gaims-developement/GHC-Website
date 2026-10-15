@@ -75,16 +75,14 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   fileFilter: (_req, file, cb) => {
-    // allow PDF, DOCX/DOC, and images (for declarations)
-    const allowed = [
-      'application/pdf',
+    // Every abstract upload (the abstract itself in the "pdf" field, and the declaration form) must be a
+    // Word document. PDFs are not accepted; a rejected file is dropped and the handler reports it as missing.
+    const wordMimes = [
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/msword',
-      'image/jpeg',
-      'image/png',
-      'image/jpg',
+      'application/octet-stream',
     ];
-    cb(null, allowed.includes(file.mimetype) && hasAllowedExtension(file, ['.pdf', '.docx', '.doc', '.jpg', '.jpeg', '.png']));
+    return cb(null, wordMimes.includes(file.mimetype) && hasAllowedExtension(file, ['.docx', '.doc']));
   },
   limits: { fileSize: Number(process.env.MAX_RESEARCH_UPLOAD_SIZE || 10 * 1024 * 1024) },
 });

@@ -4,6 +4,7 @@ const multer = require('multer');
 const router = require('express').Router();
 const {
   closeWorkshop,
+  setWorkshopEnabled,
   confirmWorkshopRegistration,
   createWorkshop,
   deleteWorkshop,
@@ -87,6 +88,7 @@ router.post('/', requireAuth, canManageWorkshops, upload.single('image'), create
 router.patch('/reorder', requireAuth, canManageWorkshops, reorderWorkshops);
 router.patch('/:id/publish', requireAuth, canManageWorkshops, publishWorkshop);
 router.patch('/:id/close', requireAuth, canManageWorkshops, closeWorkshop);
+router.patch('/:id/enabled', requireAuth, canManageWorkshops, setWorkshopEnabled);
 router.put('/:id', requireAuth, canManageWorkshops, upload.single('image'), updateWorkshop);
 router.delete('/:id', requireAuth, canManageWorkshops, deleteWorkshop);
 router.post('/:id/register-confirmed', requireAuth, canConfirmApplications, confirmWorkshopRegistration);

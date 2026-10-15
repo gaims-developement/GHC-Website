@@ -673,6 +673,8 @@ const createWorkshopTables = async () => {
   await addColumnIfMissing('workshops', 'end_time', 'TIME NULL');
   await addColumnIfMissing('workshops', 'registration_deadline', 'DATETIME NULL');
   await addColumnIfMissing('workshops', 'full_description', 'TEXT NULL');
+  // Website visibility switch from the CMS: disabled workshops are shown as "Coming Soon".
+  await addColumnIfMissing('workshops', 'is_enabled', 'BOOLEAN NOT NULL DEFAULT TRUE');
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS workshop_applications (
@@ -3274,84 +3276,6 @@ const seedSpeakers = async () => {
   );
 };
 
-const seedWorkshops = async () => {
-  // Ensure the 3 required workshops exist and have correct titles, capacities, and venue
-  const defaultWorkshops = [
-    {
-      title: 'BLS',
-      faculty: 'New Delhi Faculty',
-      organizer: 'New Delhi',
-      description: 'Hands-on Basic Life Support training with adult, child and infant CPR, AED usage and airway management.',
-      fullDescription: 'Comprehensive Basic Life Support (BLS) training certified by experienced instructors in New Delhi. Hands-on high-fidelity simulation and automated external defibrillator (AED) operation.',
-      workshopType: 'Clinical Skills',
-      capacity: 50,
-      duration: '22nd & 23rd',
-      venue: 'New Delhi',
-      date: '2026-09-22 09:00:00',
-      price: 0,
-      certificateAvailable: true,
-      isRegistrationOpen: true,
-      status: 'published',
-      displayOrder: 1,
-    },
-    {
-      title: 'Suturing & Laparoscopic',
-      faculty: 'New Delhi Faculty',
-      organizer: 'New Delhi',
-      description: 'Advanced surgical knot tying, continuous and interrupted suturing techniques and laparoscopic simulation.',
-      fullDescription: 'Intensive surgical skills workshop covering essential knot tying, deep dermal suturing, mattress sutures, instrument handling, and laparoscopic box trainer simulations with expert surgeons.',
-      workshopType: 'Clinical Skills',
-      capacity: 30,
-      duration: '22nd & 23rd',
-      venue: 'New Delhi',
-      date: '2026-09-22 13:00:00',
-      price: 0,
-      certificateAvailable: true,
-      isRegistrationOpen: true,
-      status: 'published',
-      displayOrder: 2,
-    },
-    {
-      title: 'Lumbar Puncture & Sites of Injection',
-      faculty: 'New Delhi Faculty',
-      organizer: 'New Delhi',
-      description: 'Procedural masterclass on lumbar puncture landmarks, aseptic technique and safe systemic injection sites.',
-      fullDescription: 'Master the anatomy, patient positioning, CSF pressure measurement and sterile technique for diagnostic and therapeutic lumbar puncture, alongside intra-articular and parenteral injection sites.',
-      workshopType: 'Clinical Skills',
-      capacity: 30,
-      duration: '22nd & 23rd',
-      venue: 'New Delhi',
-      date: '2026-09-22 15:00:00',
-      price: 0,
-      certificateAvailable: true,
-      isRegistrationOpen: true,
-      status: 'published',
-      displayOrder: 3,
-    },
-  ];
-
-  for (const w of defaultWorkshops) {
-    const [existing] = await pool.query(
-      'SELECT id FROM workshops WHERE title = ? OR title LIKE ? LIMIT 1',
-      [w.title, `%${w.title.split(' ')[0]}%`]
-    );
-
-    // Existing rows are owned by the CMS; never overwrite them on restart/redeploy.
-    if (existing.length > 0) continue;
-
-    await pool.query(
-      `INSERT INTO workshops
-        (title, faculty, organizer, description, full_description, workshop_type, capacity, registered_count, duration, venue, date, price, certificate_available, is_registration_open, featured, status, display_order)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?, 1, 'published', ?)`,
-      [
-        w.title, w.faculty, w.organizer, w.description, w.fullDescription,
-        w.workshopType, w.capacity, w.duration, w.venue, w.date, w.price,
-        w.certificateAvailable, w.isRegistrationOpen, w.displayOrder
-      ]
-    );
-  }
-};
-
 const seedResearch = async () => {
   await pool.query(
     `INSERT INTO email_templates (template_key, subject, body, is_active)
@@ -3512,9 +3436,9 @@ const seedTickets = async () => {
   const [rows] = await pool.query('SELECT COUNT(*) AS count FROM ticket_types');
   if (rows[0].count === 0) {
     const tickets = [
-      ['GAIMS Elites (Early Bird)', 'Early bird registration for GAIMS elites (Valid till Oct 15th).', 1500, 'INR', 700, 700, true, true],
+      ['GAIMS Elites (Early Bird)', 'Early bird registration for GAIMS elites (Valid till Oct 20th).', 1500, 'INR', 700, 700, true, true],
       ['GAIMS Elites (Late)', 'Late registration for GAIMS elites (Valid till mid Nov).', 2500, 'INR', 700, 700, false, true],
-      ['Non-Member (Early Bird)', 'Early bird registration for non-members (Valid till Oct 15th).', 2000, 'INR', 800, 800, true, true],
+      ['Non-Member (Early Bird)', 'Early bird registration for non-members (Valid till Oct 20th).', 2000, 'INR', 800, 800, true, true],
       ['Non-Member (Late)', 'Late registration for non-members (Valid till mid Nov).', 3000, 'INR', 800, 800, false, true],
     ];
 
@@ -4217,7 +4141,6 @@ const initializeDatabase = async () => {
     await seedAuthData();
     await seedCoreArchitectureData();
     await seedSpeakers();
-    await seedWorkshops();
     await seedResearch();
     await seedAwardNominationData();
     await seedTickets();
@@ -4254,7 +4177,6 @@ module.exports = {
   seedCoupons,
   seedSeoPages,
   seedSpeakers,
-  seedWorkshops,
   seedResearch,
   seedAwardNominationData,
   seedTickets,

@@ -72,6 +72,7 @@ import Users from "./pages/Users";
 import AdminSettings from "./pages/AdminSettings";
 import AdminCollaboration from "./pages/AdminCollaboration";
 import CmsControls from "./pages/CmsControls";
+import EarlyBird from "./pages/EarlyBird";
 import TeamManagement from "./pages/TeamManagement";
 import TeamMonitoring from "./pages/TeamMonitoring";
 import VisaApplications from "./pages/VisaApplications";
@@ -242,6 +243,7 @@ const pages = {
   collaboration: AdminCollaboration,
   "hero-collaboration": AdminCollaboration,
   "cms-controls": CmsControls,
+  "early-bird": EarlyBird,
   teams: TeamManagement,
   "team-monitoring": TeamMonitoring,
 };

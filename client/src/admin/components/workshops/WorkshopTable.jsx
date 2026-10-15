@@ -1,6 +1,26 @@
 import { Edit3, ExternalLink, Lock, Send, Star, Trash2 } from "lucide-react";
 
-function WorkshopTable({ workshops, onClose, onDelete, onEdit, onFeature, onPublish }) {
+// Live = shown normally on the website; Coming Soon = listed but no details or applications.
+function EnabledToggle({ workshop, onToggleEnabled }) {
+  const enabled = workshop.isEnabled !== false;
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={enabled}
+      onClick={() => onToggleEnabled(workshop)}
+      title={enabled ? "Live on website. Click to show as Coming Soon" : "Shown as Coming Soon. Click to make live"}
+      style={{ display: "inline-flex", alignItems: "center", gap: "0.45rem", padding: "0.3rem 0.6rem 0.3rem 0.35rem", borderRadius: "999px", border: `1px solid ${enabled ? "#6ee7b7" : "#fcd34d"}`, background: enabled ? "#ecfdf5" : "#fffbeb", color: enabled ? "#065f46" : "#92400e", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+    >
+      <span style={{ position: "relative", width: "28px", height: "16px", borderRadius: "999px", background: enabled ? "#10b981" : "#d1d5db", transition: "background 0.15s" }}>
+        <span style={{ position: "absolute", top: "2px", left: enabled ? "14px" : "2px", width: "12px", height: "12px", borderRadius: "50%", background: "#fff", transition: "left 0.15s" }} />
+      </span>
+      {enabled ? "Live" : "Coming Soon"}
+    </button>
+  );
+}
+
+function WorkshopTable({ workshops, onClose, onDelete, onEdit, onFeature, onPublish, onToggleEnabled }) {
   return (
     <div>
       <div className="admin-mobile-card-list">
@@ -17,6 +37,7 @@ function WorkshopTable({ workshops, onClose, onDelete, onEdit, onFeature, onPubl
               <dl>
                 <div><dt>Type</dt><dd>{workshop.workshopType || "Workshop"}</dd></div>
                 <div><dt>Seats left</dt><dd>{remaining} / {workshop.capacity}</dd></div>
+                <div><dt>Website</dt><dd><EnabledToggle workshop={workshop} onToggleEnabled={onToggleEnabled} /></dd></div>
               </dl>
               <div className="speaker-actions mobile-actions">
                 <a href={`/workshops/${slug}`} target="_blank" rel="noopener noreferrer" title="View Public Page" className="admin-action-btn"><ExternalLink size={16} />View Page</a>
@@ -39,6 +60,7 @@ function WorkshopTable({ workshops, onClose, onDelete, onEdit, onFeature, onPubl
               <th>Type</th>
               <th>Seats</th>
               <th>Status</th>
+              <th>Website</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -56,6 +78,7 @@ function WorkshopTable({ workshops, onClose, onDelete, onEdit, onFeature, onPubl
                   <td>{workshop.workshopType}</td>
                   <td>{remaining} / {workshop.capacity}</td>
                   <td><span className={`status-pill ${workshop.status}`}>{workshop.status}</span></td>
+                  <td><EnabledToggle workshop={workshop} onToggleEnabled={onToggleEnabled} /></td>
                   <td>
                     <div className="speaker-actions">
                       <a href={`/workshops/${slug}`} target="_blank" rel="noopener noreferrer" title="View Public Page" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '6px', border: '1px solid #cbd5e1', color: '#173B8F', textDecoration: 'none' }}><ExternalLink size={15} /></a>

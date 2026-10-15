@@ -245,6 +245,7 @@ const NAV_SECTIONS = [
     title: "ADMINISTRATION",
     items: [
       { id: "users", label: "Users", icon: Users, permissions: ["users.manage", "manage_users", "manage_system", "manage_roles"] },
+      { id: "early-bird", label: "Early Bird", icon: CalendarClock, superAdminOnly: true, aliases: ["registration deadline", "pricing"] },
       { id: "system-audit-logs", label: "Audit Logs", icon: ShieldCheck, permissions: ["view_audit_logs", "manage_system"] },
       { id: "visa-applications", label: "Visa Applications", icon: PlaneTakeoff, permissions: ["manage_system", "visa.manage"] },
       { id: "api-monitoring", label: "API Monitoring", icon: Activity, permissions: ["view_system_reports", "manage_system", "api.monitor"] },
@@ -368,6 +369,7 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
         }
 
         const allowedItems = section.items.filter((item) => {
+          if (item.superAdminOnly) return userRole === "SUPER_ADMIN";
           if (item.id === "reviews" && isChairperson) return false;
           if (item.id === "scientific-team-lead" && !isTeamLead && !isSuperAdmin) return false;
           if (item.id === "scientific" && isTeamLead && !isSuperAdmin && !isChairperson) return false;

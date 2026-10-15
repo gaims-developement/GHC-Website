@@ -37,6 +37,8 @@ const normalize = (workshop) => workshop && ({
   availableSeats: Math.max(0, Number(workshop.capacity || 0) - Number(workshop.registered_count || 0)),
   certificateAvailable: workshop.certificate_available !== undefined ? Boolean(workshop.certificate_available) : true,
   isRegistrationOpen: workshop.is_registration_open !== undefined ? Boolean(workshop.is_registration_open) : true,
+  // Disabled workshops stay listed on the website but show "Coming Soon" and take no applications.
+  isEnabled: workshop.is_enabled !== undefined && workshop.is_enabled !== null ? Boolean(workshop.is_enabled) : true,
   startTime: workshop.start_time || null,
   endTime: workshop.end_time || null,
   registrationDeadline: workshop.registration_deadline || null,
@@ -173,6 +175,11 @@ const close = async (id) => {
   return findById(id);
 };
 
+const setEnabled = async (id, enabled) => {
+  await pool.query('UPDATE workshops SET is_enabled = ? WHERE id = ?', [Boolean(enabled), id]);
+  return findById(id);
+};
+
 const reorder = async (items) => {
   const connection = await pool.getConnection();
   try {
@@ -238,4 +245,4 @@ const createRegistration = async ({ workshopId, registrationId = null, paymentId
   return result.insertId;
 };
 
-module.exports = { close, create, createRegistration, findById, findBySlug, incrementRegistered, list, publish, remove, reorder, stats, update };
+module.exports = { close, create, createRegistration, findById, findBySlug, incrementRegistered, list, publish, remove, reorder, setEnabled, stats, update };

@@ -310,7 +310,8 @@ export default function WorkshopRegister() {
     }
   };
 
-  const isClosed = workshop && (workshop.status === "closed" || workshop.isRegistrationOpen === false);
+  const isComingSoon = Boolean(workshop) && workshop.isEnabled === false;
+  const isClosed = workshop && (isComingSoon || workshop.status === "closed" || workshop.isRegistrationOpen === false);
   const remainingSeats = workshop ? Math.max(0, Number(workshop.capacity || 0) - Number(workshop.registeredCount || 0)) : 0;
   const isFull = workshop && Number(workshop.capacity || 0) > 0 && remainingSeats === 0;
 
@@ -371,8 +372,8 @@ export default function WorkshopRegister() {
               Certificates Provided
             </span>
             {isClosed ? (
-              <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200">
-                Applications Closed
+              <span className={`px-3 py-1 rounded-full text-xs font-bold border ${isComingSoon ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-rose-100 text-rose-800 border-rose-200"}`}>
+                {isComingSoon ? "Coming Soon" : "Applications Closed"}
               </span>
             ) : isFull ? (
               <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200">
@@ -755,7 +756,7 @@ export default function WorkshopRegister() {
           <div className="pt-4 border-t border-slate-100">
             {isClosed ? (
               <div className="w-full py-4 px-6 rounded-2xl bg-slate-200 text-slate-500 font-bold text-center text-sm cursor-not-allowed">
-                Applications Closed for this Workshop
+                {isComingSoon ? "This workshop is coming soon. Applications are not open yet." : "Applications Closed for this Workshop"}
               </div>
             ) : isFull ? (
               <div className="w-full py-4 px-6 rounded-2xl bg-slate-200 text-slate-500 font-bold text-center text-sm cursor-not-allowed">

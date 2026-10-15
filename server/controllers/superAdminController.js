@@ -7,6 +7,7 @@ const Trailer = require('../models/trailerModel');
 const User = require('../models/userModel');
 const asyncHandler = require('../utils/asyncHandler');
 const { getJwtSecret } = require('../config/jwt');
+const { getEarlyBird, saveEarlyBird, DEFAULT_EARLY_BIRD_DEADLINE } = require('../utils/earlyBird');
 
 const number = (value) => Number(value || 0);
 const allowedSorts = {
@@ -535,7 +536,7 @@ const activity = asyncHandler(async (req, res) => {
 
 const getCmsControls = asyncHandler(async (_req, res) => {
   const settings = await Settings.get();
-  const [[cmsControls]] = await pool.query('SELECT setting_value, updated_at FROM app_settings WHERE setting_key = "cms_controls" LIMIT 1');
+  const [[cmsControls]] = await pool.query('SELECT setting_value, updated_at FROM app_settings WHERE setting_key = ? LIMIT 1', ['cms_controls']);
 
   const parsed = parseJson(cmsControls?.setting_value, {
     homepage: {},
@@ -550,6 +551,9 @@ const getCmsControls = asyncHandler(async (_req, res) => {
 
   if (parsed.earlyBirdManualOff === undefined) {
     parsed.earlyBirdManualOff = false;
+  }
+  if (!parsed.earlyBirdDeadline) {
+    parsed.earlyBirdDeadline = DEFAULT_EARLY_BIRD_DEADLINE;
   }
 
   if (!parsed.hero) parsed.hero = {};
@@ -567,6 +571,23 @@ const getCmsControls = asyncHandler(async (_req, res) => {
     settings: settings.settings,
     updatedAt: cmsControls?.updated_at || settings.updatedAt,
   });
+});
+
+const getEarlyBirdSettings = asyncHandler(async (_req, res) => {
+  res.json({ earlyBird: await getEarlyBird() });
+});
+
+const updateEarlyBirdSettings = asyncHandler(async (req, res) => {
+  const { deadline, manualOff } = req.body || {};
+  if (deadline !== undefined && (typeof deadline !== 'string' || Number.isNaN(Date.parse(deadline)))) {
+    return res.status(400).json({ message: 'Please choose a valid early bird end date and time.' });
+  }
+  if (manualOff !== undefined && typeof manualOff !== 'boolean') {
+    return res.status(400).json({ message: 'manualOff must be true or false' });
+  }
+  const earlyBird = await saveEarlyBird({ deadline, manualOff });
+  await ActivityLog.logActivity({ userId: req.user.id, action: 'updated_early_bird', module: 'settings', recordId: 'early_bird', metadata: earlyBird });
+  res.json({ earlyBird });
 });
 
 const updateCmsControls = asyncHandler(async (req, res) => {
@@ -644,6 +665,8 @@ module.exports = {
   updateTeamMember,
   updateModule,
   updateRolePermissions,
+  getEarlyBirdSettings,
+  updateEarlyBirdSettings,
   updateTeam,
   visibleModules,
 };

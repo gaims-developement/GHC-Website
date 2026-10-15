@@ -19,6 +19,8 @@ const {
   resetTeamMemberPassword,
   transferTeamMember,
   updateCmsControls,
+  getEarlyBirdSettings,
+  updateEarlyBirdSettings,
   updateTeamMember,
   updateModule,
   updateRolePermissions,
@@ -53,5 +55,7 @@ router.delete('/super-admin/modules/:moduleId', requireAuth, requirePermission('
 router.post('/super-admin/impersonate/:userId', requireAuth, requirePermission('impersonation.manage'), impersonate);
 router.get('/super-admin/cms-controls', requireAuth, requirePermission('cms.manage'), getCmsControls);
 router.put('/super-admin/cms-controls', requireAuth, requirePermission('cms.manage'), updateCmsControls);
+router.get('/super-admin/early-bird', requireAuth, superAdminOnly, getEarlyBirdSettings);
+router.put('/super-admin/early-bird', requireAuth, superAdminOnly, updateEarlyBirdSettings);
 
 module.exports = router;

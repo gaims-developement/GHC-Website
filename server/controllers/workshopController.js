@@ -135,6 +135,15 @@ const closeWorkshop = asyncHandler(async (req, res) => {
   return res.json({ workshop });
 });
 
+const setWorkshopEnabled = asyncHandler(async (req, res) => {
+  if (typeof req.body?.enabled !== 'boolean') {
+    return res.status(400).json({ message: 'enabled must be true or false' });
+  }
+  const workshop = await Workshop.setEnabled(req.params.id, req.body.enabled);
+  if (!workshop) return res.status(404).json({ message: 'Workshop not found' });
+  return res.json({ workshop });
+});
+
 const reorderWorkshops = asyncHandler(async (req, res) => {
   if (!Array.isArray(req.body.items)) {
     return res.status(400).json({ message: 'items array is required' });
@@ -188,6 +197,7 @@ module.exports = {
   listWorkshops,
   publishWorkshop,
   reorderWorkshops,
+  setWorkshopEnabled,
   updateWorkshop,
   workshopStats,
 };

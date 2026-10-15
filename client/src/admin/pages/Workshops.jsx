@@ -110,6 +110,11 @@ function Workshops({ api }) {
     loadWorkshops();
   };
 
+  const toggleEnabled = async (workshop) => {
+    await api.patch(`/api/workshops/${workshop.id}/enabled`, { enabled: workshop.isEnabled === false });
+    loadWorkshops();
+  };
+
   const toggleFeature = async (workshop) => {
     await api.put(`/api/workshops/${workshop.id}`, { ...workshop, featured: !workshop.featured });
     loadWorkshops();
@@ -161,6 +166,7 @@ function Workshops({ api }) {
           onEdit={openForm}
           onFeature={toggleFeature}
           onPublish={publishWorkshop}
+          onToggleEnabled={toggleEnabled}
         />
       </section>
 
