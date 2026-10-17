@@ -3073,7 +3073,7 @@ const seedCoupons = async () => {
 
 const seedSeoPages = async () => {
   const seoPages = [
-    ['home', 'Global Healthcare Conclave 2026', 'Global Healthcare Conclave 2026 (GHC 2026) by GAIMS in New Delhi — healthcare leadership, research, hands-on workshops, world-class speakers and delegate registration. November 2026.', 'Global Healthcare Conclave 2026, GHC 2026, GAIMS conference, healthcare conference New Delhi, medical conference India, research abstracts, healthcare workshops', 'https://ghc.gaims.org/assets/logos/ghclogo.jpeg', 'https://ghc.gaims.org/', null],
+    ['home', 'Global Healthcare Conclave 2026', 'Global Healthcare Conclave 2026 (GHC 2026) by GAIMS in New Delhi — healthcare leadership, research, hands-on workshops, world-class speakers and delegate registration. 28–29 November 2026.', 'Global Healthcare Conclave 2026, GHC 2026, GAIMS conference, healthcare conference New Delhi, medical conference India, research abstracts, healthcare workshops', 'https://ghc.gaims.org/assets/logos/ghclogo.jpeg', 'https://ghc.gaims.org/', null],
     ['register', 'Register — Global Healthcare Conclave 2026', 'Register and pay securely for the Global Healthcare Conclave 2026. Delegate passes, research track and workshops with online ticket checkout.', 'GHC 2026 registration, Global Healthcare Conclave register, delegate pass, conference ticket, healthcare conclave New Delhi', null, 'https://ghc.gaims.org/register', null],
     ['abstract-registration', 'Submit an Abstract — Global Healthcare Conclave 2026', 'Submit a research abstract for presentation at the Global Healthcare Conclave 2026 and join the GHC research ecosystem.', 'abstract submission, research abstract, GHC 2026 research, poster presentation, healthcare research conference', null, 'https://ghc.gaims.org/abstract-registration', null],
     ['abstract-revision', 'Revise Abstract — Global Healthcare Conclave 2026', 'Review and update your submitted abstract for the Global Healthcare Conclave 2026 research program.', 'abstract revision, GHC 2026 abstract, research update, poster revision', null, 'https://ghc.gaims.org/abstract-revision', null],
@@ -3347,7 +3347,7 @@ const seedResearch = async () => {
         <p class="text">To confirm your participation, please complete the required confirmation process using the secure link below:</p>
         <div class="button-wrapper"><a href="{{participationLink}}" class="button primary-button" target="_blank">Confirm Your Participation</a></div>
         <p class="text">This confirmation helps the Scientific Committee coordinate:</p>
-        <ul class="list"><li>Conference participation</li><li>Scientific poster presentation planning</li><li>Presenter communication and schedule updates</li><li>Food and accommodation coordination, where applicable</li></ul>
+        <ul class="list"><li>Conference participation</li><li>Scientific poster presentation planning</li><li>Presenter communication and schedule updates</li></ul><div style="background-color:#fff7ed; border-left:4px solid #ea580c; padding:16px 18px; margin:20px 0; border-radius:6px; font-size:14px; line-height:1.7; color:#7c2d12 !important; -webkit-text-fill-color:#7c2d12;"><strong>Please note:</strong> <strong>No accommodation will be arranged by the organisers</strong>; please make your own stay arrangements.</div>
         <div class="note"><strong>Important:</strong> The Medical Student Hands-On Workshop is not included in the abstract presentation registration.<br><br>Workshop access is free for eligible GAIMS Elite Members. If you are not an Elite Member, you may need to purchase a GAIMS Elite Membership to access the workshop.</div>
         <h3 class="step-title">2. Join the GHC Abstract WhatsApp Group</h3>
         <p class="text">Please join the official GHC Abstract WhatsApp Group to receive important updates regarding abstract presentations, poster presentation instructions, scientific committee announcements, schedules, deadlines, and other abstract-related updates.</p>
@@ -3515,8 +3515,8 @@ const createVisaTables = async () => {
     CREATE TABLE IF NOT EXISTS visa_letter_settings (
       id INT PRIMARY KEY AUTO_INCREMENT,
       event_name VARCHAR(255) DEFAULT 'Global Health Conclave (GHC)',
-      event_dates VARCHAR(255) DEFAULT '22nd–24th November 2026',
-      venue VARCHAR(255) DEFAULT 'New Delhi, India',
+      event_dates VARCHAR(255) DEFAULT '28th–29th November 2026',
+      venue VARCHAR(255) DEFAULT 'Bharat Mandapam, New Delhi',
       organizer_name VARCHAR(255) DEFAULT 'GAIMS',
       collaboration_org VARCHAR(255) DEFAULT 'AIIMS Student Association',
       general_email VARCHAR(255) DEFAULT 'sec@gaims.org',
@@ -3573,6 +3573,49 @@ const createNewsletterTables = async () => {
 
 const newCheckinToken = () => `GHCDEL-${crypto.randomBytes(18).toString('base64url')}`;
 
+// Invites: people imported from a spreadsheet in the CMS and emailed the conclave invitation.
+const createInviteTables = async () => {
+  // email_key is the lower-cased email; its UNIQUE index stops the same address being imported (and emailed) twice.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS invites (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      full_name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      email_key VARCHAR(255) NOT NULL,
+      import_batch VARCHAR(40) NULL,
+      sent_at DATETIME NULL,
+      send_count INT NOT NULL DEFAULT 0,
+      last_attempt_at DATETIME NULL,
+      last_error TEXT NULL,
+      created_by INT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_invites_email_key (email_key)
+    )
+  `);
+
+  // Both invitation templates are inserted once; afterwards they are owned by the CMS (Email Templates) and
+  // only replaced when a newer version of the shipped HTML file is deployed (detected by its version marker).
+  const seedTemplate = async (templateKey, fileName, subject) => {
+    const body = fs.readFileSync(path.join(__dirname, '..', 'assets', 'email', fileName), 'utf8');
+    await pool.query(
+      `INSERT INTO email_templates (template_key, subject, body, is_active)
+       VALUES (?, ?, ?, 1)
+       ON DUPLICATE KEY UPDATE template_key = template_key`,
+      [templateKey, subject, body]
+    );
+    const versionMarker = (body.match(/<!-- (ghc-[a-z-]+-v\d+) -->/) || [])[1];
+    if (versionMarker) {
+      await pool.query(
+        'UPDATE email_templates SET subject = ?, body = ? WHERE template_key = ? AND body NOT LIKE ?',
+        [subject, body, templateKey, `%${versionMarker}%`]
+      );
+    }
+  };
+  await seedTemplate('conclave_invitation', 'conclave-invitation.html', 'You are cordially invited to the GAIMS Global Healthcare Conclave 2026');
+  await seedTemplate('delegate_whatsapp_invite', 'delegate-whatsapp-invite.html', "You're invited: join the GHC 2026 Delegate WhatsApp Group");
+};
+
 const createDelegateTables = async () => {
   // name_key is the normalized name; its UNIQUE index guarantees a name is never imported twice.
   await pool.query(`
@@ -3601,6 +3644,11 @@ const createDelegateTables = async () => {
   await addColumnIfMissing('delegates', 'confirmation_send_count', 'INT NOT NULL DEFAULT 0');
   await addColumnIfMissing('delegates', 'confirmation_last_attempt_at', 'DATETIME NULL');
   await addColumnIfMissing('delegates', 'confirmation_last_error', 'TEXT NULL');
+  // Delegate WhatsApp group invitation (sent from the "WhatsApp Group" tab).
+  await addColumnIfMissing('delegates', 'whatsapp_invite_sent_at', 'DATETIME NULL');
+  await addColumnIfMissing('delegates', 'whatsapp_invite_send_count', 'INT NOT NULL DEFAULT 0');
+  await addColumnIfMissing('delegates', 'whatsapp_invite_last_attempt_at', 'DATETIME NULL');
+  await addColumnIfMissing('delegates', 'whatsapp_invite_last_error', 'TEXT NULL');
 
   await addColumnIfMissing('delegates', 'checkin_token', 'VARCHAR(64) NULL');
   await addIndexIfMissing('delegates', 'uq_delegates_checkin_token', 'UNIQUE KEY uq_delegates_checkin_token (checkin_token)');
@@ -4138,6 +4186,7 @@ const initializeDatabase = async () => {
     await createCommitteeTables();
     await createNewsletterTables();
     await createDelegateTables();
+    await createInviteTables();
     await seedAuthData();
     await seedCoreArchitectureData();
     await seedSpeakers();

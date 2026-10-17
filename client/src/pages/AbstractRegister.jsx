@@ -135,7 +135,7 @@ const submissionGuidelinesData = [
     points: [
       "File format: Word document only (.doc or .docx). PDF files are not accepted. (Maximum file size: 10 MB).",
       "Font: Times New Roman, Font size: 12.",
-      "Word count: 350–400 words (Tables, legends, and references are excluded from the abstract word count).",
+      "Word count: 400 words max, excluding author names and title (Tables, legends, and references are also excluded from the abstract word count).",
       "Abstracts may include relevant tables and references.",
       "All information and data entered in the submission must be accurate and verified."
     ]
@@ -730,7 +730,7 @@ export default function AbstractRegister() {
 
                   <ul className="list-disc list-inside space-y-1.5 text-xs text-[#344054] leading-relaxed">
                     <li>The file must be in <strong>DOCX format</strong> and not more than <strong>10 MB</strong> in size (Font: <strong>Times New Roman, Size: 12</strong>).</li>
-                    <li>Word Limit: <strong>350–400 words</strong> (Tables, legends, and references are excluded from count).</li>
+                    <li>Word Limit: <strong>400 words max</strong>, excluding author names and title (Tables, legends, and references are also excluded from count).</li>
                     <li>Screening Thresholds: Plagiarism <strong>less than 20%</strong>; AI-detection score <strong>less than 30%</strong> (compliant with JAMA guidelines).</li>
                     <li><strong>Multiple Submissions:</strong> Permitted <em>only sequentially</em> if the first abstract has been rejected.</li>
                     <li><strong>Presenting Author Restriction:</strong> An individual may serve as presenting author for <strong>only one accepted poster</strong>.</li>
@@ -1329,7 +1329,7 @@ export default function AbstractRegister() {
                         ) : (
                           <>
                             <h4 className="font-bold text-[#101828] mb-1 text-sm">Choose your Abstract document</h4>
-                            <p className="text-[#475467] text-xs">Word document only (.doc/.docx) · Times New Roman 12 pt, 350–400 words, Max 10MB</p>
+                            <p className="text-[#475467] text-xs">Word document only (.doc/.docx) · Times New Roman 12 pt, 400 words max (excluding author names and title), Max 10MB</p>
                             <p className="mt-1 text-xs font-bold text-rose-600">PDF is not accepted</p>
                           </>
                         )}

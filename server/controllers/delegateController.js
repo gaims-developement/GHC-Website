@@ -3,6 +3,7 @@ const { pool } = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendTemplateEmail } = require('../services/mailService');
 const { buildConfirmationEmail } = require('../services/delegateEmailService');
+const { getDelegateWhatsappGroupUrl } = require('../config/links');
 
 const MAX_ROWS_PER_IMPORT = 2000;
 
@@ -31,6 +32,10 @@ const toDelegate = (row) => ({
   confirmationSendCount: Number(row.confirmation_send_count || 0),
   confirmationLastAttemptAt: row.confirmation_last_attempt_at || null,
   confirmationLastError: row.confirmation_last_error || null,
+  whatsappInviteSentAt: row.whatsapp_invite_sent_at || null,
+  whatsappInviteSendCount: Number(row.whatsapp_invite_send_count || 0),
+  whatsappInviteLastAttemptAt: row.whatsapp_invite_last_attempt_at || null,
+  whatsappInviteLastError: row.whatsapp_invite_last_error || null,
   createdAt: row.created_at,
 });
 
@@ -164,6 +169,44 @@ const sendConfirmation = asyncHandler(async (req, res) => {
   res.json({ delegate: toDelegate(updated), recipient: row.email });
 });
 
+// Names come from an imported CSV and are placed into HTML email.
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// Delegate WhatsApp group invitation, sent from the "WhatsApp Group" tab to delegates who haven't had the link yet.
+const sendWhatsappInvite = asyncHandler(async (req, res) => {
+  const [[row]] = await pool.query('SELECT * FROM delegates WHERE id = ?', [req.params.id]);
+  if (!row) return res.status(404).json({ message: 'Delegate not found' });
+  // Bulk send passes onlyIfNotSent so a delegate emailed meanwhile (e.g. by another admin) is skipped.
+  if (req.body?.onlyIfNotSent && row.whatsapp_invite_sent_at) {
+    return res.status(409).json({ skipped: true, message: `${row.full_name} has already been sent the WhatsApp group link.`, delegate: toDelegate(row) });
+  }
+  if (!row.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
+    return res.status(400).json({ message: `${row.full_name} does not have a valid email address.` });
+  }
+
+  const now = new Date();
+  try {
+    await sendTemplateEmail('delegate_whatsapp_invite', row.email, {
+      name: escapeHtml(row.full_name),
+      whatsappLink: escapeHtml(getDelegateWhatsappGroupUrl()),
+    });
+  } catch (error) {
+    await pool.query(
+      'UPDATE delegates SET whatsapp_invite_last_attempt_at = ?, whatsapp_invite_last_error = ? WHERE id = ?',
+      [now, String(error.message || error).slice(0, 1000), row.id]
+    );
+    const [[failed]] = await pool.query('SELECT * FROM delegates WHERE id = ?', [row.id]);
+    return res.status(502).json({ message: `Email to ${row.email} could not be sent: ${error.message}`, delegate: toDelegate(failed) });
+  }
+
+  await pool.query(
+    'UPDATE delegates SET whatsapp_invite_sent_at = ?, whatsapp_invite_last_attempt_at = ?, whatsapp_invite_last_error = NULL, whatsapp_invite_send_count = whatsapp_invite_send_count + 1 WHERE id = ?',
+    [now, now, row.id]
+  );
+  const [[updated]] = await pool.query('SELECT * FROM delegates WHERE id = ?', [row.id]);
+  res.json({ delegate: toDelegate(updated) });
+});
+
 // QR scanner check-in: the scanned code must be a delegate's private check-in token.
 const checkIn = asyncHandler(async (req, res) => {
   const code = String(req.body?.code || '').trim();
@@ -203,4 +246,4 @@ const sponsorScan = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { checkIn, importDelegates, listDelegates, sendConfirmation, setAttendance, sponsorScan };
+module.exports = { checkIn, importDelegates, listDelegates, sendConfirmation, sendWhatsappInvite, setAttendance, sponsorScan };

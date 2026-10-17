@@ -450,4 +450,4 @@ const buildConfirmationEmail = async (delegate) => {
   return { attachments, variables };
 };
 
-module.exports = { buildConfirmationEmail, renderDetailsBand, getStaticBands, EVENT };
+module.exports = { buildConfirmationEmail, renderDetailsBand, getStaticBands, EVENT, erase };

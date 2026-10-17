@@ -99,8 +99,7 @@ const abstractAcceptedTemplate = `<!DOCTYPE html>
                 <li style="font-size:15px; line-height:1.8; color:#4b5563 !important; -webkit-text-fill-color:#4b5563;">Conference participation</li>
                 <li style="font-size:15px; line-height:1.8; color:#4b5563 !important; -webkit-text-fill-color:#4b5563;">Scientific poster presentation planning</li>
                 <li style="font-size:15px; line-height:1.8; color:#4b5563 !important; -webkit-text-fill-color:#4b5563;">Presenter communication and schedule updates</li>
-                <li style="font-size:15px; line-height:1.8; color:#4b5563 !important; -webkit-text-fill-color:#4b5563;">Food and accommodation coordination, where applicable</li>
-              </ul>
+                </ul><div style="background-color:#fff7ed; border-left:4px solid #ea580c; padding:16px 18px; margin:20px 0; border-radius:6px; font-size:14px; line-height:1.7; color:#7c2d12 !important; -webkit-text-fill-color:#7c2d12;"><strong>Please note:</strong> <strong>No accommodation will be arranged by the organisers</strong>; please make your own stay arrangements.</div>
               <div style="background-color:#f9fafb; border-left:4px solid #2563eb; padding:16px 18px; margin:20px 0; border-radius:6px; font-size:14px; line-height:1.7; color:#4b5563 !important; -webkit-text-fill-color:#4b5563;">
                 <strong>Important:</strong> The Medical Student Hands-On Workshop is not included in the abstract presentation registration.
                 <br><br>

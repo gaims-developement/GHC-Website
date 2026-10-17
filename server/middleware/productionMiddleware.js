@@ -14,7 +14,10 @@ const apiLimiter = rateLimit({
     // Sponsor booths all scan from the venue network.
     (req.method === 'POST' && req.path === '/delegates/sponsor-scan') ||
     // Bulk confirmation emails are sent one request per delegate.
-    (req.method === 'POST' && /^\/delegates\/\d+\/send-confirmation$/.test(req.path)),
+    (req.method === 'POST' && /^\/delegates\/\d+\/send-confirmation$/.test(req.path)) ||
+    // Bulk WhatsApp group invitations are also sent one request per person.
+    (req.method === 'POST' && /^\/invites\/\d+\/send$/.test(req.path)) ||
+    (req.method === 'POST' && /^\/delegates\/\d+\/send-whatsapp-invite$/.test(req.path)),
 });
 
 const authLimiter = rateLimit({

@@ -72,7 +72,7 @@ export default function Venue() {
           <div className="absolute inset-0 bg-gradient-to-t from-[#081B33]/80 via-transparent to-transparent"></div>
           <div className="absolute bottom-6 left-6 text-white">
             <h3 className="font-['Outfit'] text-2xl font-extrabold">New Delhi, India</h3>
-            <p className="text-white/80">November 2026</p>
+            <p className="text-white/80">28–29 November 2026</p>
           </div>
         </div>
       </section>
@@ -86,14 +86,14 @@ export default function Venue() {
         <div className="max-w-4xl mx-auto">
           <motion.article className="bg-white rounded-3xl border border-gray-100 shadow-[0_8px_30px_rgba(16,24,40,0.06)] overflow-hidden" whileHover={{ y: -6 }}>
             <div className="h-64 sm:h-80 overflow-hidden relative">
-              <img src="https://images.unsplash.com/photo-1587474260584-136574528ed5?q=80&w=2070&auto=format&fit=crop" alt="New Delhi" className="w-full h-full object-cover" />
-              <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-4 py-1.5 rounded-full text-xs font-bold text-[#081B33] uppercase tracking-wide shadow-sm">Official Host City</div>
+              <img src="/assets/places/Bharat%20Mandapam.jpg" alt="Bharat Mandapam, New Delhi, the venue of Global Healthcare Conclave 2026" className="w-full h-full object-cover" />
+              <div className="absolute top-4 right-4 bg-white/90 backdrop-blur px-4 py-1.5 rounded-full text-xs font-bold text-[#081B33] uppercase tracking-wide shadow-sm">Official Venue</div>
             </div>
             <div className="p-8 sm:p-10">
-              <h3 className="text-2xl sm:text-3xl font-extrabold font-['Outfit'] text-[#101828] mb-3">New Delhi</h3>
-              <p className="text-[#475467] mb-6 text-base leading-relaxed">Join us at the heart of India's capital for GHC 2026. The city of New Delhi sets the benchmark for medical excellence and healthcare innovation, hosting the core academic sessions, workshops, and research showcases for the conclave.</p>
+              <h3 className="text-2xl sm:text-3xl font-extrabold font-['Outfit'] text-[#101828] mb-3">Bharat Mandapam</h3>
+              <p className="text-[#475467] mb-6 text-base leading-relaxed">Join us at Bharat Mandapam, in the heart of India's capital, for GHC 2026. The venue hosts the core academic sessions, workshops, and research showcases for the conclave on 28–29 November 2026.</p>
               <div className="flex flex-wrap gap-4 text-sm text-[#0D47A1] font-semibold">
-                <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 text-[#4FC3F7]" /> New Delhi, India</span>
+                <a href="https://maps.google.com/?q=Bharat+Mandapam,+New+Delhi" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:underline"><MapPin className="h-4 w-4 text-[#4FC3F7]" /> Bharat Mandapam, New Delhi</a>
               </div>
             </div>
           </motion.article>

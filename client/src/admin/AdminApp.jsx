@@ -80,6 +80,8 @@ import VisaApplicationDetails from "./pages/VisaApplicationDetails";
 import VisaSettings from "./pages/VisaSettings";
 import Delegates from "./pages/Delegates";
 import DelegateAttendance from "./pages/DelegateAttendance";
+import Invites from "./pages/Invites";
+import DelegateWhatsapp from "./pages/DelegateWhatsapp";
 import "./admin.css";
 
 const api = axios.create({
@@ -152,6 +154,8 @@ const pages = {
   registrations: Registrations,
   delegates: Delegates,
   "delegate-attendance": DelegateAttendance,
+  invites: Invites,
+  "delegate-whatsapp": DelegateWhatsapp,
   tickets: AdminTickets,
   payments: Payments,
   badges: Badges,

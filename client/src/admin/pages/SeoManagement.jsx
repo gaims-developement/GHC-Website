@@ -92,8 +92,8 @@ const baseEventSchema = (route) => ({
   "@type": "Event",
   "@id": `${SITE_URL}${route.length > 1 ? route.replace(/\/+$/, "") : "/"}#event`,
   name: "Global Healthcare Conclave 2026",
-  startDate: "2026-11-22",
-  endDate: "2026-11-24",
+  startDate: "2026-11-28",
+  endDate: "2026-11-29",
   eventStatus: "https://schema.org/EventScheduled",
   eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
   location: {

@@ -25,12 +25,12 @@ const formatTimeRange = (startTime, endTime) => {
 
 const getDayAndDate = (startTime) => {
   if (!startTime) {
-    return { day: 'Day 1', date: 'November 22, 2026' };
+    return { day: 'Day 1', date: 'November 28, 2026' };
   }
   try {
     const d = new Date(startTime);
     if (isNaN(d.getTime())) {
-      return { day: 'Day 1', date: 'November 22, 2026' };
+      return { day: 'Day 1', date: 'November 28, 2026' };
     }
     const year = d.getUTCFullYear();
     const month = String(d.getUTCMonth() + 1).padStart(2, '0');
@@ -42,14 +42,11 @@ const getDayAndDate = (startTime) => {
     const localDayNum = String(d.getDate()).padStart(2, '0');
     const localYmd = `${localYear}-${localMonth}-${localDayNum}`;
 
-    if (ymd === '2026-11-22' || localYmd === '2026-11-22') {
-      return { day: 'Day 1', date: 'November 22, 2026' };
+    if (ymd === '2026-11-28' || localYmd === '2026-11-28') {
+      return { day: 'Day 1', date: 'November 28, 2026' };
     }
-    if (ymd === '2026-11-23' || localYmd === '2026-11-23') {
-      return { day: 'Day 2', date: 'November 23, 2026' };
-    }
-    if (ymd === '2026-11-24' || localYmd === '2026-11-24') {
-      return { day: 'Day 3', date: 'November 24, 2026' };
+    if (ymd === '2026-11-29' || localYmd === '2026-11-29') {
+      return { day: 'Day 2', date: 'November 29, 2026' };
     }
 
     const formattedDate = d.toLocaleDateString('en-US', {
@@ -60,7 +57,7 @@ const getDayAndDate = (startTime) => {
 
     return { day: 'Day 1', date: formattedDate };
   } catch {
-    return { day: 'Day 1', date: 'November 22, 2026' };
+    return { day: 'Day 1', date: 'November 28, 2026' };
   }
 };
 
@@ -148,7 +145,7 @@ const list = async () => {
     _id: String(row.id),
     id: row.id,
     day: row.day || 'Day 1',
-    date: row.date || 'November 22, 2026',
+    date: row.date || 'November 28, 2026',
     time: row.time || 'Time to be announced',
     title: row.title || 'Untitled Session',
     description: row.description || '',

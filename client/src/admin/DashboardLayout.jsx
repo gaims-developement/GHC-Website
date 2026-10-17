@@ -1,4 +1,5 @@
 import {
+  MessageCircle,
   ScanLine,
   Activity,
   Bell,
@@ -182,6 +183,8 @@ const NAV_SECTIONS = [
       // "delegates.manage" is granted to no role: only Super Admin / Admin (who see every item) get these.
       { id: "delegates", label: "Delegate List", icon: ClipboardList, permissions: ["delegates.manage"], aliases: ["csv import", "registration id"] },
       { id: "delegate-attendance", label: "Attendance", icon: UserCheck, permissions: ["delegates.manage"], aliases: ["present", "check in"] },
+      { id: "invites", label: "Invites", icon: Mail, permissions: ["delegates.manage"], aliases: ["invitation", "email invite"] },
+      { id: "delegate-whatsapp", label: "WhatsApp Group", icon: MessageCircle, permissions: ["delegates.manage"], aliases: ["whatsapp", "group link"] },
     ],
   },
   {

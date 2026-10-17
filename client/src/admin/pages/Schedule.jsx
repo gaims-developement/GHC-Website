@@ -320,20 +320,15 @@ function Schedule({ api }) {
                   <small style={{ display: "block", color: "#64748b", marginBottom: "6px", fontWeight: "600" }}>Quick Conference Day Presets:</small>
                   <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                     <button type="button" className="admin-secondary-button" style={{ fontSize: "11px", padding: "4px 8px" }} onClick={() => {
-                      const startTime = sessionModal.start_time ? `2026-11-22T${String(sessionModal.start_time).slice(11, 16) || '09:00'}` : "2026-11-22T09:00";
-                      const endTime = sessionModal.end_time ? `2026-11-22T${String(sessionModal.end_time).slice(11, 16) || '10:30'}` : "2026-11-22T10:30";
+                      const startTime = sessionModal.start_time ? `2026-11-28T${String(sessionModal.start_time).slice(11, 16) || '09:00'}` : "2026-11-28T09:00";
+                      const endTime = sessionModal.end_time ? `2026-11-28T${String(sessionModal.end_time).slice(11, 16) || '10:30'}` : "2026-11-28T10:30";
                       setSessionModal(prev => ({ ...prev, start_time: startTime, end_time: endTime }));
-                    }}>Day 1 (Nov 22)</button>
+                    }}>Day 1 (Nov 28)</button>
                     <button type="button" className="admin-secondary-button" style={{ fontSize: "11px", padding: "4px 8px" }} onClick={() => {
-                      const startTime = sessionModal.start_time ? `2026-11-23T${String(sessionModal.start_time).slice(11, 16) || '09:00'}` : "2026-11-23T09:00";
-                      const endTime = sessionModal.end_time ? `2026-11-23T${String(sessionModal.end_time).slice(11, 16) || '10:30'}` : "2026-11-23T10:30";
+                      const startTime = sessionModal.start_time ? `2026-11-29T${String(sessionModal.start_time).slice(11, 16) || '09:00'}` : "2026-11-29T09:00";
+                      const endTime = sessionModal.end_time ? `2026-11-29T${String(sessionModal.end_time).slice(11, 16) || '10:30'}` : "2026-11-29T10:30";
                       setSessionModal(prev => ({ ...prev, start_time: startTime, end_time: endTime }));
-                    }}>Day 2 (Nov 23)</button>
-                    <button type="button" className="admin-secondary-button" style={{ fontSize: "11px", padding: "4px 8px" }} onClick={() => {
-                      const startTime = sessionModal.start_time ? `2026-11-24T${String(sessionModal.start_time).slice(11, 16) || '09:00'}` : "2026-11-24T09:00";
-                      const endTime = sessionModal.end_time ? `2026-11-24T${String(sessionModal.end_time).slice(11, 16) || '10:30'}` : "2026-11-24T10:30";
-                      setSessionModal(prev => ({ ...prev, start_time: startTime, end_time: endTime }));
-                    }}>Day 3 (Nov 24)</button>
+                    }}>Day 2 (Nov 29)</button>
                   </div>
                 </div>
 

@@ -12,8 +12,8 @@ const resolveImageUrl = (img) => {
 };
 
 const days = [
-  { id: 'Day 1', label: 'Day 1', date: 'November 2026' },
-  { id: 'Day 2', label: 'Day 2', date: 'November 2026' }
+  { id: 'Day 1', label: 'Day 1', date: '28 November 2026' },
+  { id: 'Day 2', label: 'Day 2', date: '29 November 2026' }
 ];
 
 const Schedule = () => {

@@ -19,7 +19,6 @@ import {
   ArrowRight,
   Award,
   BadgeCheck,
-  Bell,
   BrainCircuit,
   CalendarDays,
   Check,
@@ -121,8 +120,8 @@ const defaultScheduleActivities = {
 };
 
 const scheduleDays = [
-  { key: "day1", title: "Conference Day 1", status: "November 2026", subtitle: "Opening · Keynotes · Panels" },
-  { key: "day2", title: "Conference Day 2", status: "November 2026", subtitle: "Research · Workshops · Awards" },
+  { key: "day1", title: "Conference Day 1", status: "28 November 2026", subtitle: "Opening · Keynotes · Panels" },
+  { key: "day2", title: "Conference Day 2", status: "29 November 2026", subtitle: "Research · Workshops · Awards" },
 ];
 
 const heroTitle = "Global Healthcare Conclave 2026";
@@ -539,7 +538,7 @@ function Hero({ banner }) {
 
           <motion.div className="hero-pill mb-4 bg-white/90 border border-gray-300 shadow-sm" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: finalDelay, duration: 0.7, ease: "easeOut" }}>
             <MapPin className="h-4 w-4 text-[#F43F8A]" />
-            <span className="text-[#101828] font-bold text-xs tracking-wider">New Delhi · November 2026</span>
+            <span className="text-[#101828] font-bold text-xs tracking-wider">Bharat Mandapam · 28–29 November 2026</span>
           </motion.div>
           <motion.h1
             className="mt-4 font-['Outfit'] text-5xl font-extrabold leading-[1.1] sm:text-6xl lg:text-7xl text-[#101828]"
@@ -1075,9 +1074,65 @@ function WorldClassSpeakers() {
   );
 }
 
+// Animated "COMING SOON" for when no workshops are published: letters rise in on scroll, then drift in a soft wave.
+function ComingSoonText() {
+  const rootRef = useRef(null);
+  const text = "COMING SOON";
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+    const ctx = gsap.context(() => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const letters = root.querySelectorAll(".coming-soon-letter");
+        gsap.timeline({ scrollTrigger: { trigger: root, start: "top 85%", once: true } })
+          .from(letters, {
+            yPercent: 120,
+            opacity: 0,
+            rotateX: -90,
+            duration: 0.9,
+            ease: "back.out(1.7)",
+            stagger: 0.06,
+          })
+          .to(letters, {
+            yPercent: -12,
+            duration: 1.2,
+            ease: "sine.inOut",
+            stagger: { each: 0.08, repeat: -1, yoyo: true },
+          })
+          .to(root, {
+            textShadow: "0 0 28px rgba(0, 166, 166, 0.45)",
+            duration: 1.6,
+            ease: "sine.inOut",
+            repeat: -1,
+            yoyo: true,
+          }, "<");
+      });
+    }, root);
+    return () => ctx.revert();
+  }, []);
+
+  return (
+    <p
+      ref={rootRef}
+      aria-label={text}
+      className="max-w-7xl mx-auto px-4 sm:px-6 py-10 text-center font-['Outfit'] text-3xl sm:text-5xl font-black tracking-[0.25em] text-[#173B8F] [perspective:600px]"
+    >
+      {text.split("").map((char, index) => (
+        <span key={index} aria-hidden="true" className="coming-soon-letter inline-block will-change-transform">
+          {char === " " ? " " : char}
+        </span>
+      ))}
+    </p>
+  );
+}
+
 function WorkshopsExperience() {
   const { endpoint } = useMockResource(apiEndpoints.workshops, mockWorkshops);
   const [workshopData, setWorkshopData] = useState(mockWorkshops);
+  // Set once the CMS has answered, so "Coming Soon" never flashes while workshops are still loading.
+  const [workshopsLoaded, setWorkshopsLoaded] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -1096,7 +1151,8 @@ function WorkshopsExperience() {
           displayDate: workshop.duration ? `${workshop.duration}, Nov 2026` : formatWorkshopDate(workshop.date),
         })));
       }
-    }).catch(() => setWorkshopData(mockWorkshops));
+    }).catch(() => setWorkshopData(mockWorkshops))
+      .finally(() => setWorkshopsLoaded(true));
   }, []);
 
   const scrollWorkshops = (direction) => {
@@ -1116,7 +1172,11 @@ function WorkshopsExperience() {
         />
       </div>
 
+      {/* No workshops published in the CMS yet: plain text, no card or slider */}
+      {workshopsLoaded && workshopData.length === 0 && <ComingSoonText />}
+
       {/* Slider Container with Navigation Buttons Inside */}
+      {workshopData.length > 0 && (
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 group/slider">
         {/* Left Arrow Button Inside Slider */}
         <button
@@ -1233,6 +1293,7 @@ function WorkshopsExperience() {
         })}
         </div>
       </div>
+      )}
     </section>
   );
 }
@@ -1361,9 +1422,9 @@ function GHCTimeline() {
     {
       key: "registration",
       title: "Registration Open",
-      subtitle: "Announcing soon",
-      status: "Announcing Soon",
-      statusType: "soon",
+      subtitle: "Registration open",
+      status: "Registration Open",
+      statusType: "confirmed",
       icon: CalendarDays,
       content: <RegistrationOpenContent />,
     },
@@ -1499,8 +1560,8 @@ function SchedulePhaseCard({ phase, open, onToggle }) {
 function RegistrationOpenContent() {
   return (
     <div className="schedule-message">
-      <p>Registration dates will be announced soon. Enable notifications to be the first to know.</p>
-      <button type="button" className="schedule-ghost-button"><Bell className="h-4 w-4" />Notify Me</button>
+      <p>Registration is open. Secure your delegate pass for the Global Healthcare Conclave 2026.</p>
+      <Link to="/register" className="schedule-ghost-button">Register Now <ArrowRight className="h-4 w-4" /></Link>
     </div>
   );
 }
@@ -1739,7 +1800,7 @@ function ResearchHub() {
                     </div>
                     <ul className="list-disc list-inside space-y-2 text-white/90 text-sm">
                       <li><strong>File Format:</strong> DOCX only, Times New Roman, Font size 12, max <strong>10 MB</strong>.</li>
-                      <li><strong>Word Limit:</strong> <strong>350–400 words</strong> (tables, legends, and references are excluded from count).</li>
+                      <li><strong>Word Limit:</strong> <strong>400 words max</strong>, excluding author names and title (tables, legends, and references are also excluded from the count).</li>
                       <li><strong>Integrity Thresholds:</strong> Plagiarism <strong>less than 20%</strong>; AI-detection score <strong>less than 30%</strong> (compliant with JAMA guidelines).</li>
                       <li><strong>Sequential Submissions Only:</strong> An applicant may submit a 2nd abstract <em>only</em> if the 1st submission is outrightly rejected.</li>
                       <li><strong>Presenting Author Restriction:</strong> An individual may be presenting author for <strong>only one accepted poster</strong>.</li>
@@ -1822,7 +1883,7 @@ function ResearchHub() {
                         <div className="bg-white/[0.02] p-2.5 rounded-lg border border-white/5"><strong>File Format:</strong> DOCX only</div>
                         <div className="bg-white/[0.02] p-2.5 rounded-lg border border-white/5"><strong>Max File Size:</strong> 10 MB</div>
                         <div className="bg-white/[0.02] p-2.5 rounded-lg border border-white/5"><strong>Font & Size:</strong> Times New Roman, Size 12</div>
-                        <div className="bg-white/[0.02] p-2.5 rounded-lg border border-white/5"><strong>Word Count:</strong> 350–400 words</div>
+                        <div className="bg-white/[0.02] p-2.5 rounded-lg border border-white/5"><strong>Word Count:</strong> 400 words max, excluding author names and title</div>
                       </div>
                       <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
                         <li>Tables, legends, and references are excluded from the abstract word count.</li>
@@ -2293,7 +2354,7 @@ function VenueSection() {
   const displayStays = stays.length > 0 ? stays : defaultHospitalityStays;
 
   const officialVenueInfo = [
-    { icon: MapPin, title: "Official Venue", text: "New Delhi" },
+    { icon: MapPin, title: "Official Venue", text: "Bharat Mandapam, New Delhi" },
     { icon: Hotel, title: "Accommodations", text: "Curated delegate stays and hotels across New Delhi" },
     { icon: Plane, title: "Transit Access", text: "New Delhi transit connectivity & metro access" },
     { icon: BadgeCheck, title: "Delegate Desk", text: "On-site registration, badge issuance, and workshop routing" },
@@ -2303,18 +2364,27 @@ function VenueSection() {
     <section id="venue" className="section-shell reveal-section">
       <div className="venue-grid">
         <div className="venue-visual">
-          <div className="venue-media">
-            <span>New Delhi</span>
+          <div className="venue-media relative overflow-hidden">
+            <img
+              src="/assets/places/Bharat%20Mandapam.jpg"
+              alt="Bharat Mandapam, New Delhi, the venue of Global Healthcare Conclave 2026"
+              loading="lazy"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/30 to-transparent px-6 pb-5 pt-16 text-left">
+              <p className="text-2xl sm:text-3xl font-extrabold leading-tight text-white">Bharat Mandapam</p>
+              <p className="mt-1 text-sm font-semibold tracking-wide text-white/80">New Delhi</p>
+            </div>
           </div>
           <div className="map-placeholder">
-            <a 
-              href="https://maps.google.com/?q=New+Delhi" 
-              target="_blank" 
-              rel="noopener noreferrer" 
+            <a
+              href="https://maps.google.com/?q=Bharat+Mandapam,+New+Delhi"
+              target="_blank"
+              rel="noopener noreferrer"
               className="flex items-center gap-2 hover:text-blue-400 transition-colors"
             >
               <MapPin className="h-7 w-7 text-[#4FC3F7]" />
-              <span>View New Delhi on Google Maps</span>
+              <span>View Bharat Mandapam on Google Maps</span>
             </a>
           </div>
         </div>
