@@ -21,7 +21,7 @@ import { DEFAULT_POSTER_CONTENT } from "./posterConfig";
 
 // Fixed 1200 x 1800 design canvas. Callers scale it for preview; exports render it at full size.
 // variant="email" is the artwork for the invitation email (server/assets/email/invitation-poster.jpg):
-// taller, with Register / WhatsApp buttons, and the QR panel without its own button.
+// taller, with a Register Now button, and the QR panel without its own button.
 const InvitationPoster = forwardRef(function InvitationPoster({ content = DEFAULT_POSTER_CONTENT, variant = "print", style }, ref) {
   const isEmail = variant === "email";
   return (

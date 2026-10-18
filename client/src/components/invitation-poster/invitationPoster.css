@@ -519,7 +519,7 @@
   color: #9fd4f5;
 }
 
-/* Two buttons, one per half of the poster, so each half can be its own linked image in the email. */
+/* The Register Now button, centred above the footer. */
 .gip-actions {
   position: absolute;
   z-index: 2;
@@ -546,27 +546,8 @@
 }
 
 .gip-action-register {
-  left: 220px;
+  left: 420px;
   color: var(--gip-navy);
   background: linear-gradient(180deg, #b9ebff 0%, #4cc3fa 100%);
   box-shadow: 0 0 26px rgba(56, 189, 248, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.7);
-}
-
-.gip-action-whatsapp {
-  left: 620px;
-  color: var(--gip-gold);
-  background: linear-gradient(180deg, #0b2a5a 0%, #051a3c 100%);
-  border: 1.5px solid rgba(244, 198, 106, 0.9);
-  box-shadow: 0 0 24px rgba(244, 198, 106, 0.28), inset 0 0 18px rgba(244, 198, 106, 0.08);
-}
-
-.gip-wa-mark {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #25d366;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 12px rgba(37, 211, 102, 0.6);
 }

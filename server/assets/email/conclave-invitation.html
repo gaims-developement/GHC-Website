@@ -9,7 +9,7 @@
 <title>You are cordially invited — GAIMS Global Healthcare Conclave 2026</title>
 </head>
 <body style="margin:0; padding:0; background:#020c1e;">
-<!-- ghc-conclave-invitation-v10 -->
+<!-- ghc-conclave-invitation-v11 -->
 <!-- (bump this version marker when changing this file so existing servers pick up the new layout) -->
 <!-- The invitation poster cut into bands (services/invitationImageService.js); the name band is personalised. -->
 <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:#020c1e;">{{name}}, you are cordially invited to the GAIMS Global Healthcare Conclave 2026 · {{eventDates}} · {{venue}}</div>
@@ -34,12 +34,7 @@
         </tr>
         <tr>
           <td style="padding:0; line-height:0; font-size:0;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-              <tr>
-                <td width="{{buttonWidth}}" style="width:50%; padding:0; line-height:0; font-size:0;"><a href="{{registerLink}}" target="_blank"><img src="cid:inv-register" width="{{buttonWidth}}" height="{{buttonsHeight}}" alt="Register Now" style="display:block; width:100%; height:auto; border:0;"></a></td>
-                <td width="{{buttonWidth}}" style="width:50%; padding:0; line-height:0; font-size:0;"><a href="{{whatsappLink}}" target="_blank"><img src="cid:inv-whatsapp" width="{{buttonWidth}}" height="{{buttonsHeight}}" alt="Join WhatsApp Group" style="display:block; width:100%; height:auto; border:0;"></a></td>
-              </tr>
-            </table>
+            <a href="{{registerLink}}" target="_blank"><img src="cid:inv-register" width="640" height="{{buttonHeight}}" alt="Register Now" style="display:block; width:100%; max-width:640px; height:auto; border:0;"></a>
           </td>
         </tr>
         <tr>
@@ -51,7 +46,7 @@
           <td style="padding:20px 28px 22px 28px; background:#020c1e; border-top:1px solid #1b3358; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:1.7; color:#94a3b8; text-align:center;">
             Invitation for <strong style="color:#F4C66A;">{{name}}</strong><br>
             GAIMS Global Healthcare Conclave 2026 · {{eventDates}} · {{venue}}<br>
-            <a href="{{registerLink}}" target="_blank" style="color:#7dd3fc; text-decoration:none;">Register now</a> &nbsp;·&nbsp; <a href="{{whatsappLink}}" target="_blank" style="color:#4ade80; text-decoration:none;">Join the WhatsApp group</a><br>
+            <a href="{{registerLink}}" target="_blank" style="color:#7dd3fc; text-decoration:none;">Register now</a><br>
             Need help? Write to <a href="{{helpUrl}}" style="color:#7dd3fc; text-decoration:none;">{{helpEmails}}</a>
           </td>
         </tr>

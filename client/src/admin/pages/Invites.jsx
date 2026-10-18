@@ -204,7 +204,7 @@ function Invites({ api }) {
         <h1>Invites</h1>
         <p className="admin-muted">
           Upload an Excel (.xlsx) or CSV file of names and emails, then send everyone the formal conclave invitation.
-          The email addresses each person by name and includes Register Now and Join WhatsApp Group buttons.
+          The email addresses each person by name and includes a QR code and a Register Now button.
           Email addresses already on the list are skipped, so nobody is added twice.
         </p>
         <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginTop: "1rem" }}>

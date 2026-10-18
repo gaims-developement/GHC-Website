@@ -127,20 +127,12 @@ export function RegistrationQR({ url, showButton = true }) {
   );
 }
 
-// Email variant only: the two calls to action, each half is cut into its own linked image.
+// Email variant only: the Register Now call to action (its band is a linked image in the email).
 export function EmailActions() {
   return (
     <div className="gip-actions">
       <span className="gip-action gip-action-register">
         REGISTER NOW <ArrowRight size={24} strokeWidth={2.2} />
-      </span>
-      <span className="gip-action gip-action-whatsapp">
-        <span className="gip-wa-mark">
-          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-            <path fill="#fff" d="M12 3.2a8.7 8.7 0 0 0-7.5 13.1L3.3 20.8l4.6-1.2A8.7 8.7 0 1 0 12 3.2Zm0 1.6a7.1 7.1 0 1 1-3.6 13.2l-.3-.2-2.7.7.7-2.6-.2-.3A7.1 7.1 0 0 1 12 4.8Zm-2.6 3.6c-.2 0-.5 0-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1 2.7c.1.2 1.8 2.8 4.4 3.8 2.2.9 2.6.7 3.1.6.5 0 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2l-.5-.3-1.7-.8c-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a5.8 5.8 0 0 1-2.9-2.5c-.2-.4.2-.4.6-1.2.1-.2 0-.3 0-.4l-.8-1.9c-.2-.5-.4-.4-.6-.4h-.5Z" />
-          </svg>
-        </span>
-        JOIN WHATSAPP GROUP
       </span>
     </div>
   );

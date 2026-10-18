@@ -1,13 +1,13 @@
 const path = require('path');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
 const { EVENT, toJpeg } = require('./delegateEmailService');
-const { getDelegateWhatsappGroupUrl, getRegistrationUrl } = require('../config/links');
+const { getRegistrationUrl } = require('../config/links');
 
 // The conclave invitation email is the GHC 2026 invitation poster (assets/email/invitation-poster.jpg), exported
 // from the admin's Invitation Poster page with "Email artwork" selected. Its QR code already points to the Clirnet
 // registration page. The poster is cut into horizontal bands sent as embedded (cid) images, like the registration
-// confirmation email; the guest's name is painted into the gold nameplate, and the QR panel and the two buttons
-// are linked images. If the poster is re-exported, keep the 1200 x 1920 layout so the band positions below hold.
+// confirmation email; the guest's name is painted into the gold nameplate, and the QR panel and the Register Now
+// button are linked images. If the poster is re-exported, keep the 1200 x 1920 layout so the band positions below hold.
 const ASSETS = path.join(__dirname, '..', 'assets');
 const POSTER = path.join(ASSETS, 'email', 'invitation-poster.jpg');
 GlobalFonts.registerFromPath(path.join(ASSETS, 'fonts', 'Cinzel.ttf'), 'GHCCinzel');
@@ -22,7 +22,7 @@ const BANDS = {
   top: [0, 1260], // header, Bharat Mandapam, headline and invitation copy
   name: [1260, 1425], // gold nameplate
   info: [1425, 1725], // highlights and the QR registration panel
-  buttons: [1725, 1830], // Register Now | Join WhatsApp Group, split at the centre
+  button: [1725, 1830], // Register Now
   bottom: [1830, 1920], // footer
 };
 const NAMEPLATE = { x: 190, y: 1288, w: 820, h: 112 };
@@ -50,10 +50,7 @@ const getStaticBands = () => {
       .then(async (poster) => ({
         top: await toJpeg(cropBand(poster, BANDS.top)),
         info: await toJpeg(cropBand(poster, BANDS.info)),
-        buttons: await Promise.all([
-          toJpeg(cropBand(poster, BANDS.buttons, [0, DESIGN_WIDTH / 2])),
-          toJpeg(cropBand(poster, BANDS.buttons, [DESIGN_WIDTH / 2, DESIGN_WIDTH])),
-        ]),
+        button: await toJpeg(cropBand(poster, BANDS.button)),
         bottom: await toJpeg(cropBand(poster, BANDS.bottom)),
       }))
       .catch((error) => {
@@ -127,8 +124,7 @@ const buildInvitationEmail = async ({ fullName }) => {
     { filename: 'ghc-invite-top.jpg', content: statics.top, contentType: 'image/jpeg', cid: 'inv-top' },
     { filename: 'ghc-invite-name.jpg', content: nameBand, contentType: 'image/jpeg', cid: 'inv-name' },
     { filename: 'ghc-invite-info.jpg', content: statics.info, contentType: 'image/jpeg', cid: 'inv-info' },
-    { filename: 'ghc-invite-register.jpg', content: statics.buttons[0], contentType: 'image/jpeg', cid: 'inv-register' },
-    { filename: 'ghc-invite-whatsapp.jpg', content: statics.buttons[1], contentType: 'image/jpeg', cid: 'inv-whatsapp' },
+    { filename: 'ghc-invite-register.jpg', content: statics.button, contentType: 'image/jpeg', cid: 'inv-register' },
     { filename: 'ghc-invite-bottom.jpg', content: statics.bottom, contentType: 'image/jpeg', cid: 'inv-bottom' },
   ];
   const variables = {
@@ -137,15 +133,13 @@ const buildInvitationEmail = async ({ fullName }) => {
     venue: escapeHtml(EVENT.venue),
     registerLink: escapeHtml(getRegistrationUrl()),
     eventUrl: escapeHtml(EVENT.url),
-    whatsappLink: escapeHtml(getDelegateWhatsappGroupUrl()),
     helpEmails: escapeHtml([EVENT.helpTo, ...EVENT.helpCc].join(', ')),
     helpUrl: escapeHtml(`mailto:${EVENT.helpTo}?subject=${encodeURIComponent('GHC 2026 Invitation Query')}`),
     topHeight: shown(BANDS.top[1] - BANDS.top[0]),
     nameHeight: shown(BANDS.name[1] - BANDS.name[0]),
     infoHeight: shown(BANDS.info[1] - BANDS.info[0]),
-    buttonsHeight: shown(BANDS.buttons[1] - BANDS.buttons[0]),
+    buttonHeight: shown(BANDS.button[1] - BANDS.button[0]),
     bottomHeight: shown(BANDS.bottom[1] - BANDS.bottom[0]),
-    buttonWidth: EMAIL_WIDTH / 2,
   };
   return { attachments, variables };
 };
