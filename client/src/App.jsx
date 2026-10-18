@@ -2517,7 +2517,7 @@ function PartnerMarquee({ partners = [] }) {
             
             const content = (
               <>
-                <span className="flex h-28 w-44 items-center justify-center md:h-32 md:w-56">
+                <span className="flex h-[146px] w-[229px] items-center justify-center md:h-[166px] md:w-[291px]">
                   {logoUrl ? (
                     <img
                       src={logoUrl}

@@ -2,6 +2,9 @@ const { pool } = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendTemplateEmail, verifyConnection } = require('../services/mailService');
 const { buildConfirmationEmail } = require('../services/delegateEmailService');
+const { buildInvitationEmail } = require('../services/invitationImageService');
+const { buildWhatsappInviteAttachments, HERO_HEIGHT: WHATSAPP_HERO_HEIGHT } = require('../services/whatsappInviteImageService');
+const { getDelegateWhatsappGroupUrl } = require('../config/links');
 
 const limit = (value, fallback = 50) => Math.min(Math.max(Number(value) || fallback, 1), 200);
 
@@ -281,9 +284,17 @@ const testEmailTemplate = asyncHandler(async (req, res) => {
     let variables = { ...defaults, ...sampleVariables };
     let attachments = [];
 
-    // The delegate confirmation is an image-based design: its artwork, QR code and links are generated per
-    // delegate, so a test send has to build the full email rather than fill in sample text variables.
-    if (template.template_key === 'delegate_registration_confirmation') {
+    // Image-based emails (delegate confirmation, conclave invitation, delegate WhatsApp invite) have their artwork
+    // and links generated per recipient, so a test send has to build the full email rather than fill in sample text.
+    const testName = sampleVariables.fullName || sampleVariables.name || defaults.fullName;
+    if (template.template_key === 'conclave_invitation') {
+      const built = await buildInvitationEmail({ fullName: testName, email });
+      variables = built.variables;
+      attachments = built.attachments;
+    } else if (template.template_key === 'delegate_whatsapp_invite') {
+      variables = { name: testName, whatsappLink: getDelegateWhatsappGroupUrl(), heroHeight: WHATSAPP_HERO_HEIGHT };
+      attachments = await buildWhatsappInviteAttachments();
+    } else if (template.template_key === 'delegate_registration_confirmation') {
       const built = await buildConfirmationEmail({
         fullName: sampleVariables.fullName || defaults.fullName,
         registrationId: sampleVariables.registrationId || 'GHC26-DEL-00000',

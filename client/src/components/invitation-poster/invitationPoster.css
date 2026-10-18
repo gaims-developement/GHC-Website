@@ -1,0 +1,572 @@
+/* GHC 2026 invitation poster. Fixed 1200 x 1800 canvas; every section is placed absolutely so the
+   composition never reflows. Layer order: photo (0) < texture/vignette (1) < content (2). */
+
+.gip-poster {
+  --gip-navy: #03152F;
+  --gip-royal: #0756C9;
+  --gip-electric: #38BDF8;
+  --gip-gold: #F4C66A;
+  --gip-ice: #e0f2fe;
+  position: relative;
+  width: 1200px;
+  height: 1800px;
+  overflow: hidden;
+  background: radial-gradient(120% 60% at 50% 62%, #072a5e 0%, #041d42 45%, var(--gip-navy) 100%);
+  color: #fff;
+  font-family: "Montserrat", "Inter", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.gip-poster p,
+.gip-poster h1,
+.gip-poster h2,
+.gip-poster ul {
+  margin: 0;
+  padding: 0;
+}
+
+.gip-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.gip-dots {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  border-radius: 50%;
+  background-image: radial-gradient(circle, #7dd3fc 1.5px, transparent 1.7px);
+  background-size: 12px 12px;
+  -webkit-mask-image: radial-gradient(closest-side, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.25) 70%, transparent);
+  mask-image: radial-gradient(closest-side, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.25) 70%, transparent);
+}
+
+.gip-dots-main {
+  left: 630px;
+  top: -70px;
+  width: 660px;
+  height: 660px;
+  opacity: 0.32;
+}
+
+.gip-dots-side {
+  left: -90px;
+  top: 950px;
+  width: 520px;
+  height: 520px;
+  opacity: 0.14;
+}
+
+.gip-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(85% 70% at 50% 45%, transparent 60%, rgba(1, 8, 22, 0.65) 100%);
+}
+
+.gip-bullet {
+  margin: 0 0.9em;
+  opacity: 0.85;
+}
+
+/* ---------- Venue hero ---------- */
+.gip-hero {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1200px;
+  height: 980px;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.gip-hero-photo {
+  position: absolute;
+  left: -170px;
+  top: 96px;
+  width: 1540px;
+  height: auto;
+  display: block;
+  /* Feather the photo's top and bottom edges into the navy background. */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 60%, transparent 80%);
+  mask-image: linear-gradient(180deg, transparent 0%, #000 22%, #000 60%, transparent 80%);
+}
+
+.gip-hero-glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(38% 22% at 50% 44%, rgba(56, 189, 248, 0.18), transparent 70%),
+    radial-gradient(20% 14% at 50% 58%, rgba(244, 198, 106, 0.16), transparent 70%);
+  mix-blend-mode: screen;
+}
+
+.gip-hero-fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(3, 21, 47, 0.85) 0%,
+    rgba(3, 21, 47, 0.55) 14%,
+    rgba(3, 21, 47, 0) 30%,
+    rgba(3, 21, 47, 0) 56%,
+    rgba(3, 21, 47, 0.5) 72%,
+    rgba(4, 29, 66, 0) 100%
+  );
+}
+
+/* ---------- Header ---------- */
+.gip-header {
+  position: absolute;
+  z-index: 2;
+  left: 70px;
+  right: 70px;
+  top: 52px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.gip-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gip-logo {
+  width: 360px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 0 18px rgba(3, 21, 47, 0.9));
+}
+
+.gip-brand-tagline {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 3.2px;
+  color: var(--gip-ice);
+  padding-left: 8px;
+}
+
+.gip-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  padding: 10px 0 10px 40px;
+  border-left: 1px solid rgba(224, 242, 254, 0.35);
+  margin-top: 18px;
+}
+
+.gip-fact {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.gip-fact-icon {
+  color: var(--gip-gold);
+  filter: drop-shadow(0 0 8px rgba(244, 198, 106, 0.45));
+  flex-shrink: 0;
+}
+
+.gip-fact p {
+  font-size: 22px;
+  line-height: 1.3;
+  letter-spacing: 1.6px;
+}
+
+.gip-fact-strong {
+  font-weight: 600;
+  color: #fff;
+}
+
+.gip-fact-gold {
+  font-weight: 600;
+  color: var(--gip-gold);
+}
+
+.gip-fact-light {
+  font-weight: 500;
+  color: var(--gip-ice);
+}
+
+/* ---------- Headline ---------- */
+.gip-headline {
+  position: absolute;
+  z-index: 2;
+  left: 60px;
+  right: 60px;
+  top: 748px;
+  text-align: center;
+}
+
+.gip-cordially {
+  font-size: 27px;
+  font-weight: 500;
+  letter-spacing: 11px;
+  color: var(--gip-ice);
+  padding-left: 11px;
+}
+
+.gip-invited {
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 700;
+  font-size: 168px;
+  line-height: 1;
+  letter-spacing: 6px;
+  margin-top: 6px !important;
+  background: linear-gradient(180deg, #ffffff 0%, #e6f1ff 38%, #8fb4e6 62%, #d9e8ff 82%, #ffffff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 22px rgba(56, 189, 248, 0.35)) drop-shadow(0 4px 2px rgba(1, 8, 22, 0.6));
+}
+
+.gip-to-the {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  margin-top: 4px !important;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 9px;
+  color: var(--gip-ice);
+}
+
+.gip-rule {
+  display: block;
+  width: 270px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(224, 242, 254, 0.75), transparent);
+}
+
+.gip-event-name {
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 500;
+  font-size: 43px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  margin-top: 14px !important;
+  color: #fff;
+  text-shadow: 0 2px 14px rgba(3, 21, 47, 0.8);
+}
+
+.gip-headline-tagline {
+  margin-top: 16px !important;
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: 6px;
+  color: var(--gip-electric);
+}
+
+.gip-copy {
+  margin: 20px auto 0 !important;
+  max-width: 900px;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 500;
+  font-size: 29px;
+  line-height: 1.38;
+  color: #eef6ff;
+}
+
+/* ---------- Blank nameplate (must stay empty) ---------- */
+.gip-nameplate {
+  position: absolute;
+  z-index: 2;
+  left: 190px;
+  width: 820px;
+  top: 1288px;
+  height: 112px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(244, 198, 106, 0.85);
+  background: linear-gradient(180deg, rgba(3, 21, 47, 0.92), rgba(6, 30, 66, 0.92));
+  box-shadow:
+    0 0 0 6px rgba(244, 198, 106, 0.06),
+    0 0 34px rgba(244, 198, 106, 0.18),
+    inset 0 0 40px rgba(7, 86, 201, 0.25);
+}
+
+.gip-corner {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  border-color: #ffe2a3;
+  border-style: solid;
+  filter: drop-shadow(0 0 6px rgba(244, 198, 106, 0.9));
+}
+
+.gip-corner-tl { left: -5px; top: -5px; border-width: 3px 0 0 3px; border-top-left-radius: 12px; }
+.gip-corner-tr { right: -5px; top: -5px; border-width: 3px 3px 0 0; border-top-right-radius: 12px; }
+.gip-corner-bl { left: -5px; bottom: -5px; border-width: 0 0 3px 3px; border-bottom-left-radius: 12px; }
+.gip-corner-br { right: -5px; bottom: -5px; border-width: 0 3px 3px 0; border-bottom-right-radius: 12px; }
+
+/* ---------- Highlights ---------- */
+.gip-highlights {
+  position: absolute;
+  z-index: 2;
+  left: 80px;
+  right: 80px;
+  top: 1428px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  list-style: none;
+}
+
+.gip-highlights li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: 1.2px;
+  line-height: 1.3;
+  color: #f1f7ff;
+  text-align: center;
+}
+
+.gip-highlights li + li {
+  border-left: 1px solid rgba(125, 211, 252, 0.35);
+}
+
+.gip-highlight-icon {
+  color: #7dd3fc;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.55));
+}
+
+/* ---------- QR registration ---------- */
+.gip-qr-panel {
+  position: absolute;
+  z-index: 2;
+  left: 260px;
+  width: 680px;
+  top: 1548px;
+  height: 164px;
+  box-sizing: border-box;
+  padding: 14px 26px 14px 14px;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  border-radius: 18px;
+  border: 1.5px solid rgba(56, 189, 248, 0.8);
+  background: linear-gradient(160deg, rgba(7, 34, 76, 0.97), rgba(3, 21, 47, 0.97));
+  box-shadow: 0 0 30px rgba(56, 189, 248, 0.3), inset 0 0 26px rgba(7, 86, 201, 0.25);
+}
+
+.gip-qr-tile {
+  flex-shrink: 0;
+  width: 136px;
+  height: 136px;
+  border-radius: 12px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gip-qr-tile svg {
+  display: block;
+}
+
+.gip-qr-placeholder {
+  width: 116px;
+  height: 116px;
+  border: 2px dashed #94a3b8;
+  border-radius: 6px;
+}
+
+.gip-qr-text {
+  padding-left: 24px;
+  border-left: 1px solid rgba(125, 211, 252, 0.3);
+}
+
+.gip-qr-title {
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 700;
+  font-size: 25px;
+  line-height: 1.15;
+  white-space: nowrap;
+  color: #7dd3fc;
+}
+
+.gip-qr-body {
+  margin-top: 6px !important;
+  font-size: 16px;
+  line-height: 1.4;
+  color: #e6f1ff;
+}
+
+.gip-qr-cta {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 22px;
+  border-radius: 8px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+  color: var(--gip-navy);
+  background: linear-gradient(180deg, #a5e3ff 0%, #4cc3fa 100%);
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.45);
+}
+
+/* ---------- Footer ---------- */
+.gip-footer {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 240px;
+}
+
+.gip-skyline {
+  position: absolute;
+  left: 0;
+  top: -20px;
+  width: 1200px;
+  height: 210px;
+}
+
+.gip-footer-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 76px;
+  padding: 0 60px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  background: linear-gradient(180deg, rgba(2, 12, 30, 0.6), #020c1e 60%);
+  border-top: 1px solid rgba(125, 211, 252, 0.25);
+}
+
+.gip-follow {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.gip-follow > p {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--gip-ice);
+}
+
+.gip-socials {
+  display: flex;
+  gap: 14px;
+}
+
+.gip-socials svg {
+  width: 26px;
+  height: 26px;
+}
+
+.gip-website {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  color: #fff;
+}
+
+.gip-gaims {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.gip-gaims img {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  display: block;
+  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.5);
+}
+
+.gip-gaims-name {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 2px;
+}
+
+.gip-gaims-full {
+  font-size: 12px;
+  line-height: 1.35;
+  color: #c7dcf5;
+}
+
+/* ---------- Email variant ---------- */
+.gip-poster.gip-email {
+  height: 1920px;
+}
+
+.gip-qr-note {
+  margin-top: 12px !important;
+  font-size: 15px;
+  letter-spacing: 0.4px;
+  color: #9fd4f5;
+}
+
+/* Two buttons, one per half of the poster, so each half can be its own linked image in the email. */
+.gip-actions {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  right: 0;
+  top: 1748px;
+  height: 76px;
+}
+
+.gip-action {
+  position: absolute;
+  top: 0;
+  width: 360px;
+  height: 76px;
+  box-sizing: border-box;
+  border-radius: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 1.4px;
+}
+
+.gip-action-register {
+  left: 220px;
+  color: var(--gip-navy);
+  background: linear-gradient(180deg, #b9ebff 0%, #4cc3fa 100%);
+  box-shadow: 0 0 26px rgba(56, 189, 248, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.gip-action-whatsapp {
+  left: 620px;
+  color: var(--gip-gold);
+  background: linear-gradient(180deg, #0b2a5a 0%, #051a3c 100%);
+  border: 1.5px solid rgba(244, 198, 106, 0.9);
+  box-shadow: 0 0 24px rgba(244, 198, 106, 0.28), inset 0 0 18px rgba(244, 198, 106, 0.08);
+}
+
+.gip-wa-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #25d366;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 12px rgba(37, 211, 102, 0.6);
+}

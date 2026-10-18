@@ -81,6 +81,7 @@ import VisaSettings from "./pages/VisaSettings";
 import Delegates from "./pages/Delegates";
 import DelegateAttendance from "./pages/DelegateAttendance";
 import Invites from "./pages/Invites";
+import InvitationPosterGenerator from "./pages/InvitationPosterGenerator";
 import DelegateWhatsapp from "./pages/DelegateWhatsapp";
 import "./admin.css";
 
@@ -155,6 +156,7 @@ const pages = {
   delegates: Delegates,
   "delegate-attendance": DelegateAttendance,
   invites: Invites,
+  "invitation-poster": InvitationPosterGenerator,
   "delegate-whatsapp": DelegateWhatsapp,
   tickets: AdminTickets,
   payments: Payments,

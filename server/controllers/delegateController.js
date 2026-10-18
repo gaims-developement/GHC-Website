@@ -3,6 +3,7 @@ const { pool } = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendTemplateEmail } = require('../services/mailService');
 const { buildConfirmationEmail } = require('../services/delegateEmailService');
+const { buildWhatsappInviteAttachments, HERO_HEIGHT: WHATSAPP_HERO_HEIGHT } = require('../services/whatsappInviteImageService');
 const { getDelegateWhatsappGroupUrl } = require('../config/links');
 
 const MAX_ROWS_PER_IMPORT = 2000;
@@ -189,7 +190,8 @@ const sendWhatsappInvite = asyncHandler(async (req, res) => {
     await sendTemplateEmail('delegate_whatsapp_invite', row.email, {
       name: escapeHtml(row.full_name),
       whatsappLink: escapeHtml(getDelegateWhatsappGroupUrl()),
-    });
+      heroHeight: WHATSAPP_HERO_HEIGHT,
+    }, { attachments: await buildWhatsappInviteAttachments() });
   } catch (error) {
     await pool.query(
       'UPDATE delegates SET whatsapp_invite_last_attempt_at = ?, whatsapp_invite_last_error = ? WHERE id = ?',

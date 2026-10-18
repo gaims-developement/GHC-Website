@@ -1,6 +1,7 @@
 const path = require('path');
 const QRCode = require('qrcode');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
+const { getDelegateWhatsappGroupUrl } = require('../config/links');
 
 // The confirmation email is the designer's artwork (assets/email/source-design.png, 1024x1536) cut into
 // horizontal bands. Personal details are painted onto the artwork where the design had {{placeholders}}.
@@ -312,17 +313,34 @@ const cropBand = (source, [top, bottom], [left, right] = [0, 1024]) => {
 
 const toJpeg = (canvas) => canvas.encode('jpeg', 88);
 
-// Static bands are identical for every delegate, so they are rendered once per process.
-let staticPromise = null;
-const getStaticBands = () => {
-  if (!staticPromise) {
-    staticPromise = (async () => {
+// The top band with the corrected header dates and the real Bharat Mandapam in the hero. Shared with the
+// conclave invitation email (services/invitationImageService.js), which rewords the hero text on a copy.
+let topCanvasPromise = null;
+const getTopCanvas = () => {
+  if (!topCanvasPromise) {
+    topCanvasPromise = (async () => {
       const source = await getSource();
       const top = cropBand(source, BANDS.top);
       const ctx = top.getContext('2d');
       erase(ctx, 795, 41, 152, 23);
       fitText(ctx, EVENT.headerDates, { x: 797, y: 57, maxWidth: 150, size: 12, weight: 'Bold' });
       await drawHeroVenue(ctx);
+      return top;
+    })().catch((error) => {
+      topCanvasPromise = null;
+      throw error;
+    });
+  }
+  return topCanvasPromise;
+};
+
+// Static bands are identical for every delegate, so they are rendered once per process.
+let staticPromise = null;
+const getStaticBands = () => {
+  if (!staticPromise) {
+    staticPromise = (async () => {
+      const source = await getSource();
+      const top = await getTopCanvas();
 
       const buttons = await Promise.all(BUTTON_COLUMNS.map((cols) => toJpeg(cropBand(source, BANDS.buttons, cols))));
 
@@ -439,6 +457,7 @@ const buildConfirmationEmail = async (delegate) => {
     eventUrl: escapeHtml(EVENT.url),
     helpUrl: escapeHtml(helpUrl(delegate.registrationId)),
     helpEmails: escapeHtml([EVENT.helpTo, ...EVENT.helpCc].join(', ')),
+    whatsappLink: escapeHtml(getDelegateWhatsappGroupUrl()),
     topHeight: px(BANDS.top[1] - BANDS.top[0]),
     detailsHeight: px(BANDS.details[1] - BANDS.details[0]),
     buttonsHeight: px(BANDS.buttons[1] - BANDS.buttons[0]),
@@ -450,4 +469,22 @@ const buildConfirmationEmail = async (delegate) => {
   return { attachments, variables };
 };
 
-module.exports = { buildConfirmationEmail, renderDetailsBand, getStaticBands, EVENT, erase };
+module.exports = {
+  buildConfirmationEmail,
+  renderDetailsBand,
+  getStaticBands,
+  EVENT,
+  erase,
+  // Shared with the conclave invitation email, which reuses this design.
+  BANDS,
+  BUTTON_COLUMNS,
+  SCALE,
+  getSource,
+  getTopCanvas,
+  cropBand,
+  fitText,
+  fitTwoLines,
+  roundedRect,
+  toJpeg,
+  calendarUrl,
+};

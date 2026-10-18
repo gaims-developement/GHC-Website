@@ -4,57 +4,55 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="x-apple-disable-message-reformatting">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
 <title>You are cordially invited — GAIMS Global Healthcare Conclave 2026</title>
 </head>
-<body style="margin:0; padding:0; background:#040b1d;">
-<!-- ghc-conclave-invitation-v4 -->
+<body style="margin:0; padding:0; background:#020c1e;">
+<!-- ghc-conclave-invitation-v10 -->
 <!-- (bump this version marker when changing this file so existing servers pick up the new layout) -->
-<!-- The invitation is the designed poster (assets/email/invitation-source.png) with the dates, name and a real QR code
-     painted on per recipient (services/invitationImageService.js); this file only stacks its slices. -->
-<div style="display:none; max-height:0; overflow:hidden; opacity:0; color:#040b1d;">{{name}}, you are cordially invited to the GAIMS Global Healthcare Conclave 2026, 28–29 November 2026, Bharat Mandapam, New Delhi.</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#040b1d;">
+<!-- The invitation poster cut into bands (services/invitationImageService.js); the name band is personalised. -->
+<div style="display:none; max-height:0; overflow:hidden; opacity:0; color:#020c1e;">{{name}}, you are cordially invited to the GAIMS Global Healthcare Conclave 2026 · {{eventDates}} · {{venue}}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#020c1e;">
   <tr>
     <td align="center" style="padding:20px 0;">
-      <table role="presentation" width="{{emailWidth}}" cellpadding="0" cellspacing="0" border="0" style="width:{{emailWidth}}px; max-width:100%; background:#0a1838;">
+      <table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="width:640px; max-width:100%; background:#03152F;">
         <tr>
           <td style="padding:0; line-height:0; font-size:0;">
-            <a href="{{registerLink}}" target="_blank"><img src="cid:inv-top" width="{{emailWidth}}" height="{{topHeight}}" alt="You are cordially invited, {{name}}, to the GAIMS Global Healthcare Conclave 2026 — 28–29 November 2026, Bharat Mandapam, New Delhi." style="display:block; width:100%; max-width:{{emailWidth}}px; height:auto; border:0;"></a>
+            <a href="{{registerLink}}" target="_blank"><img src="cid:inv-top" width="640" height="{{topHeight}}" alt="You are cordially invited to the GAIMS Global Healthcare Conclave 2026 · {{eventDates}} · Bharat Mandapam, New Delhi" style="display:block; width:100%; max-width:640px; height:auto; border:0;"></a>
           </td>
         </tr>
-        <!-- Row with the poster's "Register Now" button: every slice links to registration. -->
+        <tr>
+          <td style="padding:0; line-height:0; font-size:0;">
+            <img src="cid:inv-name" width="640" height="{{nameHeight}}" alt="{{name}}" style="display:block; width:100%; max-width:640px; height:auto; border:0;">
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:0; line-height:0; font-size:0;">
+            <a href="{{registerLink}}" target="_blank"><img src="cid:inv-info" width="640" height="{{infoHeight}}" alt="World-class speakers, scientific sessions and workshops, global networking and prestigious awards. Confirm your presence: scan the QR code to register." style="display:block; width:100%; max-width:640px; height:auto; border:0;"></a>
+          </td>
+        </tr>
         <tr>
           <td style="padding:0; line-height:0; font-size:0;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td width="{{cta1Width}}" style="width:47.66%; padding:0; line-height:0; font-size:0;"><a href="{{registerLink}}" target="_blank"><img src="cid:inv-cta-1" width="{{cta1Width}}" height="{{ctaHeight}}" alt="" style="display:block; width:100%; height:auto; border:0;"></a></td>
-                <td width="{{cta2Width}}" style="width:21.88%; padding:0; line-height:0; font-size:0;"><a href="{{registerLink}}" target="_blank"><img src="cid:inv-cta-2" width="{{cta2Width}}" height="{{ctaHeight}}" alt="Register Now" style="display:block; width:100%; height:auto; border:0;"></a></td>
-                <td width="{{cta3Width}}" style="width:30.46%; padding:0; line-height:0; font-size:0;"><a href="{{registerLink}}" target="_blank"><img src="cid:inv-cta-3" width="{{cta3Width}}" height="{{ctaHeight}}" alt="" style="display:block; width:100%; height:auto; border:0;"></a></td>
+                <td width="{{buttonWidth}}" style="width:50%; padding:0; line-height:0; font-size:0;"><a href="{{registerLink}}" target="_blank"><img src="cid:inv-register" width="{{buttonWidth}}" height="{{buttonsHeight}}" alt="Register Now" style="display:block; width:100%; height:auto; border:0;"></a></td>
+                <td width="{{buttonWidth}}" style="width:50%; padding:0; line-height:0; font-size:0;"><a href="{{whatsappLink}}" target="_blank"><img src="cid:inv-whatsapp" width="{{buttonWidth}}" height="{{buttonsHeight}}" alt="Join WhatsApp Group" style="display:block; width:100%; height:auto; border:0;"></a></td>
               </tr>
             </table>
           </td>
         </tr>
         <tr>
           <td style="padding:0; line-height:0; font-size:0;">
-            <a href="https://ghc.gaims.org" target="_blank"><img src="cid:inv-bottom" width="{{emailWidth}}" height="{{bottomHeight}}" alt="www.ghc.gaims.org" style="display:block; width:100%; max-width:{{emailWidth}}px; height:auto; border:0;"></a>
+            <a href="{{eventUrl}}" target="_blank"><img src="cid:inv-bottom" width="640" height="{{bottomHeight}}" alt="www.ghc.gaims.org · GAIMS, Global Association of Indian Medical Students" style="display:block; width:100%; max-width:640px; height:auto; border:0;"></a>
           </td>
         </tr>
-        <!-- Join WhatsApp Group, styled to match the poster -->
         <tr>
-          <td align="center" style="padding:26px 24px 28px 24px; background:#040b1d; border-top:1px solid #6b5626;">
-            <div style="font-family:Georgia, 'Times New Roman', serif; font-size:13px; letter-spacing:4px; color:#e8c77a; margin-bottom:14px;">STAY CONNECTED</div>
-            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
-              <tr>
-                <td align="center" style="border-radius:8px; background:#1fa855; border:1px solid #d4af37;">
-                  <a href="{{whatsappLink}}" target="_blank" style="display:inline-block; padding:14px 34px; font-family:Arial, Helvetica, sans-serif; font-size:15px; font-weight:bold; letter-spacing:1px; color:#ffffff; text-decoration:none; border-radius:8px;">JOIN WHATSAPP GROUP</a>
-                </td>
-              </tr>
-            </table>
-            <div style="font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:1.6; color:#8fa0bf; margin-top:16px;">
-              If the buttons don't open:
-              <a href="{{registerLink}}" target="_blank" style="color:#e8c77a;">Register</a>
-              &nbsp;&middot;&nbsp;
-              <a href="{{whatsappLink}}" target="_blank" style="color:#7fdca0;">WhatsApp group</a>
-            </div>
+          <td style="padding:20px 28px 22px 28px; background:#020c1e; border-top:1px solid #1b3358; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:1.7; color:#94a3b8; text-align:center;">
+            Invitation for <strong style="color:#F4C66A;">{{name}}</strong><br>
+            GAIMS Global Healthcare Conclave 2026 · {{eventDates}} · {{venue}}<br>
+            <a href="{{registerLink}}" target="_blank" style="color:#7dd3fc; text-decoration:none;">Register now</a> &nbsp;·&nbsp; <a href="{{whatsappLink}}" target="_blank" style="color:#4ade80; text-decoration:none;">Join the WhatsApp group</a><br>
+            Need help? Write to <a href="{{helpUrl}}" style="color:#7dd3fc; text-decoration:none;">{{helpEmails}}</a>
           </td>
         </tr>
       </table>

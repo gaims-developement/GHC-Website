@@ -334,6 +334,19 @@ const addColumnIfMissing = async (tableName, columnName, definition) => {
   }
 };
 
+// Shipped email templates carry a marker like <!-- ghc-delegate-confirmation-v4 -->. Replace the stored copy only
+// when the file is a newer version, so a server still running older code never downgrades a template on restart.
+const upgradeShippedTemplate = async (templateKey, subject, body) => {
+  const marker = body.match(/<!-- (ghc-[a-z-]+)-v(\d+) -->/);
+  if (!marker) return;
+  const [, name, fileVersion] = marker;
+  const [[stored]] = await pool.query('SELECT body FROM email_templates WHERE template_key = ? LIMIT 1', [templateKey]);
+  if (!stored) return;
+  const storedMatch = String(stored.body || '').match(new RegExp(`<!-- ${name}-v(\\d+) -->`));
+  if (storedMatch && Number(storedMatch[1]) >= Number(fileVersion)) return;
+  await pool.query('UPDATE email_templates SET subject = ?, body = ? WHERE template_key = ?', [subject, body, templateKey]);
+};
+
 const addIndexIfMissing = async (tableName, indexName, definition) => {
   const safeTableName = assertSqlIdentifier(tableName, 'tableName');
   const safeIndexName = assertSqlIdentifier(indexName, 'indexName');
@@ -3604,13 +3617,7 @@ const createInviteTables = async () => {
        ON DUPLICATE KEY UPDATE template_key = template_key`,
       [templateKey, subject, body]
     );
-    const versionMarker = (body.match(/<!-- (ghc-[a-z-]+-v\d+) -->/) || [])[1];
-    if (versionMarker) {
-      await pool.query(
-        'UPDATE email_templates SET subject = ?, body = ? WHERE template_key = ? AND body NOT LIKE ?',
-        [subject, body, templateKey, `%${versionMarker}%`]
-      );
-    }
+    await upgradeShippedTemplate(templateKey, subject, body);
   };
   await seedTemplate('conclave_invitation', 'conclave-invitation.html', 'You are cordially invited to the GAIMS Global Healthcare Conclave 2026');
   await seedTemplate('delegate_whatsapp_invite', 'delegate-whatsapp-invite.html', "You're invited: join the GHC 2026 Delegate WhatsApp Group");
@@ -3679,13 +3686,7 @@ const createDelegateTables = async () => {
     ['delegate_registration_confirmation', templateSubject, templateBody]
   );
   // Upgrade older shipped versions of this template (identified by the version marker in the HTML file).
-  const versionMarker = (templateBody.match(/<!-- (ghc-delegate-confirmation-v\d+) -->/) || [])[1];
-  if (versionMarker) {
-    await pool.query(
-      "UPDATE email_templates SET subject = ?, body = ? WHERE template_key = 'delegate_registration_confirmation' AND body NOT LIKE ?",
-      [templateSubject, templateBody, `%${versionMarker}%`]
-    );
-  }
+  await upgradeShippedTemplate('delegate_registration_confirmation', templateSubject, templateBody);
 };
 
 const seedAwardNominationData = async () => {
@@ -3693,15 +3694,16 @@ const seedAwardNominationData = async () => {
   const [existingAwards] = await pool.query('SELECT COUNT(*) AS count FROM awards');
   if (existingAwards[0].count === 0) {
     const awardsList = [
-      ['Young Entrepreneur Award', 'For innovative healthcare startups and leaders.', 'Healthcare Leadership', 'Trophy & Certificate'],
-      ['Women in Healthcare Award', 'Celebrating female excellence and leadership.', 'Healthcare Excellence', 'Trophy & Certificate'],
-      ['Medical Educator Award', 'For outstanding contribution to medical teaching.', 'Medical Education', 'Trophy & Certificate'],
-      ['Young Researcher Award', 'Recognising breakthrough student research.', 'Research & Innovation', 'Trophy & Certificate'],
-      ['Community Service Award', 'For impactful public health initiatives.', 'Public Health', 'Trophy & Certificate'],
-      ['Medical NGO Award', 'Honouring organizational impact in healthcare.', 'Social Impact', 'Trophy & Certificate'],
-      ['Medical Leadership Award', 'For exceptional visionary leadership across age categories (Under 20, Under 30, Under 40).', 'Healthcare Leadership', 'Trophy & Certificate'],
-      ['Influencer Award', 'For driving positive health communication.', 'Media & Communication', 'Trophy & Certificate'],
-      ['Academic Award', 'For consistent academic brilliance.', 'Academics', 'Trophy & Certificate'],
+      ['Medical Innovator of the Year', 'For innovative healthcare solutions, startups and ideas.', 'Healthcare Leadership', 'Trophy & Certificate'],
+      ['Woman in Medicine of the Year', 'Celebrating female excellence and leadership in medicine.', 'Healthcare Excellence', 'Trophy & Certificate'],
+      ['Medical Educator of the Year', 'For outstanding contribution to medical teaching.', 'Medical Education', 'Trophy & Certificate'],
+      ['Young Medical Researcher of the Year', 'Recognising breakthrough research by young researchers.', 'Research & Innovation', 'Trophy & Certificate'],
+      ['Medical Changemaker of the Year', 'For impactful public health and community initiatives.', 'Public Health', 'Trophy & Certificate'],
+      ['Medical NGO of the Year', 'Honouring organisational impact in healthcare.', 'Social Impact', 'Trophy & Certificate'],
+      ['Emerging Medical Leader of the Year', 'For exceptional visionary leadership across age categories (Under 20, Under 30, Under 40).', 'Healthcare Leadership', 'Trophy & Certificate'],
+      ['Medical Influencer of the Year', 'For driving positive health communication.', 'Media & Communication', 'Trophy & Certificate'],
+      ["People's Choice – Medical Influencer", 'The medical influencer chosen by the public.', 'Media & Communication', 'Trophy & Certificate'],
+      ['Medical Student of the Year', 'For outstanding all-round excellence as a medical student.', 'Academics', 'Trophy & Certificate'],
     ];
     await pool.query('INSERT INTO awards (name, description, category, prize) VALUES ?', [awardsList]);
   }
@@ -4016,13 +4018,7 @@ const seedAwardNominationData = async () => {
     ['workshop_registration_confirmation', workshopConfirmationSubject, workshopConfirmationBody]
   );
   // Upgrade older shipped versions of this template (identified by the version marker in the HTML).
-  const workshopConfirmationVersion = (workshopConfirmationBody.match(/<!-- (ghc-workshop-confirmation-v\d+) -->/) || [])[1];
-  if (workshopConfirmationVersion) {
-    await pool.query(
-      "UPDATE email_templates SET subject = ?, body = ? WHERE template_key = 'workshop_registration_confirmation' AND body NOT LIKE ?",
-      [workshopConfirmationSubject, workshopConfirmationBody, `%${workshopConfirmationVersion}%`]
-    );
-  }
+  await upgradeShippedTemplate('workshop_registration_confirmation', workshopConfirmationSubject, workshopConfirmationBody);
 
   await pool.query(
     `INSERT INTO email_templates (template_key, subject, body, is_active)

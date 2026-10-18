@@ -1,9 +1,8 @@
 const crypto = require('crypto');
 const { pool } = require('../config/db');
-const { getDelegateWhatsappGroupUrl, getRegistrationUrl } = require('../config/links');
 const asyncHandler = require('../utils/asyncHandler');
 const { sendTemplateEmail } = require('../services/mailService');
-const { buildInvitationImages } = require('../services/invitationImageService');
+const { buildInvitationEmail } = require('../services/invitationImageService');
 
 const MAX_ROWS_PER_IMPORT = 2000;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -12,9 +11,6 @@ const clean = (value, max = 255) => {
   const text = String(value).replace(/\s+/g, ' ').trim();
   return text ? text.slice(0, max) : null;
 };
-
-// Names come from an uploaded spreadsheet and are placed into HTML email.
-const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const toInvite = (row) => ({
   id: row.id,
@@ -86,14 +82,9 @@ const sendInvite = asyncHandler(async (req, res) => {
 
   const now = new Date();
   try {
-    // The invitation is artwork with the recipient's name painted on; the template stacks its slices.
-    const { attachments, sizes } = await buildInvitationImages(row.full_name);
-    await sendTemplateEmail('conclave_invitation', row.email, {
-      name: escapeHtml(row.full_name),
-      whatsappLink: escapeHtml(getDelegateWhatsappGroupUrl()),
-      registerLink: escapeHtml(getRegistrationUrl()),
-      ...sizes,
-    }, { attachments });
+    // Same design and delivery as the registration confirmation email: images embedded as cid attachments.
+    const { attachments, variables } = await buildInvitationEmail({ fullName: row.full_name, email: row.email });
+    await sendTemplateEmail('conclave_invitation', row.email, variables, { attachments });
   } catch (error) {
     await pool.query('UPDATE invites SET last_attempt_at = ?, last_error = ? WHERE id = ?', [now, String(error.message || error).slice(0, 1000), row.id]);
     const [[failed]] = await pool.query('SELECT * FROM invites WHERE id = ?', [row.id]);

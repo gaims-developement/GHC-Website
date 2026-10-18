@@ -26,15 +26,16 @@ import { API_BASE_URL } from "../config/api";
 import { setPageSeo, trackEvent } from "../utils/seo";
 
 const awardsList = [
-  { id: "young_entrepreneur", name: "Young Entrepreneur Award", desc: "For innovative healthcare startups and leaders." },
-  { id: "women_healthcare", name: "Women in Healthcare Award", desc: "Celebrating female excellence and leadership." },
-  { id: "medical_educator", name: "Medical Educator Award", desc: "For outstanding contribution to medical teaching." },
-  { id: "young_researcher", name: "Young Researcher Award", desc: "Recognising breakthrough student research." },
-  { id: "community_service", name: "Community Service Award", desc: "For impactful public health initiatives." },
-  { id: "medical_ngo", name: "Medical NGO Award", desc: "Honouring organizational impact in healthcare." },
-  { id: "medical_leadership", name: "Medical Leadership Award", desc: "For exceptional visionary leadership.", hasAgeCategories: true },
-  { id: "influencer", name: "Influencer Award", desc: "For driving positive health communication." },
-  { id: "academic", name: "Academic Award", desc: "For consistent academic brilliance." },
+  { id: "young_entrepreneur", name: "Medical Innovator of the Year", desc: "For innovative healthcare solutions, startups and ideas." },
+  { id: "women_healthcare", name: "Woman in Medicine of the Year", desc: "Celebrating female excellence and leadership in medicine." },
+  { id: "medical_educator", name: "Medical Educator of the Year", desc: "For outstanding contribution to medical teaching." },
+  { id: "young_researcher", name: "Young Medical Researcher of the Year", desc: "Recognising breakthrough research by young researchers." },
+  { id: "community_service", name: "Medical Changemaker of the Year", desc: "For impactful public health and community initiatives." },
+  { id: "medical_ngo", name: "Medical NGO of the Year", desc: "Honouring organisational impact in healthcare." },
+  { id: "medical_leadership", name: "Emerging Medical Leader of the Year", desc: "For exceptional visionary leadership.", hasAgeCategories: true },
+  { id: "influencer", name: "Medical Influencer of the Year", desc: "For driving positive health communication." },
+  { id: "peoples_choice_influencer", name: "People's Choice – Medical Influencer", desc: "The medical influencer chosen by the public." },
+  { id: "academic", name: "Medical Student of the Year", desc: "For outstanding all-round excellence as a medical student." },
 ];
 
 const ageCategories = [

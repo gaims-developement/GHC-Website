@@ -1,186 +1,153 @@
 const path = require('path');
-const QRCode = require('qrcode');
 const { createCanvas, loadImage, GlobalFonts } = require('@napi-rs/canvas');
-// Loading the delegate email service also registers the Poppins fonts (GHCPoppins*) used below.
-const { erase } = require('./delegateEmailService');
-const { getRegistrationUrl } = require('../config/links');
+const { EVENT, toJpeg } = require('./delegateEmailService');
+const { getDelegateWhatsappGroupUrl, getRegistrationUrl } = require('../config/links');
 
-// The conclave invitation email is the designed poster (assets/email/invitation-source.png, 1024x1536), kept as
-// designed and cut into horizontal bands. Only these are painted over it: the corrected dates, the recipient's
-// name (in place of "Your Name Here" and the designation line) and a real QR code to the registration page.
-// The band holding the poster's "Register Now" button is sliced into columns so it can be linked.
+// The conclave invitation email is the GHC 2026 invitation poster (assets/email/invitation-poster.jpg), exported
+// from the admin's Invitation Poster page with "Email artwork" selected. Its QR code already points to the Clirnet
+// registration page. The poster is cut into horizontal bands sent as embedded (cid) images, like the registration
+// confirmation email; the guest's name is painted into the gold nameplate, and the QR panel and the two buttons
+// are linked images. If the poster is re-exported, keep the 1200 x 1920 layout so the band positions below hold.
 const ASSETS = path.join(__dirname, '..', 'assets');
-const SOURCE = path.join(ASSETS, 'email', 'invitation-source.png');
+const POSTER = path.join(ASSETS, 'email', 'invitation-poster.jpg');
+GlobalFonts.registerFromPath(path.join(ASSETS, 'fonts', 'Cinzel.ttf'), 'GHCCinzel');
 
-GlobalFonts.registerFromPath(path.join(ASSETS, 'fonts', 'GreatVibes-Regular.ttf'), 'InviteScript');
-
-const WIDTH = 1024;
-const HEIGHT = 1536;
-// Band edges are multiples of 8 so they scale to whole pixels at the 640px email width (factor 0.625).
+// Positions are in poster design units (1200 x 1920); band edges are multiples of 15 so they map to whole
+// pixels at the 1280px render width (shown at 640px in the email, sharp on high-density screens).
+const DESIGN_WIDTH = 1200;
+const RENDER_WIDTH = 1280;
 const EMAIL_WIDTH = 640;
+const K = RENDER_WIDTH / DESIGN_WIDTH;
 const BANDS = {
-  top: [0, 1264],
-  cta: [1264, 1312],
-  bottom: [1312, HEIGHT],
+  top: [0, 1260], // header, Bharat Mandapam, headline and invitation copy
+  name: [1260, 1425], // gold nameplate
+  info: [1425, 1725], // highlights and the QR registration panel
+  buttons: [1725, 1830], // Register Now | Join WhatsApp Group, split at the centre
+  bottom: [1830, 1920], // footer
 };
-// The middle column is exactly the poster's "Register Now" button.
-const CTA_COLUMNS = [[0, 488], [488, 712], [712, 1024]];
-const QR_BOX = { x: 310, y: 1170, w: 139, h: 137 };
+const NAMEPLATE = { x: 190, y: 1288, w: 820, h: 112 };
 
-const roundedRect = (ctx, x, y, w, h, r) => {
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.arcTo(x + w, y, x + w, y + h, r);
-  ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r);
-  ctx.arcTo(x, y, x + w, y, r);
-  ctx.closePath();
+let posterPromise = null;
+const getPoster = () => {
+  if (!posterPromise) posterPromise = loadImage(POSTER).catch((error) => { posterPromise = null; throw error; });
+  return posterPromise;
 };
 
-// Shrink the font until the text fits maxWidth.
-const fitFont = (ctx, text, family, size, maxWidth, minSize) => {
-  let fontSize = size;
-  ctx.font = `${fontSize}px ${family}`;
-  while (ctx.measureText(text).width > maxWidth && fontSize > minSize) {
-    fontSize -= 0.5;
-    ctx.font = `${fontSize}px ${family}`;
-  }
-  return fontSize;
-};
-
-// Text drawn glyph by glyph with extra tracking (the poster's wide-spaced caption style).
-const drawTracked = (ctx, text, { x, y, spacing }) => {
-  let cursor = x;
-  ctx.textAlign = 'left';
-  for (const char of text) {
-    ctx.fillText(char, cursor, y);
-    cursor += ctx.measureText(char).width + spacing;
-  }
-};
-
-// Everything except the recipient's name: drawn once per process and reused.
-const renderBase = async () => {
-  const source = await loadImage(SOURCE);
-  const canvas = createCanvas(WIDTH, HEIGHT);
+// Crop a band (design units) out of the high-resolution poster, scaled to the render width.
+const cropBand = (poster, [top, bottom], [left, right] = [0, DESIGN_WIDTH]) => {
+  const ratio = poster.width / DESIGN_WIDTH;
+  const canvas = createCanvas(Math.round((right - left) * K), Math.round((bottom - top) * K));
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(source, 0, 0, WIDTH, HEIGHT);
-
-  // Dates: "22 – 24 / JANUARY 2026" -> "28 – 29 / NOVEMBER 2026".
-  erase(ctx, 770, 42, 168, 46);
-  ctx.fillStyle = '#e8ebf2';
-  ctx.textBaseline = 'alphabetic';
-  ctx.font = '19px GHCPoppinsRegular';
-  drawTracked(ctx, '28 – 29', { x: 775, y: 63, spacing: 1.2 });
-  drawTracked(ctx, 'NOVEMBER 2026', { x: 775, y: 84, spacing: 1.2 });
-
-  // Name panel: clear "Your Name Here" and the designation line (the name is drawn per recipient).
-  erase(ctx, 215, 918, 595, 112);
-  const ruleY = 1010;
-  for (const [from, to] of [[300, 504], [520, 724]]) {
-    const gradient = ctx.createLinearGradient(from, 0, to, 0);
-    gradient.addColorStop(from < 512 ? 0 : 1, 'rgba(212,165,90,0)');
-    gradient.addColorStop(from < 512 ? 1 : 0, 'rgba(232,190,110,0.95)');
-    ctx.strokeStyle = gradient;
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.moveTo(from, ruleY);
-    ctx.lineTo(to, ruleY);
-    ctx.stroke();
-  }
-  ctx.fillStyle = '#f1cf86';
-  ctx.beginPath();
-  ctx.arc(512, ruleY, 3.2, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Replace the poster's placeholder QR with a real one that opens the registration page.
-  roundedRect(ctx, QR_BOX.x, QR_BOX.y, QR_BOX.w, QR_BOX.h, 10);
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
-  const qr = await loadImage(await QRCode.toBuffer(getRegistrationUrl(), {
-    errorCorrectionLevel: 'M',
-    margin: 0,
-    width: 480,
-    color: { dark: '#0b1220', light: '#ffffff' },
-  }));
-  const qrSize = 117;
-  ctx.drawImage(qr, QR_BOX.x + (QR_BOX.w - qrSize) / 2, QR_BOX.y + (QR_BOX.h - qrSize) / 2, qrSize, qrSize);
-
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(poster, left * ratio, top * ratio, (right - left) * ratio, (bottom - top) * ratio, 0, 0, canvas.width, canvas.height);
   return canvas;
 };
 
-const crop = (source, x, y, w, h) => {
-  const canvas = createCanvas(w, h);
-  canvas.getContext('2d').drawImage(source, x, y, w, h, 0, 0, w, h);
-  return canvas;
-};
-
-// Quality 84 keeps the photo crisp while holding each email to roughly 400 KB of images.
-const encode = (canvas) => canvas.encode('jpeg', 84);
-
-let basePromise = null;
-let staticBandsPromise = null;
-const getBase = () => {
-  if (!basePromise) basePromise = renderBase();
-  return basePromise;
-};
-
-// The call-to-action row and the bottom of the poster are the same for everyone, so they are encoded once.
+let staticPromise = null;
 const getStaticBands = () => {
-  if (!staticBandsPromise) {
-    staticBandsPromise = getBase().then(async (base) => {
-      const [y0, y1] = BANDS.cta;
-      const cta = await Promise.all(CTA_COLUMNS.map(([x0, x1]) => encode(crop(base, x0, y0, x1 - x0, y1 - y0))));
-      const bottom = await encode(crop(base, 0, BANDS.bottom[0], WIDTH, BANDS.bottom[1] - BANDS.bottom[0]));
-      return { cta, bottom };
-    });
+  if (!staticPromise) {
+    staticPromise = getPoster()
+      .then(async (poster) => ({
+        top: await toJpeg(cropBand(poster, BANDS.top)),
+        info: await toJpeg(cropBand(poster, BANDS.info)),
+        buttons: await Promise.all([
+          toJpeg(cropBand(poster, BANDS.buttons, [0, DESIGN_WIDTH / 2])),
+          toJpeg(cropBand(poster, BANDS.buttons, [DESIGN_WIDTH / 2, DESIGN_WIDTH])),
+        ]),
+        bottom: await toJpeg(cropBand(poster, BANDS.bottom)),
+      }))
+      .catch((error) => {
+        staticPromise = null;
+        throw error;
+      });
   }
-  return staticBandsPromise;
+  return staticPromise;
 };
 
-// Top band with the recipient's name written in gold script, centred in the poster's name panel.
-const renderTopBand = async (fullName) => {
-  const base = await getBase();
-  const [y0, y1] = BANDS.top;
-  const canvas = crop(base, 0, y0, WIDTH, y1 - y0);
+// The nameplate band with the guest's name in gold Cinzel, shrunk to fit; very long names wrap onto two lines.
+const renderNameBand = async (fullName) => {
+  const canvas = cropBand(await getPoster(), BANDS.name);
   const ctx = canvas.getContext('2d');
-  const name = String(fullName || 'Valued Guest').trim();
-  const size = fitFont(ctx, name, 'InviteScript', 72, 560, 34);
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.45)';
-  ctx.shadowBlur = 6;
-  ctx.shadowOffsetY = 2;
-  const gradient = ctx.createLinearGradient(0, 930, 0, 995);
-  gradient.addColorStop(0, '#f6dc9c');
-  gradient.addColorStop(1, '#d9a24f');
-  ctx.fillStyle = gradient;
-  ctx.font = `${size}px InviteScript`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'alphabetic';
-  ctx.fillText(name, WIDTH / 2, 988);
-  ctx.restore();
-  return encode(canvas);
-};
-
-const toEmail = (n) => Math.round(n * (EMAIL_WIDTH / WIDTH));
-
-// Inline (cid) attachments for one recipient's invitation, plus the pixel sizes the email template needs.
-const buildInvitationImages = async (fullName) => {
-  const [top, statics] = await Promise.all([renderTopBand(fullName), getStaticBands()]);
-  const attachments = [
-    { filename: 'invitation.jpg', content: top, contentType: 'image/jpeg', cid: 'inv-top' },
-    ...statics.cta.map((content, i) => ({ filename: `invitation-cta-${i + 1}.jpg`, content, contentType: 'image/jpeg', cid: `inv-cta-${i + 1}` })),
-    { filename: 'invitation-footer.jpg', content: statics.bottom, contentType: 'image/jpeg', cid: 'inv-bottom' },
-  ];
-  const sizes = {
-    emailWidth: EMAIL_WIDTH,
-    topHeight: toEmail(BANDS.top[1] - BANDS.top[0]),
-    ctaHeight: toEmail(BANDS.cta[1] - BANDS.cta[0]),
-    bottomHeight: toEmail(BANDS.bottom[1] - BANDS.bottom[0]),
-    cta1Width: toEmail(CTA_COLUMNS[0][1] - CTA_COLUMNS[0][0]),
-    cta2Width: toEmail(CTA_COLUMNS[1][1] - CTA_COLUMNS[1][0]),
-    cta3Width: toEmail(CTA_COLUMNS[2][1] - CTA_COLUMNS[2][0]),
+  const plate = {
+    x: NAMEPLATE.x * K,
+    y: (NAMEPLATE.y - BANDS.name[0]) * K,
+    w: NAMEPLATE.w * K,
+    h: NAMEPLATE.h * K,
   };
-  return { attachments, sizes };
+  const name = String(fullName || '').replace(/\s+/g, ' ').trim() || 'Distinguished Guest';
+  const maxWidth = plate.w * 0.86;
+
+  const measure = (text, size) => {
+    ctx.font = `${size}px GHCCinzel`;
+    return ctx.measureText(text).width;
+  };
+  let lines = [name];
+  let size = 60;
+  while (size > 38 && measure(name, size) > maxWidth) size -= 1;
+  if (measure(name, size) > maxWidth) {
+    const mid = Math.floor(name.length / 2);
+    const before = name.lastIndexOf(' ', mid);
+    const after = name.indexOf(' ', mid);
+    const cut = before > 0 && (after < 0 || mid - before <= after - mid) ? before : after;
+    lines = cut > 0 ? [name.slice(0, cut), name.slice(cut + 1)] : [name];
+    size = 40;
+    while (size > 22 && Math.max(...lines.map((line) => measure(line, size))) > maxWidth) size -= 1;
+  }
+
+  ctx.font = `${size}px GHCCinzel`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const centerX = plate.x + plate.w / 2;
+  const lineGap = size * 1.18;
+  const firstY = plate.y + plate.h / 2 - ((lines.length - 1) * lineGap) / 2 + size * 0.04;
+  lines.forEach((line, i) => {
+    let text = line;
+    while (ctx.measureText(text).width > maxWidth && text.length > 1) text = `${text.slice(0, -2)}…`;
+    const y = firstY + i * lineGap;
+    // Champagne-gold gradient over each line's own height.
+    const gold = ctx.createLinearGradient(0, y - size / 2, 0, y + size / 2);
+    gold.addColorStop(0, '#fff3cf');
+    gold.addColorStop(0.5, '#f4c66a');
+    gold.addColorStop(1, '#d9a441');
+    ctx.shadowColor = 'rgba(244, 198, 106, 0.55)';
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = gold;
+    ctx.fillText(text, centerX, y);
+  });
+  return toJpeg(canvas);
 };
 
-module.exports = { buildInvitationImages, renderBase };
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const shown = (designUnits) => Math.round((designUnits * EMAIL_WIDTH) / DESIGN_WIDTH);
+
+// Inline (cid) images and template variables for one guest's invitation.
+const buildInvitationEmail = async ({ fullName }) => {
+  const [statics, nameBand] = await Promise.all([getStaticBands(), renderNameBand(fullName)]);
+  const attachments = [
+    { filename: 'ghc-invite-top.jpg', content: statics.top, contentType: 'image/jpeg', cid: 'inv-top' },
+    { filename: 'ghc-invite-name.jpg', content: nameBand, contentType: 'image/jpeg', cid: 'inv-name' },
+    { filename: 'ghc-invite-info.jpg', content: statics.info, contentType: 'image/jpeg', cid: 'inv-info' },
+    { filename: 'ghc-invite-register.jpg', content: statics.buttons[0], contentType: 'image/jpeg', cid: 'inv-register' },
+    { filename: 'ghc-invite-whatsapp.jpg', content: statics.buttons[1], contentType: 'image/jpeg', cid: 'inv-whatsapp' },
+    { filename: 'ghc-invite-bottom.jpg', content: statics.bottom, contentType: 'image/jpeg', cid: 'inv-bottom' },
+  ];
+  const variables = {
+    name: escapeHtml(fullName),
+    eventDates: escapeHtml(EVENT.dates),
+    venue: escapeHtml(EVENT.venue),
+    registerLink: escapeHtml(getRegistrationUrl()),
+    eventUrl: escapeHtml(EVENT.url),
+    whatsappLink: escapeHtml(getDelegateWhatsappGroupUrl()),
+    helpEmails: escapeHtml([EVENT.helpTo, ...EVENT.helpCc].join(', ')),
+    helpUrl: escapeHtml(`mailto:${EVENT.helpTo}?subject=${encodeURIComponent('GHC 2026 Invitation Query')}`),
+    topHeight: shown(BANDS.top[1] - BANDS.top[0]),
+    nameHeight: shown(BANDS.name[1] - BANDS.name[0]),
+    infoHeight: shown(BANDS.info[1] - BANDS.info[0]),
+    buttonsHeight: shown(BANDS.buttons[1] - BANDS.buttons[0]),
+    bottomHeight: shown(BANDS.bottom[1] - BANDS.bottom[0]),
+    buttonWidth: EMAIL_WIDTH / 2,
+  };
+  return { attachments, variables };
+};
+
+module.exports = { buildInvitationEmail };
