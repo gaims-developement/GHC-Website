@@ -709,12 +709,6 @@ export default function AbstractRegister() {
                     </div>
 
                     <div className="bg-white rounded-xl p-3.5 border border-[#6C4AB6]/15 shadow-2xs">
-                      <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider block">Screening Mode</span>
-                      <span className="text-sm font-extrabold text-emerald-700">Rolling Basis (~10–15 Oct onwards)</span>
-                      <span className="text-[10px] text-gray-500 block mt-0.5">Decisions and feedback sent in parallel</span>
-                    </div>
-
-                    <div className="bg-white rounded-xl p-3.5 border border-[#6C4AB6]/15 shadow-2xs">
                       <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider block">Revision Deadline (Submitted ≤ 22 Oct)</span>
                       <span className="text-sm font-extrabold text-[#6C4AB6]">31 October 2026</span>
                       <span className="text-[10px] text-gray-500 block mt-0.5">Strict deadline for first-batch revisions</span>
