@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import ReviewerTeams from "../components/scientific/ReviewerTeams";
 import { apiUrl } from "../../config/api";
+import PhoneCell from "../components/PhoneCell";
 
 function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
   // ----------------------------------------------------
@@ -1714,6 +1715,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                     <th>Code</th>
                     <th>Title of Research</th>
                     <th>Presenting Author</th>
+                    <th>Phone</th>
                     <th>Reviewer Team</th>
                     <th>Assigned Reviewer</th>
                     <th>Workflow Stage</th>
@@ -1738,6 +1740,9 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                       <td>
                         <div>{sub.presentingAuthor || sub.correspondingAuthor || sub.authors || "Not specified"}</div>
                         <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>{sub.institution || "GAIMS"}</span>
+                      </td>
+                      <td style={{ fontSize: "0.85rem", whiteSpace: "nowrap", minWidth: "150px" }}>
+                        <PhoneCell phone={sub.phone} />
                       </td>
                       <td>
                         {sub.teamName ? (

@@ -20,6 +20,7 @@ import {
   Users,
   X,
 } from "lucide-react";
+import PhoneCell from "../components/PhoneCell";
 
 export default function ScientificTeamLead({ api, user, onNavigate }) {
   const [roleLoading, setRoleLoading] = useState(true);
@@ -526,6 +527,7 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
                     <th>Code</th>
                     <th>Title of Research</th>
                     <th>Presenting Author</th>
+                    <th>Phone</th>
                     <th>Category</th>
                     <th>Status</th>
                     <th style={{ textAlign: "right" }}>Action</th>
@@ -547,6 +549,9 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
                       <td>
                         <div>{abs.presentingAuthor || abs.authors || "Not specified"}</div>
                         <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>{abs.institution || "GAIMS"}</span>
+                      </td>
+                      <td style={{ fontSize: "0.85rem", whiteSpace: "nowrap", minWidth: "150px" }}>
+                        <PhoneCell phone={abs.phone} />
                       </td>
                       <td>
                         <span style={{ fontSize: "0.8rem", color: "#4b5563" }}>
@@ -816,6 +821,7 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
                   <th>Code</th>
                   <th>Title of Research</th>
                   <th>Author</th>
+                  <th>Phone</th>
                   <th>Assigned Reviewer</th>
                   <th>Workflow Stage</th>
                   <th>Score</th>
@@ -836,6 +842,9 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
                       </strong>
                     </td>
                     <td style={{ fontSize: "0.85rem" }}>{abs.presentingAuthor || abs.authors || "-"}</td>
+                    <td style={{ fontSize: "0.85rem", whiteSpace: "nowrap", minWidth: "150px" }}>
+                      <PhoneCell phone={abs.phone} />
+                    </td>
                     <td style={{ fontSize: "0.85rem" }}>
                       {abs.assignedReviewerName ? (
                         <span style={{ fontWeight: 600, color: "#374151" }}>{abs.assignedReviewerName}</span>
