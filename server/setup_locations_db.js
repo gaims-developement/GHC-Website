@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { pool } = require('./config/db');
 const { Country, State, City } = require('country-state-city');
+const { applyNepalProvinces } = require('./utils/nepalProvinces');
 
 async function setupLocations() {
   console.log("Starting location database setup...");
@@ -158,6 +159,9 @@ async function setupLocations() {
     }
 
     console.log(`Cities: Inserted ${citiesInserted}`);
+    // The package still has Nepal's pre-2015 regions; replace them with the seven provinces.
+    const nepal = await applyNepalProvinces(pool);
+    if (nepal.updated) console.log(`Nepal: ${nepal.provinces} provinces, ${nepal.cities} cities`);
     console.log("Location database setup complete.");
 
   } catch (e) {

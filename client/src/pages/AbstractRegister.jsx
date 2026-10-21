@@ -244,7 +244,7 @@ const defaultCountries = [
   { id: 38, name: "Canada" },
   { id: 229, name: "United Arab Emirates" },
   { id: 199, name: "Singapore" },
-  { id: 156, name: "Nepal" },
+  { id: 154, name: "Nepal" },
   { id: 167, name: "Pakistan" },
   { id: 18, name: "Bangladesh" },
   { id: 206, name: "Sri Lanka" },
@@ -277,6 +277,8 @@ export default function AbstractRegister() {
   const [statesList, setStatesList] = useState([]);
   const [citiesList, setCitiesList] = useState([]);
   const [loadingLocations, setLoadingLocations] = useState(false);
+  // False while a country's states are loading; a country with no states then gets a free-text State field.
+  const [statesLoaded, setStatesLoaded] = useState(false);
   const [citySearchTerm, setCitySearchTerm] = useState("");
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const cityDropdownRef = useRef(null);
@@ -320,10 +322,13 @@ export default function AbstractRegister() {
   useEffect(() => {
     if (form.countryId) {
       setStatesList([]);
+      setStatesLoaded(false);
+      setCitySearchTerm("");
       setForm(curr => ({ ...curr, state: "", stateId: null, city: "", cityId: null }));
       axios.get(apiUrl(`/api/locations/states/${form.countryId}`))
         .then(res => setStatesList(Array.isArray(res.data) ? res.data : []))
-        .catch(err => console.error("Failed to load states:", err));
+        .catch(err => console.error("Failed to load states:", err))
+        .finally(() => setStatesLoaded(true));
     }
   }, [form.countryId]);
 
@@ -1076,19 +1081,29 @@ export default function AbstractRegister() {
                       <label className="block text-sm font-semibold text-[#344054] mb-2">
                         State / Province <span className="text-rose-500">*</span>
                       </label>
-                      <select
-                        value={form.stateId || ""}
-                        onChange={(e) => {
-                          const stateObj = statesList.find(s => s.id.toString() === e.target.value);
-                          updateForm("stateId", stateObj ? stateObj.id : null, { state: stateObj ? stateObj.name : "", city: "", cityId: null });
-                          setCitySearchTerm("");
-                        }}
-                        disabled={!form.countryId || statesList.length === 0}
-                        className={`w-full bg-white border ${errors.state ? 'border-rose-400 focus:ring-rose-200' : 'border-gray-300 focus:border-[#6C4AB6] focus:ring-[#6C4AB6]/20'} rounded-xl px-4 py-3 text-[#101828] focus:outline-none focus:ring-2 shadow-xs transition-all disabled:opacity-50`}
-                      >
-                        <option value="" disabled>{statesList.length === 0 && form.countryId ? "No states loaded" : "Select State"}</option>
-                        {statesList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                      </select>
+                      {form.countryId && statesLoaded && statesList.length === 0 ? (
+                        <input
+                          type="text"
+                          value={form.state}
+                          onChange={(e) => updateForm("state", e.target.value, { stateId: null })}
+                          placeholder="Type your state / province"
+                          className={`w-full bg-white border ${errors.state ? 'border-rose-400 focus:ring-rose-200' : 'border-gray-300 focus:border-[#6C4AB6] focus:ring-[#6C4AB6]/20'} rounded-xl px-4 py-3 text-[#101828] placeholder-gray-400 focus:outline-none focus:ring-2 shadow-xs transition-all`}
+                        />
+                      ) : (
+                        <select
+                          value={form.stateId || ""}
+                          onChange={(e) => {
+                            const stateObj = statesList.find(s => s.id.toString() === e.target.value);
+                            updateForm("stateId", stateObj ? stateObj.id : null, { state: stateObj ? stateObj.name : "", city: "", cityId: null });
+                            setCitySearchTerm("");
+                          }}
+                          disabled={!form.countryId || statesList.length === 0}
+                          className={`w-full bg-white border ${errors.state ? 'border-rose-400 focus:ring-rose-200' : 'border-gray-300 focus:border-[#6C4AB6] focus:ring-[#6C4AB6]/20'} rounded-xl px-4 py-3 text-[#101828] focus:outline-none focus:ring-2 shadow-xs transition-all disabled:opacity-50`}
+                        >
+                          <option value="" disabled>{form.countryId && !statesLoaded ? "Loading states..." : "Select State"}</option>
+                          {statesList.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                        </select>
+                      )}
                       {errors.state && <p className="text-rose-500 mt-1.5 text-xs font-semibold">{errors.state}</p>}
                     </div>
 
@@ -1101,15 +1116,16 @@ export default function AbstractRegister() {
                           type="text"
                           value={form.cityId ? form.city : citySearchTerm}
                           onChange={(e) => {
+                            // Whatever is typed is the city; picking a suggestion just fills it in.
                             setCitySearchTerm(e.target.value);
-                            updateForm("city", "", { cityId: null });
+                            updateForm("city", e.target.value, { cityId: null });
                             setShowCityDropdown(true);
                           }}
                           onFocus={() => {
                             if (!form.cityId) setShowCityDropdown(true);
                           }}
-                          disabled={!form.stateId}
-                          placeholder={!form.stateId ? "Select state first" : "Search city..."}
+                          disabled={!form.state.trim()}
+                          placeholder={!form.state.trim() ? "Select state first" : "Search or type your city"}
                           className={`w-full bg-white border ${errors.city ? 'border-rose-400 focus:ring-rose-200' : 'border-gray-300 focus:border-[#6C4AB6] focus:ring-[#6C4AB6]/20'} rounded-xl px-4 py-3 text-[#101828] placeholder-gray-400 focus:outline-none focus:ring-2 transition-all shadow-xs disabled:opacity-50`}
                         />
                         {loadingLocations && (
@@ -1136,7 +1152,14 @@ export default function AbstractRegister() {
                               </div>
                             ))
                           ) : (
-                            !loadingLocations && <div className="px-4 py-3 text-gray-500 text-xs text-center">No matching cities found</div>
+                            !loadingLocations && (
+                              <div
+                                onClick={() => setShowCityDropdown(false)}
+                                className="px-4 py-3 text-xs text-center text-[#6C4AB6] font-semibold cursor-pointer hover:bg-gray-50"
+                              >
+                                Not in the list? Use &quot;{citySearchTerm.trim()}&quot; as your city
+                              </div>
+                            )
                           )}
                         </div>
                       )}
