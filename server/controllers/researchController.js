@@ -146,6 +146,10 @@ const getRevisionContact = () =>
 const getAbstractWhatsappGroupUrl = () =>
   process.env.ABSTRACT_WHATSAPP_GROUP_URL || 'https://chat.whatsapp.com/KX8RTHC6qCS5AwoDgXxq1D';
 
+// Separate group ("GHC - Accepted Abstract") linked from the abstract acceptance email.
+const getAcceptedAbstractWhatsappGroupUrl = () =>
+  process.env.ACCEPTED_ABSTRACT_WHATSAPP_GROUP_URL || 'https://chat.whatsapp.com/JiXDJ5EH4d76tpj4lM0vj2';
+
 const getParticipationTokenTtlDays = () => Number(process.env.PARTICIPATION_TOKEN_TTL_DAYS || 30);
 
 const createParticipationLinkForSubmission = async (req, submission) => {
@@ -249,7 +253,7 @@ const sendAbstractDecisionEmail = async (req, submission, status, notes = '') =>
       participationLink: participation.link,
       registration_link: participation.link,
       participationExpiresAt: participation.expires ? participation.expires.toLocaleDateString('en-IN', { dateStyle: 'medium' }) : '',
-      whatsappGroupLink: getAbstractWhatsappGroupUrl(),
+      whatsappGroupLink: status === 'accepted' ? getAcceptedAbstractWhatsappGroupUrl() : getAbstractWhatsappGroupUrl(),
     });
     await logDecision(req, action, submission.id, { email: submission.email });
     return true;
