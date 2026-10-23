@@ -43,6 +43,7 @@ const normalize = (item) => item && ({
   aiPercentage: item.ai_percentage !== null ? Number(item.ai_percentage) : null,
   plagiarismPercentage: item.plagiarism_percentage !== null ? Number(item.plagiarism_percentage) : null,
   currentVersion: item.current_version || 1,
+  revisedSubmittedAt: item.revised_submitted_at || null,
   revisionToken: item.revision_token,
   revisionTokenExpires: item.revision_token_expires,
   revisionRequestedAt: item.revision_requested_at,
@@ -631,6 +632,11 @@ const saveRevision = async (token, data) => {
         current_version = ?,
         status = 'revised_submitted',
         submission_status = 'revised_submitted',
+        revised_submitted_at = NOW(),
+        workflow_stage = CASE
+          WHEN EXISTS (SELECT 1 FROM abstract_review_assignments ara WHERE ara.abstract_id = abstracts.id) THEN 'assigned_to_reviewer'
+          WHEN team_id IS NOT NULL THEN 'assigned_to_team'
+          ELSE 'submitted' END,
         revision_token = NULL,
         revision_token_expires = NULL,
         revision_token_status = 'used'

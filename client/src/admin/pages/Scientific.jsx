@@ -46,6 +46,7 @@ import {
 import ReviewerTeams from "../components/scientific/ReviewerTeams";
 import { apiUrl } from "../../config/api";
 import PhoneCell from "../components/PhoneCell";
+import RevisedBadge from "../components/RevisedBadge";
 
 function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
   // ----------------------------------------------------
@@ -1053,6 +1054,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                         </td>
                         <td>
                           <div style={{ fontWeight: 600, color: "#111827", maxWidth: "340px", lineHeight: 1.3 }}>{item.title}</div>
+                          <RevisedBadge version={item.current_version} />
                           <span style={{ fontSize: "0.75rem", textTransform: "capitalize", color: "#6b7280", marginTop: "0.2rem", display: "inline-block" }}>
                             Category: {item.category || "General"}
                           </span>
@@ -1735,6 +1737,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                         <strong title={sub.title} style={{ color: "#111827", maxWidth: "280px", display: "block" }}>
                           {sub.title}
                         </strong>
+                        <RevisedBadge version={sub.currentVersion} />
                         <span style={{ fontSize: "0.75rem", color: "#6b7280" }}>{sub.category || "Poster"} • {sub.track || "Scientific Track"}</span>
                       </td>
                       <td>

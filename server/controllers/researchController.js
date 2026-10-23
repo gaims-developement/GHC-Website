@@ -951,6 +951,7 @@ const assignedReviews = asyncHandler(async (req, res) => {
   if (!reviewer && req.user?.role !== 'SUPER_ADMIN') return res.json({ assignments: [] });
   const params = reviewer ? [reviewer.id] : [];
   const where = reviewer ? 'WHERE ara.reviewer_id = ?' : '';
+  // review_state: a review written before the author's latest revision has to be redone, so it counts as pending.
   const [assignments] = await pool.query(`
     SELECT 
       ara.*, 
@@ -974,7 +975,10 @@ const assignedReviews = asyncHandler(async (req, res) => {
       ar.total_score,
       ar.recommendation,
       ar.reviewed_at,
-      CASE WHEN ar.id IS NOT NULL THEN 'completed' ELSE 'pending' END AS review_state
+      a.current_version,
+      a.revised_submitted_at,
+      CASE WHEN ar.id IS NOT NULL AND (a.revised_submitted_at IS NULL OR ar.reviewed_at >= a.revised_submitted_at)
+        THEN 'completed' ELSE 'pending' END AS review_state
     FROM abstract_review_assignments ara
     INNER JOIN abstracts a ON a.id = ara.abstract_id
     LEFT JOIN abstract_reviews ar ON ar.abstract_id = ara.abstract_id AND ar.reviewer_id = ara.reviewer_id

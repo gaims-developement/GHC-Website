@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import PhoneCell from "../components/PhoneCell";
+import RevisedBadge from "../components/RevisedBadge";
 
 export default function ScientificTeamLead({ api, user, onNavigate }) {
   const [roleLoading, setRoleLoading] = useState(true);
@@ -545,6 +546,7 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
                         <strong title={abs.title} style={{ color: "#111827", maxWidth: "320px", display: "block" }}>
                           {abs.title}
                         </strong>
+                        <RevisedBadge version={abs.currentVersion} />
                       </td>
                       <td>
                         <div>{abs.presentingAuthor || abs.authors || "Not specified"}</div>
@@ -636,7 +638,7 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
                       <span style={{ fontFamily: "monospace", fontWeight: 700, color: "#6C4AB6", marginRight: "0.5rem" }}>
                         {abs.abstractId || `GHC-ABS-${String(abs.id).padStart(5, "0")}`}
                       </span>
-                      <strong style={{ fontSize: "1rem", color: "#111827" }}>{abs.title}</strong>
+                      <strong style={{ fontSize: "1rem", color: "#111827" }}>{abs.title}</strong> <RevisedBadge version={abs.currentVersion} />
                     </div>
                     <span style={{ fontSize: "0.75rem", fontWeight: 700, padding: "0.2rem 0.6rem", borderRadius: "999px", background: "#fef3c7", color: "#b45309" }}>
                       ⚠️ Revision Flagged by {abs.assignedReviewerName || "Reviewer"}
@@ -725,7 +727,7 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
                       <span style={{ fontFamily: "monospace", fontWeight: 700, color: "#6C4AB6", marginRight: "0.5rem" }}>
                         {abs.abstractId || `GHC-ABS-${String(abs.id).padStart(5, "0")}`}
                       </span>
-                      <strong style={{ fontSize: "1.05rem", color: "#111827" }}>{abs.title}</strong>
+                      <strong style={{ fontSize: "1.05rem", color: "#111827" }}>{abs.title}</strong> <RevisedBadge version={abs.currentVersion} />
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                       <span
@@ -840,6 +842,7 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
                       <strong title={abs.title} style={{ color: "#111827", maxWidth: "280px", display: "block" }}>
                         {abs.title}
                       </strong>
+                      <RevisedBadge version={abs.currentVersion} />
                     </td>
                     <td style={{ fontSize: "0.85rem" }}>{abs.presentingAuthor || abs.authors || "-"}</td>
                     <td style={{ fontSize: "0.85rem", whiteSpace: "nowrap", minWidth: "150px" }}>

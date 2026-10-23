@@ -1815,6 +1815,27 @@ const createResearchTables = async () => {
   await addColumnIfMissing('abstracts', 'reviewer_revision_notes', 'TEXT NULL');
   await addColumnIfMissing('abstracts', 'reviewer_recommended_action', 'VARCHAR(30) NULL');
   await addColumnIfMissing('abstracts', 'reviewer_submitted_at', 'DATETIME NULL');
+  // When the author last submitted a revision: a reviewer's earlier review no longer counts as done.
+  await addColumnIfMissing('abstracts', 'revised_submitted_at', 'DATETIME NULL');
+  // Revisions received before revised_submitted_at existed: take the time from the activity log and send them back
+  // to their reviewer (they were left at 'revision_requested', in nobody's queue). Only touches such leftover rows.
+  await pool.query(
+    `UPDATE abstracts a
+     SET a.revised_submitted_at = COALESCE(
+       (SELECT MAX(l.timestamp) FROM activity_logs l
+         WHERE l.module = 'scientific' AND l.action = 'submitted_revision'
+           AND l.record_id = CAST(a.id AS CHAR) COLLATE utf8mb4_unicode_ci),
+       a.updated_at)
+     WHERE a.status = 'revised_submitted' AND a.revised_submitted_at IS NULL`
+  );
+  await pool.query(
+    `UPDATE abstracts a
+     SET a.workflow_stage = CASE
+       WHEN EXISTS (SELECT 1 FROM abstract_review_assignments ara WHERE ara.abstract_id = a.id) THEN 'assigned_to_reviewer'
+       WHEN a.team_id IS NOT NULL THEN 'assigned_to_team'
+       ELSE 'submitted' END
+     WHERE a.status = 'revised_submitted' AND a.workflow_stage = 'revision_requested'`
+  );
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS abstract_versions (
