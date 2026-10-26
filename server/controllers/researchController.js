@@ -894,12 +894,18 @@ const assignReviewer = asyncHandler(async (req, res) => {
   await pool.query('DELETE FROM abstract_review_assignments WHERE abstract_id = ?', [abstractId]);
   await pool.query('INSERT INTO abstract_review_assignments (abstract_id, reviewer_id) VALUES (?, ?)', [abstractId, reviewerId]);
 
-  await Research.setStatus(abstractId, 'under_review');
-  await Research.setWorkflowStage(abstractId, 'assigned_to_reviewer', {
-    leadReviewerId: reviewerId,
-  });
+  // Reassigning a scored abstract keeps its reviews, final score and workflow progress; only the reviewer changes.
+  const [[scored]] = await pool.query('SELECT id FROM abstract_reviews WHERE abstract_id = ? LIMIT 1', [abstractId]);
+  if (scored) {
+    await Research.setWorkflowStage(abstractId, abstract.workflowStage, { leadReviewerId: reviewerId });
+  } else {
+    await Research.setStatus(abstractId, 'under_review');
+    await Research.setWorkflowStage(abstractId, 'assigned_to_reviewer', {
+      leadReviewerId: reviewerId,
+    });
+  }
 
-  await logDecision(req, 'assigned_reviewer', abstractId, { reviewerId, teamId: abstract.teamId });
+  await logDecision(req, scored ? 'reassigned_reviewer' : 'assigned_reviewer', abstractId, { reviewerId, teamId: abstract.teamId });
   const updated = await Research.findById(abstractId);
   res.json({ success: true, submission: updated });
 });
@@ -1010,7 +1016,17 @@ const submitScore = asyncHandler(async (req, res) => {
      ON DUPLICATE KEY UPDATE scientific_merit=VALUES(scientific_merit), originality=VALUES(originality), methodology=VALUES(methodology), presentation_quality=VALUES(presentation_quality), relevance=VALUES(relevance), comments=VALUES(comments), recommendation=VALUES(recommendation), total_score=VALUES(total_score), reviewed_at=CURRENT_TIMESTAMP`,
     [req.params.id, reviewerId, ...scores, comments || null, recommendation, total]
   );
-  await pool.query('UPDATE abstracts SET final_score = (SELECT AVG(total_score) FROM abstract_reviews WHERE abstract_id = ?) WHERE id = ?', [req.params.id, req.params.id]);
+  // Only currently assigned reviewers count, so a reassigned reviewer's new score replaces the earlier one (old review rows stay as history).
+  // Falls back to this submission when the submitter isn't assigned (SUPER_ADMIN override).
+  await pool.query(
+    `UPDATE abstracts SET final_score = COALESCE(
+       (SELECT AVG(ar.total_score) FROM abstract_reviews ar
+        INNER JOIN abstract_review_assignments ara ON ara.abstract_id = ar.abstract_id AND ara.reviewer_id = ar.reviewer_id
+        WHERE ar.abstract_id = ?),
+       ?
+     ) WHERE id = ?`,
+    [req.params.id, total, req.params.id]
+  );
 
   if (recommendation === 'revise') {
     // Reviewer flagged revision -> Moves to Team Lead for confirmation before author email is dispatched
@@ -1057,7 +1073,8 @@ const rankingBaseCte = `
       MAX(ar.reviewed_at) AS last_reviewed_at
     FROM abstracts a
     LEFT JOIN abstract_review_assignments ara ON ara.abstract_id = a.id
-    LEFT JOIN abstract_reviews ar ON ar.abstract_id = a.id AND ar.reviewer_id = ara.reviewer_id
+    -- All reviews count, so a score from a reviewer who was later reassigned still ranks.
+    LEFT JOIN abstract_reviews ar ON ar.abstract_id = a.id
     GROUP BY a.id
   ),
   official_rankings AS (
@@ -1078,7 +1095,7 @@ const buildRankingWhere = (query = {}) => {
   const reviewStatus = query.reviewStatus || 'fully_reviewed';
 
   if (reviewStatus === 'fully_reviewed') {
-    clauses.push('rs.assigned_count > 0 AND rs.completed_count = rs.assigned_count AND a.final_score IS NOT NULL');
+    clauses.push('rs.assigned_count > 0 AND rs.completed_count >= rs.assigned_count AND a.final_score IS NOT NULL');
   } else if (reviewStatus === 'pending_review') {
     clauses.push('(rs.assigned_count = 0 OR rs.completed_count < rs.assigned_count OR a.final_score IS NULL)');
   }
@@ -1137,7 +1154,7 @@ const rankingSelectSql = `
     a.year_of_study AS yearOfStudy,
     COALESCE(a.submission_status, a.status) AS abstractStatus,
     CASE
-      WHEN rs.assigned_count > 0 AND rs.completed_count = rs.assigned_count AND a.final_score IS NOT NULL THEN 'fully_reviewed'
+      WHEN rs.assigned_count > 0 AND rs.completed_count >= rs.assigned_count AND a.final_score IS NOT NULL THEN 'fully_reviewed'
       WHEN rs.completed_count > 0 THEN 'partially_reviewed'
       ELSE 'pending_review'
     END AS reviewStatus,

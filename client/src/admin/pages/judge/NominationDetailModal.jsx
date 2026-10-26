@@ -189,7 +189,8 @@ export default function NominationDetailModal({
               <div className="w-36 h-36 rounded-2xl overflow-hidden bg-slate-200 border-2 border-white shadow-md mb-4 relative flex items-center justify-center">
                 {nomination.photoUrl ? (
                   <img
-                    src={getDocUrl("photo")}
+                    // Cloudinary photos are public (the API only redirects to them); skip the token-in-URL hop that can 401.
+                    src={nomination.photoUrl.startsWith("http") ? nomination.photoUrl : getDocUrl("photo")}
                     alt={nomination.fullName}
                     className="w-full h-full object-cover"
                     onError={(e) => {

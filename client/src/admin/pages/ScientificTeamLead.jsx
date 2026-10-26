@@ -903,6 +903,19 @@ export default function ScientificTeamLead({ api, user, onNavigate }) {
                       >
                         <Eye size={13} /> View
                       </button>
+                      {abs.assignedReviewerName && !["accepted", "rejected"].includes(abs.status) && (
+                        <button
+                          type="button"
+                          className="admin-secondary-button"
+                          style={{ padding: "0.3rem 0.6rem", fontSize: "0.78rem", marginLeft: "0.4rem", display: "inline-flex", alignItems: "center", gap: "0.3rem" }}
+                          onClick={() => {
+                            setAssignModalAbstract(abs);
+                            setSelectedReviewerId("");
+                          }}
+                        >
+                          <UserPlus size={13} /> Reassign
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
