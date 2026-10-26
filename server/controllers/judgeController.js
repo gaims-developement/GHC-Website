@@ -7,6 +7,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const Nomination = require('../models/nominationModel');
 const { sendTemplateEmail } = require('../services/mailService');
 const { uploadToCloudinary } = require('../services/cloudinaryService');
+const { CLIENT_URLS } = require('../config/cors');
 
 const cloudinaryConfigured = () =>
   Boolean(
@@ -401,6 +402,8 @@ const getDocument = asyncHandler(async (req, res) => {
   }
 
   const disposition = isDownload ? 'attachment' : 'inline';
+  // Helmet's default object-src 'none' / frame-ancestors 'self' stop the admin CV viewer from embedding the PDF.
+  res.setHeader('Content-Security-Policy', `script-src 'none'; frame-ancestors 'self' ${CLIENT_URLS.join(' ')}`);
   const uploadsDir = path.resolve(__dirname, '..', 'uploads');
 
   // 1. Handle remote URL (Cloudinary)

@@ -21,6 +21,7 @@ import {
   CreditCard,
   MapPin,
 } from "lucide-react";
+import { apiUrl } from "../../../config/api";
 
 export default function NominationDetailModal({
   nomination,
@@ -87,12 +88,22 @@ export default function NominationDetailModal({
   const getDocUrl = (docType, download = false) => {
     const token = localStorage.getItem("token") || localStorage.getItem("ghc_admin_token") || "";
     const tokenParam = token ? `&token=${encodeURIComponent(token)}` : "";
-    return `/api/judge/nominations/${nomination.id}/documents/${docType}?download=${download ? "1" : "0"}${tokenParam}`;
+    return apiUrl(`/api/judge/nominations/${nomination.id}/documents/${docType}?download=${download ? "1" : "0"}${tokenParam}`);
   };
 
-  const handleViewCv = () => {
-    const url = getDocUrl("cv");
-    setPdfPreviewUrl(url);
+  // Load as a same-origin blob: framing the API URL directly is blocked by its security headers (ERR_BLOCKED_BY_RESPONSE).
+  const handleViewCv = async () => {
+    try {
+      const { data } = await api.get(`/api/judge/nominations/${nomination.id}/documents/cv`, {
+        params: { download: 0 },
+        responseType: "blob",
+      });
+      if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl);
+      setPdfPreviewUrl(URL.createObjectURL(new Blob([data], { type: "application/pdf" })));
+    } catch {
+      setFeedback({ type: "error", message: "Could not load the CV for preview. Try Download instead." });
+      return;
+    }
     setTimeout(() => {
       document.getElementById("embedded-cv-viewer")?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 150);
@@ -528,7 +539,10 @@ export default function NominationDetailModal({
                     Open in new tab <ExternalLink className="w-3 h-3" />
                   </a>
                   <button
-                    onClick={() => setPdfPreviewUrl(null)}
+                    onClick={() => {
+                      URL.revokeObjectURL(pdfPreviewUrl);
+                      setPdfPreviewUrl(null);
+                    }}
                     className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white"
                   >
                     <X className="w-4 h-4" />
