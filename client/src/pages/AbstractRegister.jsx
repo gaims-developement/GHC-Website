@@ -100,7 +100,7 @@ const submissionGuidelinesData = [
     num: "02",
     title: "Submission Timeline",
     points: [
-      "Abstract Submission Deadline: extended to 31 October 2026 (originally 22 October 2026).",
+      "Abstract Submission Deadline: extended to 10 November 2026 (originally 22 October 2026).",
       "Abstract screening will begin on a rolling basis from approximately 10–15 October 2026 rather than waiting until the final submission deadline.",
       "Registration, screening, and acceptance/rejection communication will take place in parallel on a rolling basis to avoid a concentration of submissions near the deadline."
     ]
@@ -121,7 +121,7 @@ const submissionGuidelinesData = [
       "Multiple submissions will be permitted only sequentially.",
       "An applicant may have only one active abstract submission at a time.",
       "A second abstract may be submitted only if the applicant's first abstract has been outrightly rejected.",
-      "The second submission must be made within the abstract submission deadline of 31 October 2026.",
+      "The second submission must be made within the abstract submission deadline of 10 November 2026.",
       "Participants must not submit two different abstracts simultaneously while the first submission is still under review.",
       "If two submissions are made simultaneously, the second submission will be flagged and will not be reviewed until the eligibility conditions are satisfied.",
       "Each eligible submission receives its own unique submission ID and review status.",
@@ -636,7 +636,7 @@ export default function AbstractRegister() {
               transition={{ delay: 0.1 }}
               className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 text-xs font-bold tracking-wider uppercase"
             >
-              <Calendar className="w-3.5 h-3.5 text-emerald-600" /> Deadline: 31 Oct 2026 (Extended)
+              <Calendar className="w-3.5 h-3.5 text-emerald-600" /> Deadline: 10 Nov 2026 (Extended)
             </motion.div>
           </div>
           <motion.h1
@@ -709,7 +709,7 @@ export default function AbstractRegister() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                     <div className="bg-white rounded-xl p-3.5 border border-[#6C4AB6]/15 shadow-2xs">
                       <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider block">Submission Deadline (Extended)</span>
-                      <span className="text-sm font-extrabold text-[#101828]">31 October 2026</span>
+                      <span className="text-sm font-extrabold text-[#101828]">10 November 2026</span>
                       <span className="text-[10px] text-amber-700 block mt-0.5">(Extended from 22 October 2026)</span>
                     </div>
 

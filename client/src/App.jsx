@@ -1781,7 +1781,7 @@ function ResearchHub() {
                     <div className="grid sm:grid-cols-2 gap-3 mb-4">
                       <div className="bg-black/30 rounded-xl p-3 border border-white/5">
                         <span className="text-xs text-white/50 block font-semibold uppercase tracking-wider">Submission Deadline (Extended)</span>
-                        <span className="text-sm font-bold text-white">31 October 2026</span>
+                        <span className="text-sm font-bold text-white">10 November 2026</span>
                         <span className="text-[11px] text-amber-300/80 block mt-0.5">(Extended from 22 October 2026)</span>
                       </div>
                       <div className="bg-black/30 rounded-xl p-3 border border-white/5">
@@ -1834,7 +1834,7 @@ function ResearchHub() {
                         Submission Timeline
                       </h4>
                       <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
-                        <li><strong>Abstract Submission Deadline:</strong> extended to <strong>31 October 2026</strong> (originally 22 October 2026).</li>
+                        <li><strong>Abstract Submission Deadline:</strong> extended to <strong>10 November 2026</strong> (originally 22 October 2026).</li>
                         <li>Abstract screening will begin on a <strong>rolling basis from approximately 10–15 October 2026</strong> rather than waiting until the final submission deadline.</li>
                         <li>Registration, screening, and acceptance/rejection communication will take place in parallel on a rolling basis to avoid a concentration of submissions near the deadline.</li>
                       </ul>
@@ -1864,7 +1864,7 @@ function ResearchHub() {
                         <li>Multiple submissions will be permitted <strong>only sequentially</strong>.</li>
                         <li>An applicant may have only <strong>one active abstract submission at a time</strong>.</li>
                         <li>A second abstract may be submitted only if the applicant&apos;s first abstract has been <strong>outrightly rejected</strong>.</li>
-                        <li>The second submission must be made within the abstract submission deadline of <strong>31 October 2026</strong>.</li>
+                        <li>The second submission must be made within the abstract submission deadline of <strong>10 November 2026</strong>.</li>
                         <li>Participants must not submit two different abstracts simultaneously while the first submission is still under review.</li>
                         <li>If two submissions are made simultaneously, the second submission will be flagged and <strong>will not be reviewed</strong> until eligibility conditions are satisfied.</li>
                         <li>Each eligible submission receives its own unique Submission ID and review status.</li>
