@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<title>Action Required: Complete Your Registration — GHC 2026</title>
+<style>
+  @media only screen and (max-width: 600px) {
+    .content { padding: 26px 22px !important; }
+    .button { display: block !important; }
+    .fact { display: block !important; width: auto !important; box-sizing: border-box; }
+  }
+</style>
+</head>
+<body style="margin:0; padding:0; background:#eef2f8;">
+<!-- ghc-abstract-registration-reminder-v2 -->
+<!-- (bump this version marker when changing this file so existing servers pick up the new layout) -->
+<!-- cid:rem-hero and cid:rem-bottom are rendered by services/abstractReminderEmailService.js. -->
+<div style="display:none; max-height:0; overflow:hidden; opacity:0; color:#eef2f8;">Your abstract has been selected for GHC 2026, but your delegate registration is not yet complete. Registration is mandatory for selected presenters.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eef2f8;">
+  <tr>
+    <td align="center" style="padding:16px 0;">
+      <table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:640px; table-layout:fixed; background:#ffffff;">
+
+        <!-- Hero -->
+        <tr>
+          <td style="padding:0; line-height:0; font-size:0;">
+            <a href="{{registerLink}}" target="_blank"><img src="cid:rem-hero" width="640" height="{{heroHeight}}" alt="Abstract Selected, Registration Pending — Global Healthcare Conclave 2026. {{eventDates}}, {{venue}}" style="display:block; width:100%; max-width:640px; height:auto; border:0;"></a>
+          </td>
+        </tr>
+        <tr>
+          <td style="height:5px; line-height:5px; font-size:0; background:#2563eb; background-image:linear-gradient(90deg,#1e3a8a 0%,#2563eb 55%,#9fe3f7 100%);">&nbsp;</td>
+        </tr>
+
+        <!-- Message -->
+        <tr>
+          <td class="content" bgcolor="#ffffff" style="background-color:#ffffff; padding:36px 40px 14px; font-family:Arial, Helvetica, sans-serif;">
+            <p style="font-size:16px; margin:0 0 18px; color:#1f2937;">Dear <strong>{{name}}</strong>,</p>
+            <p style="font-size:15px; line-height:1.7; color:#4b5563; margin:0 0 18px;">Congratulations on the selection of your abstract for presentation at the <strong>Global Healthcare Conclave (GHC) 2026</strong>, organised by the <strong>Global Association of Indian Medical Students (GAIMS)</strong>.</p>
+
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ecfdf5" style="background-color:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; margin:22px 0;">
+              <tr><td align="center" style="padding:20px 22px 8px;">
+                <div style="color:#047857; font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px;">{{abstractLabel}}</div>
+                {{abstractDetails}}
+              </td></tr>
+            </table>
+
+            <p style="font-size:15px; line-height:1.7; color:#4b5563; margin:0 0 20px;">However, our records show that you have <strong>not yet completed your delegate registration</strong> for the conclave.</p>
+
+            <!-- Mandatory notice -->
+            <div style="background-color:#fff7ed; border-left:4px solid #ea580c; padding:15px 18px; margin:0 0 20px; border-radius:6px; font-size:14px; line-height:1.65; color:#7c2d12;"><strong>Registration is mandatory.</strong> As per the GHC 2026 guidelines, all selected presenters are required to register as delegates for the conclave.</div>
+
+            <p style="font-size:15px; line-height:1.7; color:#4b5563; margin:0 0 22px;">We request you to complete your registration at the earliest to confirm your participation.</p>
+
+            <!-- Registration and early bird -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eff6ff" style="background-color:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; margin:0 0 20px;">
+              <tr>
+                <td align="center" style="padding:22px 24px 24px; font-family:Arial, Helvetica, sans-serif;">
+                  <div style="color:#1e3a8a; font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:10px;">Early Bird Registration</div>
+                  <div style="font-size:15px; line-height:1.6; color:#334155; margin-bottom:18px;">The early bird offer ends on <strong style="color:#173B8F;">31st October 2026</strong>. We encourage you to take advantage of it and secure your participation.</div>
+                  <a class="button" href="{{registerLink}}" target="_blank" style="display:inline-block; background-color:#1e3a8a; background-image:linear-gradient(135deg,#1e3a8a,#2563eb); color:#ffffff; padding:15px 36px; border-radius:999px; text-decoration:none; font-size:16px; font-weight:700; letter-spacing:0.3px; text-align:center;">Complete Your Registration</a>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Venue and dates -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f2f7fb; border-radius:12px; margin:0 0 22px;">
+              <tr>
+                <td class="fact" width="50%" style="padding:16px 18px; font-family:Arial, Helvetica, sans-serif; vertical-align:top;">
+                  <div style="font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748b; margin-bottom:5px;">Venue</div>
+                  <div style="font-size:14px; font-weight:700; color:#173B8F;">Bharat Mandapam, New Delhi</div>
+                </td>
+                <td class="fact" width="50%" style="padding:16px 18px; font-family:Arial, Helvetica, sans-serif; vertical-align:top;">
+                  <div style="font-size:11px; font-weight:700; letter-spacing:1px; text-transform:uppercase; color:#64748b; margin-bottom:5px;">Dates</div>
+                  <div style="font-size:14px; font-weight:700; color:#173B8F;">28–29 November 2026</div>
+                </td>
+              </tr>
+            </table>
+
+            <p style="font-size:14px; line-height:1.7; color:#4b5563; margin:0 0 18px;">If the button does not open, use this link:<br><a href="{{registerLink}}" target="_blank" style="color:#2563eb; word-break:break-all;">{{registerLink}}</a></p>
+            <p style="font-size:15px; line-height:1.7; color:#4b5563; margin:0 0 24px;">We look forward to welcoming you to GHC 2026 and celebrating your research.<br><br>Warm regards,<br><strong>GHC Scientific Committee</strong></p>
+          </td>
+        </tr>
+
+        <!-- Footer artwork -->
+        <tr>
+          <td style="padding:0; line-height:0; font-size:0;">
+            <img src="cid:rem-bottom" width="640" height="{{bottomHeight}}" alt="Bharat Mandapam, New Delhi. Organising Committee, Global Healthcare Conclave 2026." style="display:block; width:100%; max-width:640px; height:auto; border:0;">
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 28px; background:#f8fafc; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:1.6; color:#64748b; text-align:center;">
+            {{eventDates}} · {{venue}}<br>
+            Need help? Write to <a href="{{helpUrl}}" style="color:#173B8F;">{{helpEmails}}</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

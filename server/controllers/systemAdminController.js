@@ -3,6 +3,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const { sendTemplateEmail, verifyConnection } = require('../services/mailService');
 const { buildConfirmationEmail } = require('../services/delegateEmailService');
 const { buildInvitationEmail } = require('../services/invitationImageService');
+const { buildAbstractReminderEmail } = require('../services/abstractReminderEmailService');
 const { buildWhatsappInviteAttachments, HERO_HEIGHT: WHATSAPP_HERO_HEIGHT } = require('../services/whatsappInviteImageService');
 const { getDelegateWhatsappGroupUrl } = require('../config/links');
 
@@ -289,6 +290,13 @@ const testEmailTemplate = asyncHandler(async (req, res) => {
     const testName = sampleVariables.fullName || sampleVariables.name || defaults.fullName;
     if (template.template_key === 'conclave_invitation') {
       const built = await buildInvitationEmail({ fullName: testName, email });
+      variables = built.variables;
+      attachments = built.attachments;
+    } else if (template.template_key === 'abstract_registration_reminder') {
+      const built = await buildAbstractReminderEmail({
+        fullName: testName,
+        abstracts: [{ code: 'GHC-ABS-00000', title: sampleVariables.title || defaults.title }],
+      });
       variables = built.variables;
       attachments = built.attachments;
     } else if (template.template_key === 'delegate_whatsapp_invite') {

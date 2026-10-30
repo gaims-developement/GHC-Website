@@ -3628,7 +3628,28 @@ const createInviteTables = async () => {
     )
   `);
 
-  // Both invitation templates are inserted once; afterwards they are owned by the CMS (Email Templates) and
+  // Reminders: accepted-abstract authors who have not registered, imported from a spreadsheet in the CMS.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS abstract_reminders (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      full_name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      email_key VARCHAR(255) NOT NULL,
+      phone VARCHAR(50) NULL,
+      abstract_ids VARCHAR(500) NOT NULL,
+      import_batch VARCHAR(40) NULL,
+      sent_at DATETIME NULL,
+      send_count INT NOT NULL DEFAULT 0,
+      last_attempt_at DATETIME NULL,
+      last_error TEXT NULL,
+      created_by INT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_abstract_reminders_email_key (email_key)
+    )
+  `);
+
+  // The invitation and reminder templates are inserted once; afterwards they are owned by the CMS (Email Templates) and
   // only replaced when a newer version of the shipped HTML file is deployed (detected by its version marker).
   const seedTemplate = async (templateKey, fileName, subject) => {
     const body = fs.readFileSync(path.join(__dirname, '..', 'assets', 'email', fileName), 'utf8');
@@ -3642,6 +3663,7 @@ const createInviteTables = async () => {
   };
   await seedTemplate('conclave_invitation', 'conclave-invitation.html', 'You are cordially invited to the GAIMS Global Healthcare Conclave 2026');
   await seedTemplate('delegate_whatsapp_invite', 'delegate-whatsapp-invite.html', "You're invited: join the GHC 2026 Delegate WhatsApp Group");
+  await seedTemplate('abstract_registration_reminder', 'abstract-registration-reminder.html', 'Action Required: Complete Your GHC 2026 Registration');
 };
 
 const createDelegateTables = async () => {
