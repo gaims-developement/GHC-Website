@@ -1789,13 +1789,9 @@ function ResearchHub() {
                         <span className="text-sm font-bold text-emerald-400">Rolling Basis (~10–15 Oct onwards)</span>
                         <span className="text-[11px] text-white/60 block mt-0.5">Decisions communicated as received</span>
                       </div>
-                      <div className="bg-black/30 rounded-xl p-3 border border-white/5">
-                        <span className="text-xs text-white/50 block font-semibold uppercase tracking-wider">Revision Deadline (Submitted ≤ 22 Oct)</span>
-                        <span className="text-sm font-bold text-blue-300">31 October 2026</span>
-                      </div>
-                      <div className="bg-black/30 rounded-xl p-3 border border-white/5">
-                        <span className="text-xs text-white/50 block font-semibold uppercase tracking-wider">Revision Deadline (Submitted 23–31 Oct)</span>
-                        <span className="text-sm font-bold text-blue-300">5 November 2026</span>
+                      <div className="bg-black/30 rounded-xl p-3 border border-white/5 sm:col-span-2">
+                        <span className="text-xs text-white/50 block font-semibold uppercase tracking-wider">Final Revision Deadline</span>
+                        <span className="text-sm font-bold text-blue-300">14 November 2026</span>
                       </div>
                     </div>
                     <ul className="list-disc list-inside space-y-2 text-white/90 text-sm">
@@ -1844,13 +1840,12 @@ function ResearchHub() {
                     <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 space-y-2">
                       <h4 className="font-bold text-white text-base flex items-center gap-2">
                         <span className="w-6 h-6 rounded-lg bg-[#349e81]/20 text-emerald-400 text-xs flex items-center justify-center font-bold">3</span>
-                        Revision Deadlines
+                        Revision Deadline
                       </h4>
                       <p className="text-white/80 text-sm">For abstracts where revisions are requested by the Scientific Committee:</p>
                       <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
-                        <li><strong>31 October 2026:</strong> Deadline for revised submissions where the original abstract was submitted on or before 22 October 2026.</li>
-                        <li><strong>5 November 2026:</strong> Deadline for revised submissions where the original abstract was submitted between 23 and 31 October 2026 (the extended submission period).</li>
-                        <li>Only the revision specifically requested by the Scientific Committee should be submitted within the applicable revision deadline.</li>
+                        <li><strong>14 November 2026:</strong> Final deadline for revised submissions.</li>
+                        <li>Only the revision specifically requested by the Scientific Committee should be submitted within the revision deadline.</li>
                       </ul>
                     </div>
 

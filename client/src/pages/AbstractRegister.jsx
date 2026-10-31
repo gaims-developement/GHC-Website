@@ -107,11 +107,10 @@ const submissionGuidelinesData = [
   },
   {
     num: "03",
-    title: "Revision Deadlines",
+    title: "Revision Deadline",
     points: [
-      "31 October 2026: Deadline for revised submissions where the original abstract was submitted on or before 22 October 2026.",
-      "5 November 2026: Deadline for revised submissions where the original abstract was submitted between 23 and 31 October 2026 (the extended submission period).",
-      "Only the revision specifically requested by the Scientific Committee should be submitted within the applicable revision deadline."
+      "14 November 2026: Final deadline for revised submissions.",
+      "Only the revision specifically requested by the Scientific Committee should be submitted within the revision deadline."
     ]
   },
   {
@@ -714,15 +713,8 @@ export default function AbstractRegister() {
                     </div>
 
                     <div className="bg-white rounded-xl p-3.5 border border-[#6C4AB6]/15 shadow-2xs">
-                      <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider block">Revision Deadline (Submitted ≤ 22 Oct)</span>
-                      <span className="text-sm font-extrabold text-[#6C4AB6]">31 October 2026</span>
-                      <span className="text-[10px] text-gray-500 block mt-0.5">Strict deadline for first-batch revisions</span>
-                    </div>
-
-                    <div className="bg-white rounded-xl p-3.5 border border-[#6C4AB6]/15 shadow-2xs">
-                      <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider block">Revision Deadline (Submitted 23–31 Oct)</span>
-                      <span className="text-sm font-extrabold text-[#6C4AB6]">5 November 2026</span>
-                      <span className="text-[10px] text-gray-500 block mt-0.5">For abstracts received during extended period</span>
+                      <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider block">Final Revision Deadline</span>
+                      <span className="text-sm font-extrabold text-[#6C4AB6]">14 November 2026</span>
                     </div>
                   </div>
 

@@ -5,6 +5,7 @@ const { pool } = require('../config/db');
 const ActivityLog = require('../models/activityLogModel');
 const { uploadResearchPdf } = require('../services/googleDriveService');
 const { uploadToCloudinary } = require('../services/cloudinaryService');
+const { formatRevisionDeadline, getRevisionDeadline } = require('../utils/revisionDeadline');
 const { sendTemplateEmail } = require('../services/mailService');
 const asyncHandler = require('../utils/asyncHandler');
 const crypto = require('crypto');
@@ -1476,7 +1477,7 @@ const executeRevisionRequest = async ({ req, abstractId, notes, createdBy }) => 
   }
   
   const token = crypto.randomBytes(32).toString('hex');
-  const expires = new Date(Date.now() + Number(process.env.REVISION_TOKEN_TTL_DAYS || 7) * 24 * 60 * 60 * 1000);
+  const expires = getRevisionDeadline(submission.createdAt);
   const authorEmail = submission.email;
   const link = `${getPublicAppUrl()}/abstract/revise/${token}`;
 
@@ -1512,7 +1513,7 @@ const executeRevisionRequest = async ({ req, abstractId, notes, createdBy }) => 
         revision_link: link,
         link,
         whatsappGroupLink: getAbstractWhatsappGroupUrl(),
-        expiresAt: expires.toLocaleDateString('en-IN', { dateStyle: 'medium' }),
+        expiresAt: formatRevisionDeadline(expires),
         contactEmail: getRevisionContact(),
       });
       emailSent = true;
@@ -1684,7 +1685,7 @@ const resendRevisionEmail = asyncHandler(async (req, res) => {
   }
 
   const token = crypto.randomBytes(32).toString('hex');
-  const expires = new Date(Date.now() + Number(process.env.REVISION_TOKEN_TTL_DAYS || 7) * 24 * 60 * 60 * 1000);
+  const expires = getRevisionDeadline(submission.createdAt);
   const notes = req.body?.notes || req.body?.comments || submission.reviewNotes || '';
   const link = `${getPublicAppUrl()}/abstract/revise/${token}`;
 
@@ -1711,7 +1712,7 @@ const resendRevisionEmail = asyncHandler(async (req, res) => {
       revision_link: link,
       link,
       whatsappGroupLink: getAbstractWhatsappGroupUrl(),
-      expiresAt: expires.toLocaleDateString('en-IN', { dateStyle: 'medium' }),
+      expiresAt: formatRevisionDeadline(expires),
       contactEmail: getRevisionContact(),
     });
     await Research.markRevisionEmailStatus(submission.id, 'sent');
