@@ -131,6 +131,7 @@ const permissions = [
   ['workshop_certificate_manage', 'Issue and manage workshop certificates'],
   ['workshop_reports_view', 'View workshop analytics and reports'],
   ['sponsor_scan', 'Scan delegate QR codes at a sponsor booth'],
+  ['delegate_id.scan', 'Scan delegates at entry, view their photo ID and mark them present'],
 ];
 
 const modules = [
@@ -257,7 +258,7 @@ const modules = [
 const rolePermissionMap = {
   SUPER_ADMIN: permissions.map(([key]) => key),
   SYSTEM_ADMIN: ['dashboard.view', 'manage_system', 'manage_users', 'manage_roles', 'manage_permissions', 'manage_backups', 'manage_security', 'manage_settings', 'view_audit_logs', 'view_system_reports', 'users.manage', 'settings.manage', 'activity.view', 'impersonation.manage', 'manage_core_architecture', 'manage_files', 'manage_tasks', 'manage_approvals', 'view_global_reports'],
-  ADMIN: ['dashboard.view', 'users.manage', 'speakers.manage', 'workshops.manage', 'research.manage', 'partners.manage', 'media.manage', 'settings.manage', 'analytics.view', 'checkin.scan', 'attendance.manage', 'certificates.manage', 'operations.view', 'cms.manage', 'manage_registrations', 'edit_registrations', 'view_registrations', 'manage_payments', 'manage_checkins', 'manage_badges', 'manage_coupons', 'export_registration_data', 'manage_speakers', 'edit_speakers', 'delete_speakers', 'manage_sessions', 'manage_tracks', 'manage_halls', 'manage_venues', 'manage_accommodation', 'manage_transport', 'manage_vendors', 'manage_inventory', 'manage_volunteers', 'manage_recruitment', 'manage_interviews', 'manage_shifts', 'manage_attendance', 'manage_tasks', 'view_volunteer_reports', 'manage_security', 'manage_emergency_contacts', 'manage_cme', 'upload_resources', 'publish_schedule', 'manage_workshops', 'manage_events', 'manage_competitions', 'manage_event_registrations', 'manage_event_payments', 'manage_feedback', 'manage_resources', 'publish_events', 'manage_sponsors', 'manage_sponsor_tiers', 'manage_exhibitors', 'manage_stalls', 'manage_contracts', 'manage_invoices', 'manage_deliverables', 'view_sponsorship_reports', 'manage_announcements', 'manage_news', 'manage_homepage', 'manage_gallery', 'manage_campaigns', 'manage_media_partners', 'manage_notifications', 'manage_seo', 'publish_content', 'manage_abstracts', 'manage_reviewers', 'assign_reviewers', 'review_abstracts', 'manage_awards', 'manage_judges', 'manage_certificates', 'manage_templates', 'generate_certificates', 'revoke_certificates', 'manage_signatures', 'manage_accreditation', 'verify_certificates', 'view_certificate_reports', 'publish_scientific_program', 'manage_mobile_app', 'manage_mobile_users', 'view_mobile_analytics', 'award_nomination_view', 'award_nomination_accept', 'award_nomination_reject', 'award_nomination_document_view', 'workshop_application_view', 'workshop_application_verify', 'workshop_application_confirm', 'workshop_application_reject', 'workshop_attendance_manage', 'workshop_certificate_manage', 'workshop_reports_view'],
+  ADMIN: ['delegate_id.scan', 'dashboard.view', 'users.manage', 'speakers.manage', 'workshops.manage', 'research.manage', 'partners.manage', 'media.manage', 'settings.manage', 'analytics.view', 'checkin.scan', 'attendance.manage', 'certificates.manage', 'operations.view', 'cms.manage', 'manage_registrations', 'edit_registrations', 'view_registrations', 'manage_payments', 'manage_checkins', 'manage_badges', 'manage_coupons', 'export_registration_data', 'manage_speakers', 'edit_speakers', 'delete_speakers', 'manage_sessions', 'manage_tracks', 'manage_halls', 'manage_venues', 'manage_accommodation', 'manage_transport', 'manage_vendors', 'manage_inventory', 'manage_volunteers', 'manage_recruitment', 'manage_interviews', 'manage_shifts', 'manage_attendance', 'manage_tasks', 'view_volunteer_reports', 'manage_security', 'manage_emergency_contacts', 'manage_cme', 'upload_resources', 'publish_schedule', 'manage_workshops', 'manage_events', 'manage_competitions', 'manage_event_registrations', 'manage_event_payments', 'manage_feedback', 'manage_resources', 'publish_events', 'manage_sponsors', 'manage_sponsor_tiers', 'manage_exhibitors', 'manage_stalls', 'manage_contracts', 'manage_invoices', 'manage_deliverables', 'view_sponsorship_reports', 'manage_announcements', 'manage_news', 'manage_homepage', 'manage_gallery', 'manage_campaigns', 'manage_media_partners', 'manage_notifications', 'manage_seo', 'publish_content', 'manage_abstracts', 'manage_reviewers', 'assign_reviewers', 'review_abstracts', 'manage_awards', 'manage_judges', 'manage_certificates', 'manage_templates', 'generate_certificates', 'revoke_certificates', 'manage_signatures', 'manage_accreditation', 'verify_certificates', 'view_certificate_reports', 'publish_scientific_program', 'manage_mobile_app', 'manage_mobile_users', 'view_mobile_analytics', 'award_nomination_view', 'award_nomination_accept', 'award_nomination_reject', 'award_nomination_document_view', 'workshop_application_view', 'workshop_application_verify', 'workshop_application_confirm', 'workshop_application_reject', 'workshop_attendance_manage', 'workshop_certificate_manage', 'workshop_reports_view'],
   WORKSHOP_TEAM: ['dashboard.view', 'manage_workshops', 'workshops.manage', 'workshop_application_view', 'workshop_application_verify', 'workshop_application_confirm', 'workshop_application_reject', 'workshop_attendance_manage', 'workshop_certificate_manage', 'workshop_reports_view'],
   WORKSHOP_LEAD: ['dashboard.view', 'manage_workshops', 'workshops.manage', 'workshop_application_view', 'workshop_application_verify', 'workshop_application_confirm', 'workshop_application_reject', 'workshop_attendance_manage', 'workshop_certificate_manage', 'workshop_reports_view'],
   AWARD_JUDGE: ['dashboard.view', 'award_nomination_view', 'award_nomination_accept', 'award_nomination_reject', 'award_nomination_document_view'],
@@ -273,7 +274,7 @@ const rolePermissionMap = {
   SCIENTIFIC_REVIEWER: ['review_abstracts'],
   REVIEWER: ['review_abstracts'],
   VOLUNTEER: ['dashboard.view', 'checkin.scan', 'attendance.manage', 'operations.view', 'manage_registrations', 'view_registrations', 'manage_checkins'],
-  CHECKIN: ['dashboard.view', 'checkin.scan', 'attendance.manage'],
+  CHECKIN: ['dashboard.view', 'checkin.scan', 'attendance.manage', 'delegate_id.scan'],
   // Sponsor booth accounts can only scan delegates.
   SPONSOR: ['sponsor_scan'],
   OPERATIONS: ['dashboard.view', 'analytics.view', 'checkin.scan', 'attendance.manage', 'operations.view', 'certificates.manage'],
@@ -3664,6 +3665,7 @@ const createInviteTables = async () => {
   await seedTemplate('conclave_invitation', 'conclave-invitation.html', 'You are cordially invited to the GAIMS Global Healthcare Conclave 2026');
   await seedTemplate('delegate_whatsapp_invite', 'delegate-whatsapp-invite.html', "You're invited: join the GHC 2026 Delegate WhatsApp Group");
   await seedTemplate('abstract_registration_reminder', 'abstract-registration-reminder.html', 'Action Required: Complete Your GHC 2026 Registration');
+  await seedTemplate('delegate_id_request', 'delegate-id-request.html', 'Action Required: Submit Your Photo ID for GHC 2026');
 };
 
 const createDelegateTables = async () => {
@@ -3702,6 +3704,42 @@ const createDelegateTables = async () => {
 
   await addColumnIfMissing('delegates', 'checkin_token', 'VARCHAR(64) NULL');
   await addIndexIfMissing('delegates', 'uq_delegates_checkin_token', 'UNIQUE KEY uq_delegates_checkin_token (checkin_token)');
+
+  // Photo ID: id_token is the private form link, kept separate from the QR check-in token.
+  await addColumnIfMissing('delegates', 'id_token', 'VARCHAR(64) NULL');
+  await addIndexIfMissing('delegates', 'uq_delegates_id_token', 'UNIQUE KEY uq_delegates_id_token (id_token)');
+  await addColumnIfMissing('delegates', 'id_request_sent_at', 'DATETIME NULL');
+  await addColumnIfMissing('delegates', 'id_request_send_count', 'INT NOT NULL DEFAULT 0');
+  await addColumnIfMissing('delegates', 'id_request_last_attempt_at', 'DATETIME NULL');
+  await addColumnIfMissing('delegates', 'id_request_last_error', 'TEXT NULL');
+  // id_number_enc is AES-256-GCM (utils/idEncryption.js); image_public_id is a private Cloudinary asset.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS delegate_ids (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      delegate_id INT NOT NULL UNIQUE,
+      name_on_id VARCHAR(150) NOT NULL,
+      id_type VARCHAR(30) NOT NULL,
+      id_number_enc TEXT NOT NULL,
+      phone VARCHAR(20) NOT NULL,
+      image_public_id VARCHAR(255) NOT NULL,
+      status VARCHAR(20) NOT NULL DEFAULT 'pending',
+      rejection_reason VARCHAR(500) NULL,
+      reviewed_by INT NULL,
+      reviewed_at DATETIME NULL,
+      consent_at DATETIME NOT NULL,
+      submitted_at DATETIME NOT NULL
+    )
+  `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS delegate_id_access_log (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      delegate_id INT NULL,
+      user_id INT NULL,
+      action VARCHAR(20) NOT NULL,
+      created_at DATETIME NOT NULL,
+      INDEX idx_delegate_id_access (delegate_id, user_id, action, created_at)
+    )
+  `);
 
   // One row per sponsor account per delegate; the unique key is what stops a second scan at the same booth.
   await pool.query(`

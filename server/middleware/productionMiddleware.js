@@ -11,6 +11,9 @@ const apiLimiter = rateLimit({
   skip: (req) =>
     (req.method === 'PATCH' && /^\/delegates\/\d+\/attendance$/.test(req.path)) ||
     (req.method === 'POST' && req.path === '/delegates/check-in') ||
+    (req.method === 'POST' && req.path === '/delegates/check-in/preview') ||
+    (req.method === 'GET' && /^\/delegates\/\d+\/id-document$/.test(req.path)) ||
+    (req.method === 'POST' && /^\/delegates\/\d+\/send-id-request$/.test(req.path)) ||
     // Sponsor booths all scan from the venue network.
     (req.method === 'POST' && req.path === '/delegates/sponsor-scan') ||
     // Bulk confirmation emails are sent one request per delegate.

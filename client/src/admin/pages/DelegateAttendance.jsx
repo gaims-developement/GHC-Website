@@ -1,6 +1,6 @@
 import { Check, RotateCcw, Search, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import DelegateQrScanner from "../components/DelegateQrScanner";
+import DelegateIdScanner from "../components/DelegateIdScanner";
 
 const formatTime = (value) => (value ? new Date(value).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "");
 
@@ -78,7 +78,7 @@ function DelegateAttendance({ api, onNavigate }) {
         <section className="admin-panel" style={{ borderColor: "#fecaca", background: "#fef2f2", color: "#b91c1c" }}>{error}</section>
       )}
 
-      <DelegateQrScanner api={api} onCheckedIn={applyUpdate} />
+      <DelegateIdScanner api={api} onCheckedIn={applyUpdate} />
 
       <section className="admin-panel">
         <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginBottom: "1rem" }}>

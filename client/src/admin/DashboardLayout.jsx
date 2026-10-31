@@ -184,6 +184,8 @@ const NAV_SECTIONS = [
       // "delegates.manage" is granted to no role: only Super Admin / Admin (who see every item) get these.
       { id: "delegates", label: "Delegate List", icon: ClipboardList, permissions: ["delegates.manage"], aliases: ["csv import", "registration id"] },
       { id: "delegate-attendance", label: "Attendance", icon: UserCheck, permissions: ["delegates.manage"], aliases: ["present", "check in"] },
+      { id: "delegate-ids", label: "Photo IDs", icon: ShieldCheck, permissions: ["delegates.manage"], aliases: ["id card", "venue list", "verification"] },
+      { id: "id-check", label: "ID Check", icon: ScanLine, permissions: ["delegate_id.scan"], aliases: ["scanner", "door", "entry"] },
       { id: "invites", label: "Invites", icon: Mail, permissions: ["delegates.manage"], aliases: ["invitation", "email invite"] },
       { id: "reminders", label: "Reminders", icon: BellRing, permissions: ["delegates.manage"], aliases: ["registration reminder", "accepted abstract", "not registered"] },
       { id: "invitation-poster", label: "Invitation Poster", icon: FileImage, permissions: ["delegates.manage"], aliases: ["poster", "invitation card"] },

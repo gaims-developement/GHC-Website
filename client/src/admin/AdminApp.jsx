@@ -80,6 +80,8 @@ import VisaApplicationDetails from "./pages/VisaApplicationDetails";
 import VisaSettings from "./pages/VisaSettings";
 import Delegates from "./pages/Delegates";
 import DelegateAttendance from "./pages/DelegateAttendance";
+import DelegateIds from "./pages/DelegateIds";
+import DelegateIdScanner from "./components/DelegateIdScanner";
 import Invites from "./pages/Invites";
 import Reminders from "./pages/Reminders";
 import InvitationPosterGenerator from "./pages/InvitationPosterGenerator";
@@ -156,6 +158,8 @@ const pages = {
   registrations: Registrations,
   delegates: Delegates,
   "delegate-attendance": DelegateAttendance,
+  "delegate-ids": DelegateIds,
+  "id-check": DelegateIdScanner,
   invites: Invites,
   reminders: Reminders,
   "invitation-poster": InvitationPosterGenerator,

@@ -66,6 +66,7 @@ const Venue = lazy(() => import("./pages/Venue"));
 const AbstractRegister = lazy(() => import("./pages/AbstractRegister"));
 const AbstractRevision = lazy(() => import("./pages/AbstractRevision"));
 const AbstractParticipationConfirm = lazy(() => import("./pages/AbstractParticipationConfirm"));
+const DelegateIdForm = lazy(() => import("./pages/DelegateIdForm"));
 const PartnershipPortal = lazy(() => import("./pages/PartnershipPortal"));
 const WorkshopDetail = lazy(() => import("./pages/WorkshopDetail"));
 const WorkshopRegister = lazy(() => import("./pages/WorkshopRegister"));
@@ -2980,6 +2981,12 @@ const routeSeoDefaults = {
     path: "/register/workshop/",
     event: true,
   },
+  "delegate-id": {
+    title: "Submit Your Photo ID — Global Healthcare Conclave 2026",
+    description: "Private photo ID form for GHC 2026 delegates.",
+    path: "/delegate-id",
+    noindex: true,
+  },
   "dynamic-form": {
     title: "GHC Form — Global Healthcare Conclave 2026",
     description: "GHC 2026 form.",
@@ -3033,6 +3040,7 @@ function App() {
   const isAbstractRoute = location.pathname.startsWith("/abstract-registration");
   const isAbstractRevisionRoute = location.pathname.startsWith("/abstract/revise") || location.pathname.startsWith("/abstract-revision");
   const isAbstractParticipationRoute = location.pathname.startsWith("/abstract/confirm");
+  const isDelegateIdRoute = location.pathname.startsWith("/delegate-id/");
   const isPartnerRoute = location.pathname.startsWith("/partners") || location.pathname.startsWith("/partnership");
   const isWorkshopDetailRoute = location.pathname.startsWith("/workshops/") && location.pathname !== "/workshops/" && !location.pathname.endsWith("/apply");
   const isGooglePayTestRoute = location.pathname.startsWith("/google-pay-test");
@@ -3076,6 +3084,7 @@ function App() {
       isAbstractRoute ||
       isAbstractRevisionRoute ||
       isAbstractParticipationRoute ||
+      isDelegateIdRoute ||
       isPartnerRoute ||
       isWorkshopDetailRoute ||
       isWorkshopRegisterRoute ||
@@ -3140,6 +3149,7 @@ function App() {
     isAbstractRoute,
     isAbstractRevisionRoute,
     isAbstractParticipationRoute,
+    isDelegateIdRoute,
     isAdminRoute,
     isDynamicFormRoute,
     isGooglePayTestRoute,
@@ -3172,6 +3182,10 @@ function App() {
       key = "abstract-revision";
       defaults = routeSeoDefaults["abstract-revision"];
       path = "/abstract-revision";
+    } else if (isDelegateIdRoute) {
+      key = "delegate-id";
+      defaults = routeSeoDefaults["delegate-id"];
+      path = "/delegate-id";
     } else if (isAbstractParticipationRoute) {
       key = "abstract-confirmation";
       defaults = routeSeoDefaults["abstract-confirmation"];
@@ -3295,7 +3309,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (isAdminRoute || isJudgeRoute || isRegisterRoute || isAbstractRoute || isAbstractRevisionRoute || isAbstractParticipationRoute || isPartnerRoute || isWorkshopDetailRoute || isWorkshopRegisterRoute || isGooglePayTestRoute || isVerifyCertificateRoute || isDynamicFormRoute || isNominationsRoute || isVisaRoute) {
+    if (isAdminRoute || isJudgeRoute || isRegisterRoute || isAbstractRoute || isAbstractRevisionRoute || isAbstractParticipationRoute || isDelegateIdRoute || isPartnerRoute || isWorkshopDetailRoute || isWorkshopRegisterRoute || isGooglePayTestRoute || isVerifyCertificateRoute || isDynamicFormRoute || isNominationsRoute || isVisaRoute) {
       return undefined;
     }
 
@@ -3383,7 +3397,7 @@ function App() {
       lenis.destroy();
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
     };
-  }, [isAbstractRoute, isAbstractRevisionRoute, isAbstractParticipationRoute, isAdminRoute, isDynamicFormRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isVerifyCertificateRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute]);
+  }, [isAbstractRoute, isAbstractRevisionRoute, isAbstractParticipationRoute, isDelegateIdRoute, isAdminRoute, isDynamicFormRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isVerifyCertificateRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute]);
 
   let routeContent;
 
@@ -3440,6 +3454,8 @@ function App() {
         <MobileRadialNav />
       </div>
     );
+  } else if (isDelegateIdRoute) {
+    routeContent = <Suspense fallback={<div className="admin-loading">Loading ID form...</div>}><DelegateIdForm /></Suspense>;
   } else if (isAbstractParticipationRoute) {
     routeContent = (
       <div ref={appRef} className="min-h-screen overflow-hidden bg-white text-[#081B33]">
