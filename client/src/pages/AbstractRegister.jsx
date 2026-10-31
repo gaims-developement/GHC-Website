@@ -107,10 +107,10 @@ const submissionGuidelinesData = [
   },
   {
     num: "03",
-    title: "Revision Deadline",
+    title: "Revision Submission",
     points: [
-      "14 November 2026: Final deadline for revised submissions.",
-      "Only the revision specifically requested by the Scientific Committee should be submitted within the revision deadline."
+      "14 November 2026: Final date for revision submission. This applies to all abstracts.",
+      "Only the revision specifically requested by the Scientific Committee should be submitted by this date."
     ]
   },
   {
@@ -713,7 +713,7 @@ export default function AbstractRegister() {
                     </div>
 
                     <div className="bg-white rounded-xl p-3.5 border border-[#6C4AB6]/15 shadow-2xs">
-                      <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider block">Final Revision Deadline</span>
+                      <span className="text-[11px] text-gray-500 font-bold uppercase tracking-wider block">Final Date for Revision Submission</span>
                       <span className="text-sm font-extrabold text-[#6C4AB6]">14 November 2026</span>
                     </div>
                   </div>

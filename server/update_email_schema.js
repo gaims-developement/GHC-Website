@@ -204,7 +204,7 @@ const abstractRevisionRequiredTemplate = `<!DOCTYPE html>
               </table>
               <table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eff6ff" style="background-color:#eff6ff; border-radius:8px; margin:20px 0 25px;">
                 <tr><td style="padding:18px 20px; text-align:center;">
-                  <div style="font-size:13px; color:#475569 !important; -webkit-text-fill-color:#475569; margin-bottom:5px;">Revision Submission Deadline</div>
+                  <div style="font-size:13px; color:#475569 !important; -webkit-text-fill-color:#475569; margin-bottom:5px;">Final Date for Revision Submission</div>
                   <div style="font-size:18px; font-weight:bold; color:#123d6b !important; -webkit-text-fill-color:#123d6b;">{{expiresAt}}</div>
                 </td></tr>
               </table>

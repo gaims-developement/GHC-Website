@@ -5,7 +5,7 @@ const { pool } = require('../config/db');
 const ActivityLog = require('../models/activityLogModel');
 const { uploadResearchPdf } = require('../services/googleDriveService');
 const { uploadToCloudinary } = require('../services/cloudinaryService');
-const { formatRevisionDeadline, getRevisionDeadline } = require('../utils/revisionDeadline');
+const { REVISION_DEADLINE, REVISION_DEADLINE_LABEL } = require('../utils/revisionDeadline');
 const { sendTemplateEmail } = require('../services/mailService');
 const asyncHandler = require('../utils/asyncHandler');
 const crypto = require('crypto');
@@ -1477,7 +1477,7 @@ const executeRevisionRequest = async ({ req, abstractId, notes, createdBy }) => 
   }
   
   const token = crypto.randomBytes(32).toString('hex');
-  const expires = getRevisionDeadline(submission.createdAt);
+  const expires = REVISION_DEADLINE;
   const authorEmail = submission.email;
   const link = `${getPublicAppUrl()}/abstract/revise/${token}`;
 
@@ -1513,7 +1513,7 @@ const executeRevisionRequest = async ({ req, abstractId, notes, createdBy }) => 
         revision_link: link,
         link,
         whatsappGroupLink: getAbstractWhatsappGroupUrl(),
-        expiresAt: formatRevisionDeadline(expires),
+        expiresAt: REVISION_DEADLINE_LABEL,
         contactEmail: getRevisionContact(),
       });
       emailSent = true;
@@ -1685,7 +1685,7 @@ const resendRevisionEmail = asyncHandler(async (req, res) => {
   }
 
   const token = crypto.randomBytes(32).toString('hex');
-  const expires = getRevisionDeadline(submission.createdAt);
+  const expires = REVISION_DEADLINE;
   const notes = req.body?.notes || req.body?.comments || submission.reviewNotes || '';
   const link = `${getPublicAppUrl()}/abstract/revise/${token}`;
 
@@ -1712,7 +1712,7 @@ const resendRevisionEmail = asyncHandler(async (req, res) => {
       revision_link: link,
       link,
       whatsappGroupLink: getAbstractWhatsappGroupUrl(),
-      expiresAt: formatRevisionDeadline(expires),
+      expiresAt: REVISION_DEADLINE_LABEL,
       contactEmail: getRevisionContact(),
     });
     await Research.markRevisionEmailStatus(submission.id, 'sent');
