@@ -3455,7 +3455,16 @@ function App() {
       </div>
     );
   } else if (isDelegateIdRoute) {
-    routeContent = <Suspense fallback={<div className="admin-loading">Loading ID form...</div>}><DelegateIdForm /></Suspense>;
+    routeContent = (
+      <div ref={appRef} className="min-h-screen overflow-hidden bg-white text-[#081B33]">
+        <Navbar />
+        <main className="bg-white">
+          <Suspense fallback={<div className="admin-loading">Loading ID form...</div>}><DelegateIdForm /></Suspense>
+        </main>
+        <Footer />
+        <MobileRadialNav />
+      </div>
+    );
   } else if (isAbstractParticipationRoute) {
     routeContent = (
       <div ref={appRef} className="min-h-screen overflow-hidden bg-white text-[#081B33]">

@@ -8,6 +8,7 @@ const { EVENT } = require('../services/delegateEmailService');
 const { buildDelegateIdEmail } = require('../services/delegateIdEmailService');
 
 const ID_TYPES = {
+  college_id: { label: 'College ID', pattern: /^[A-Z0-9/.-]{3,30}$/ },
   passport: { label: 'Passport', pattern: /^[A-Z0-9]{6,12}$/ },
   driving_licence: { label: 'Driving Licence', pattern: /^[A-Z0-9/-]{8,20}$/ },
   pan: { label: 'PAN Card', pattern: /^[A-Z]{5}\d{4}[A-Z]$/ },
@@ -91,6 +92,7 @@ const getIdForm = asyncHandler(async (req, res) => {
 
 const uploadIdImage = (buffer) => new Promise((resolve, reject) => {
   // type: authenticated keeps the original private; it can only be fetched through the signed API call below.
+  // A PDF is stored as a JPG of its first page, so every ID displays the same way at the scanner.
   cloudinary.uploader.upload_stream({
     type: 'authenticated',
     resource_type: 'image',
@@ -120,7 +122,7 @@ const submitIdForm = asyncHandler(async (req, res) => {
   try {
     image = await uploadIdImage(req.file.buffer);
   } catch {
-    return res.status(400).json({ message: 'That image could not be read. Please upload a clear JPG or PNG photo.' });
+    return res.status(400).json({ message: 'That image could not be read. Please upload a clear JPG, PNG or PDF.' });
   }
 
   const now = new Date();
@@ -163,7 +165,7 @@ const sendIdRequest = asyncHandler(async (req, res) => {
 
   const now = new Date();
   try {
-    const { attachments, variables } = await buildDelegateIdEmail({ fullName: row.full_name, formLink: `${EVENT.url}delegate-id/${idToken}` });
+    const { attachments, variables } = await buildDelegateIdEmail({ fullName: row.full_name, email: row.email, registrationId: row.registration_id, formLink: `${EVENT.url}delegate-id/${idToken}` });
     await sendTemplateEmail('delegate_id_request', row.email, variables, { attachments });
   } catch (error) {
     await pool.query('UPDATE delegates SET id_request_last_attempt_at = ?, id_request_last_error = ? WHERE id = ?', [now, String(error.message || error).slice(0, 1000), row.id]);

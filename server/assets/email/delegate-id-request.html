@@ -9,64 +9,95 @@
 <title>Action Required: Submit Your Photo ID — GHC 2026</title>
 <style>
   @media only screen and (max-width: 600px) {
-    .content { padding: 26px 22px !important; }
-    .button { display: block !important; }
+    .content { padding: 26px 20px !important; }
+    .headline { font-size: 25px !important; }
+    .art { display: none !important; }
+    .fact { display: block !important; width: auto !important; box-sizing: border-box; border-left: 0 !important; border-top: 1px solid #dbe3f4; }
+    .fact-first { border-top: 0 !important; }
+    .button { display: block !important; padding-left: 16px !important; padding-right: 16px !important; }
   }
 </style>
 </head>
-<body style="margin:0; padding:0; background:#eef2f8;">
-<!-- ghc-delegate-id-request-v1 -->
+<body style="margin:0; padding:0; background:#e6ecf8;">
+<!-- ghc-delegate-id-request-v2 -->
 <!-- (bump this version marker when changing this file so existing servers pick up the new layout) -->
-<!-- cid:id-hero and cid:id-bottom are rendered by services/delegateIdEmailService.js. -->
-<div style="display:none; max-height:0; overflow:hidden; opacity:0; color:#eef2f8;">Please submit your photo ID for GHC 2026 so we can verify you at the venue.</div>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#eef2f8;">
+<!-- The cid: images are drawn by services/delegateIdEmailService.js. -->
+<div style="display:none; max-height:0; overflow:hidden; opacity:0; color:#e6ecf8;">Please submit your College ID or government-issued photo ID for GHC 2026 to ensure a smooth check-in.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#e6ecf8;">
   <tr>
     <td align="center" style="padding:16px 0;">
-      <table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:640px; table-layout:fixed; background:#ffffff;">
+      <table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:640px; table-layout:fixed; background:#ffffff; border-radius:18px; overflow:hidden;">
 
-        <!-- Hero -->
+        <!-- Header -->
         <tr>
-          <td style="padding:0; line-height:0; font-size:0;">
-            <a href="{{formLink}}" target="_blank"><img src="cid:id-hero" width="640" height="{{heroHeight}}" alt="Photo ID Required for Venue Entry — Global Healthcare Conclave 2026. {{eventDates}}, {{venue}}" style="display:block; width:100%; max-width:640px; height:auto; border:0;"></a>
+          <td bgcolor="#0f2147" style="padding:0; line-height:0; font-size:0; background-color:#0f2147;">
+            <img src="cid:id-header" width="640" height="120" alt="GHC Global Healthcare Conclave" style="display:block; width:100%; max-width:640px; height:auto; border:0;">
           </td>
-        </tr>
-        <tr>
-          <td style="height:5px; line-height:5px; font-size:0; background:#2563eb; background-image:linear-gradient(90deg,#1e3a8a 0%,#2563eb 55%,#9fe3f7 100%);">&nbsp;</td>
         </tr>
 
         <!-- Message -->
         <tr>
-          <td class="content" bgcolor="#ffffff" style="background-color:#ffffff; padding:36px 40px 14px; font-family:Arial, Helvetica, sans-serif;">
-            <p style="font-size:16px; margin:0 0 18px; color:#1f2937;">Dear <strong>{{name}}</strong>,</p>
-            <p style="font-size:15px; line-height:1.7; color:#4b5563; margin:0 0 18px;">Thank you for registering for the <strong>Global Healthcare Conclave (GHC) 2026</strong>. To confirm participants with the venue and verify you on arrival, we need a copy of your government-issued photo ID.</p>
-
-            <div style="background-color:#fff7ed; border-left:4px solid #ea580c; padding:15px 18px; margin:0 0 20px; border-radius:6px; font-size:14px; line-height:1.65; color:#7c2d12;"><strong>Please submit this at the earliest.</strong> The name you enter should match your ID exactly, and you should carry the same ID with you to the conclave.</div>
-
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#eff6ff" style="background-color:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; margin:0 0 20px;">
+          <td class="content" bgcolor="#ffffff" style="background-color:#ffffff; padding:32px 36px 12px; font-family:Arial, Helvetica, sans-serif;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
               <tr>
-                <td align="center" style="padding:22px 24px 24px; font-family:Arial, Helvetica, sans-serif;">
-                  <div style="font-size:15px; line-height:1.6; color:#334155; margin-bottom:18px;">Accepted IDs: Passport, Driving Licence, PAN Card, Voter ID or masked Aadhaar. International delegates should use their passport.</div>
-                  <a class="button" href="{{formLink}}" target="_blank" style="display:inline-block; background-color:#1e3a8a; background-image:linear-gradient(135deg,#1e3a8a,#2563eb); color:#ffffff; padding:15px 36px; border-radius:999px; text-decoration:none; font-size:16px; font-weight:700; letter-spacing:0.3px; text-align:center;">Submit Your Photo ID</a>
+                <td style="vertical-align:top;">
+                  <span style="display:inline-block; background-color:#fde3e1; color:#14213d; border-radius:999px; padding:6px 14px; font-size:14px; font-weight:700;">Action Required</span>
+                  <h1 class="headline" style="font-family:Arial, Helvetica, sans-serif; font-size:29px; line-height:1.2; color:#0f2147; margin:14px 0 0;">Please Provide Your Photo ID for Verification</h1>
+                </td>
+                <td class="art" width="170" style="width:170px; vertical-align:top; padding-left:10px;">
+                  <img src="cid:id-card" width="170" height="132" alt="" style="display:block; width:170px; height:auto; border:0;">
                 </td>
               </tr>
             </table>
 
-            <p style="font-size:14px; line-height:1.7; color:#4b5563; margin:0 0 18px;">This link is private to you, so please do not share it. If the button does not open, use this link:<br><a href="{{formLink}}" target="_blank" style="color:#2563eb; word-break:break-all;">{{formLink}}</a></p>
-            <p style="font-size:15px; line-height:1.7; color:#4b5563; margin:0 0 24px;">We look forward to welcoming you to GHC 2026.<br><br>Warm regards,<br><strong>GHC Organising Committee</strong></p>
-          </td>
-        </tr>
+            <p style="font-size:16px; margin:20px 0 12px; color:#1f2937;">Hello <strong>{{name}}</strong>,</p>
+            <p style="font-size:15px; line-height:1.65; color:#374151; margin:0 0 12px;">Thank you for registering for the Global Healthcare Conclave (GHC).</p>
+            <p style="font-size:15px; line-height:1.65; color:#374151; margin:0 0 20px;">To ensure a smooth check-in experience at the venue, we request you to submit a copy of your <strong>College ID or any valid government-issued photo ID</strong> for verification. If you use Aadhaar, please submit a masked Aadhaar.</p>
 
-        <!-- Footer artwork -->
-        <tr>
-          <td style="padding:0; line-height:0; font-size:0;">
-            <img src="cid:id-bottom" width="640" height="{{bottomHeight}}" alt="Bharat Mandapam, New Delhi. Organising Committee, Global Healthcare Conclave 2026." style="display:block; width:100%; max-width:640px; height:auto; border:0;">
+            <!-- Details -->
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f1f4fc" style="background-color:#f1f4fc; border-radius:14px; margin:0 0 24px; table-layout:fixed;">
+              <tr>
+                <td class="fact fact-first" width="25%" align="center" style="padding:16px 8px; vertical-align:top; font-family:Arial, Helvetica, sans-serif;">
+                  <img src="cid:id-icon-name" width="28" height="28" alt="" style="display:block; margin:0 auto 8px; border:0;">
+                  <div style="font-size:13px; font-weight:700; color:#0f2147; margin-bottom:5px;">Full Name</div>
+                  <div style="font-size:12px; line-height:1.45; color:#4b5563; word-break:break-word;">{{name}}</div>
+                </td>
+                <td class="fact" width="25%" align="center" style="padding:16px 8px; vertical-align:top; border-left:1px solid #dbe3f4; font-family:Arial, Helvetica, sans-serif;">
+                  <img src="cid:id-icon-email" width="28" height="28" alt="" style="display:block; margin:0 auto 8px; border:0;">
+                  <div style="font-size:13px; font-weight:700; color:#0f2147; margin-bottom:5px;">Registered Email</div>
+                  <div style="font-size:12px; line-height:1.45; color:#4b5563; word-break:break-all;">{{email}}</div>
+                </td>
+                <td class="fact" width="25%" align="center" style="padding:16px 8px; vertical-align:top; border-left:1px solid #dbe3f4; font-family:Arial, Helvetica, sans-serif;">
+                  <img src="cid:id-icon-registration" width="28" height="28" alt="" style="display:block; margin:0 auto 8px; border:0;">
+                  <div style="font-size:13px; font-weight:700; color:#0f2147; margin-bottom:5px;">Registration Number</div>
+                  <div style="font-size:12px; line-height:1.45; color:#4b5563; word-break:break-word;">{{registrationId}}</div>
+                </td>
+                <td class="fact" width="25%" align="center" style="padding:16px 8px; vertical-align:top; border-left:1px solid #dbe3f4; font-family:Arial, Helvetica, sans-serif;">
+                  <img src="cid:id-icon-photo" width="28" height="28" alt="" style="display:block; margin:0 auto 8px; border:0;">
+                  <div style="font-size:13px; font-weight:700; color:#0f2147; margin-bottom:5px;">Photo of Your ID</div>
+                  <div style="font-size:12px; line-height:1.45; color:#4b5563;">A clear, readable image (JPG, PNG or PDF)</div>
+                </td>
+              </tr>
+            </table>
+
+            <div style="text-align:center; margin:0 0 20px;">
+              <a class="button" href="{{formLink}}" target="_blank" style="display:inline-block; background-color:#0f2147; background-image:linear-gradient(135deg,#0f2147,#1e3a7a); color:#ffffff; padding:15px 42px; border-radius:999px; text-decoration:none; font-size:17px; font-weight:700; text-align:center;">Submit Your Photo ID Now &rarr;</a>
+            </div>
+
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 22px;">
+              <tr>
+                <td width="38" style="width:38px; vertical-align:top;"><img src="cid:id-icon-calendar" width="28" height="28" alt="" style="display:block; border:0;"></td>
+                <td style="font-family:Arial, Helvetica, sans-serif; font-size:14px; line-height:1.55; color:#374151;">Please complete this verification at the earliest to avoid any delays at the venue.</td>
+              </tr>
+            </table>
+
+            <p style="font-size:13px; line-height:1.6; color:#64748b; margin:0 0 18px;">This link is private to you, so please do not share it. If the button does not open, use this link:<br><a href="{{formLink}}" target="_blank" style="color:#2563eb; word-break:break-all;">{{formLink}}</a></p>
+            <p style="font-size:14px; line-height:1.65; color:#374151; margin:0 0 18px; padding-top:16px; border-top:1px solid #e5e7eb;">If you have any questions or face any issues, feel free to reach out to us at <a href="{{helpUrl}}" style="color:#0f2147; font-weight:700;">{{helpEmails}}</a>.</p>
+            <p style="font-size:15px; line-height:1.6; color:#374151; margin:0 0 20px;">Regards,<br>GHC Organising Team</p>
           </td>
         </tr>
         <tr>
-          <td style="padding:16px 28px; background:#f8fafc; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:1.6; color:#64748b; text-align:center;">
-            {{eventDates}} · {{venue}}<br>
-            Need help? Write to <a href="{{helpUrl}}" style="color:#173B8F;">{{helpEmails}}</a>
-          </td>
+          <td style="padding:14px 28px; background:#f8fafc; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:1.6; color:#64748b; text-align:center;">{{eventDates}} · {{venue}}</td>
         </tr>
       </table>
     </td>

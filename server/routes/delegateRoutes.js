@@ -14,11 +14,11 @@ const idFormLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 40, standardH
 const idImageUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 8 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => cb(null, ['image/jpeg', 'image/png', 'image/webp'].includes(file.mimetype)),
+  fileFilter: (_req, file, cb) => cb(null, ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(file.mimetype)),
 }).single('idImage');
 const receiveIdImage = (req, res, next) => idImageUpload(req, res, (error) => {
   if (!error) return next();
-  return res.status(400).json({ message: error.code === 'LIMIT_FILE_SIZE' ? 'Please upload a photo smaller than 8 MB.' : 'That file could not be uploaded.' });
+  return res.status(400).json({ message: error.code === 'LIMIT_FILE_SIZE' ? 'Please upload a file smaller than 8 MB.' : 'That file could not be uploaded.' });
 });
 
 router.get('/', ...adminOnly, listDelegates);

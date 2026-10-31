@@ -9,6 +9,7 @@ const { buildVenueCsv, parseIdSubmission } = require('../controllers/delegateIdC
 
 const valid = { nameOnId: 'Khushi  Sharma', idType: 'pan', idNumber: 'abcde 1234f', phone: '+91 98765-43210', consent: 'true' };
 assert.deepStrictEqual(parseIdSubmission(valid).value, { nameOnId: 'Khushi Sharma', idType: 'pan', idNumber: 'ABCDE1234F', phone: '+919876543210' });
+assert.strictEqual(parseIdSubmission({ ...valid, idType: 'college_id', idNumber: 'gmc/2024-118' }).value.idNumber, 'GMC/2024-118');
 assert.ok(parseIdSubmission({ ...valid, consent: 'false' }).error, 'consent is required');
 assert.ok(parseIdSubmission({ ...valid, idType: 'constructor' }).error, 'only known ID types');
 assert.ok(parseIdSubmission({ ...valid, phone: '9.18E+11' }).error, 'corrupted phones are refused');
