@@ -1,11 +1,12 @@
-// Self-check for photo ID validation, encryption and the venue CSV. Run: node scripts/test_delegate_id.js
+// Self-check for photo ID validation, encryption and the venue Word list. Run: node scripts/test_delegate_id.js
 require('dotenv').config({ quiet: true });
 const assert = require('assert');
 const crypto = require('crypto');
 
 process.env.ID_ENCRYPTION_KEY = crypto.randomBytes(32).toString('base64');
 const { decryptIdNumber, encryptIdNumber } = require('../utils/idEncryption');
-const { buildVenueCsv, parseIdSubmission } = require('../controllers/delegateIdController');
+const { parseIdSubmission } = require('../controllers/delegateIdController');
+const { buildVenueListDoc, shrinkIdImage } = require('../services/venueListDocService');
 
 const valid = { nameOnId: 'Khushi  Sharma', idType: 'pan', idNumber: 'abcde 1234f', phone: '+91 98765-43210', consent: 'true' };
 assert.deepStrictEqual(parseIdSubmission(valid).value, { nameOnId: 'Khushi Sharma', idType: 'pan', idNumber: 'ABCDE1234F', phone: '+919876543210' });
@@ -25,19 +26,20 @@ const parts = stored.split('.');
 parts[2] = Buffer.from('tampered').toString('base64');
 assert.throws(() => decryptIdNumber(parts.join('.')), 'tampered values are rejected');
 
-const csv = buildVenueCsv([{
-  registration_id: 'GHC26-DEL-00001',
-  name_on_id: '=HYPERLINK("http://evil")',
-  full_name: 'Delegate "One"',
-  id_phone: '+919876543210',
-  email: 'one@example.com',
-  id_type: 'aadhaar_masked',
-  id_number_enc: encryptIdNumber('9012'),
-  id_status: 'verified',
-}]);
-assert.ok(csv.charCodeAt(0) === 0xfeff);
-assert.ok(csv.includes(`"'=HYPERLINK(""http://evil"")"`), 'formulas from the public form are neutralised');
-assert.ok(csv.includes('"=""+919876543210"""'), 'phones stay exact in Excel');
-assert.ok(csv.includes('XXXX XXXX 9012'));
-console.log('delegate id ok');
-process.exit(0);
+(async () => {
+  const { createCanvas } = require('@napi-rs/canvas');
+  const big = createCanvas(1600, 1000).toBuffer('image/png');
+  const photo = await shrinkIdImage(big);
+  assert.deepStrictEqual([photo.width, photo.height], [700, 438], 'images are shrunk, keeping their shape');
+  assert.strictEqual((await shrinkIdImage(createCanvas(300, 200).toBuffer('image/png'))).width, 300, 'small images are not enlarged');
+
+  const delegate = { name: 'A & <B>', email: 'one@example.com', phone: '+919876543210', idType: 'Passport', idNumber: 'Z1234567', photo };
+  const doc = await buildVenueListDoc([delegate, { ...delegate, photo: null }]);
+  assert.strictEqual(doc.subarray(0, 2).toString(), 'PK', 'a .docx is a zip file');
+  assert.ok(doc.length > (await buildVenueListDoc([{ ...delegate, photo: null }])).length, 'images are embedded');
+  console.log('delegate id ok');
+  process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

@@ -141,7 +141,7 @@ function DelegateIds({ api }) {
       const url = URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "GHC_Venue_ID_List.csv";
+      link.download = "GHC_Venue_ID_List.docx";
       link.click();
       URL.revokeObjectURL(url);
     } catch {

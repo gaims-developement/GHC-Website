@@ -6,6 +6,7 @@ const { decryptIdNumber, encryptIdNumber, getKey } = require('../utils/idEncrypt
 const { sendTemplateEmail } = require('../services/mailService');
 const { EVENT } = require('../services/delegateEmailService');
 const { buildDelegateIdEmail } = require('../services/delegateIdEmailService');
+const { buildVenueListDoc, shrinkIdImage } = require('../services/venueListDocService');
 
 const ID_TYPES = {
   college_id: { label: 'College ID', pattern: /^[A-Z0-9/.-]{3,30}$/ },
@@ -59,7 +60,7 @@ const toIdSummary = (row) => ({
 });
 
 const DELEGATE_WITH_ID = `
-  SELECT d.*, i.status AS id_status, i.id_type, i.name_on_id, i.phone AS id_phone, i.id_number_enc,
+  SELECT d.*, i.status AS id_status, i.id_type, i.name_on_id, i.phone AS id_phone, i.id_number_enc, i.image_public_id,
     i.rejection_reason, i.submitted_at, i.reviewed_at
   FROM delegates d LEFT JOIN delegate_ids i ON i.delegate_id = d.id`;
 
@@ -102,6 +103,17 @@ const uploadIdImage = (buffer) => new Promise((resolve, reject) => {
     transformation: [{ width: 1600, height: 1600, crop: 'limit', quality: 'auto:good' }],
   }, (error, result) => (error ? reject(error) : resolve(result))).end(buffer);
 });
+
+const fetchIdImage = async (publicId) => {
+  const url = cloudinary.utils.private_download_url(publicId, 'jpg', {
+    resource_type: 'image',
+    type: 'authenticated',
+    expires_at: Math.floor(Date.now() / 1000) + 60,
+  });
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Cloudinary returned ${response.status}`);
+  return Buffer.from(await response.arrayBuffer());
+};
 
 const destroyIdImage = (publicId) =>
   cloudinary.uploader.destroy(publicId, { type: 'authenticated', resource_type: 'image', invalidate: true });
@@ -213,17 +225,16 @@ const getIdDocument = asyncHandler(async (req, res) => {
   const [[row]] = await pool.query('SELECT image_public_id FROM delegate_ids WHERE delegate_id = ?', [delegateId]);
   if (!row) return res.status(404).json({ message: 'No ID on file for this delegate.' });
 
-  const url = cloudinary.utils.private_download_url(row.image_public_id, 'jpg', {
-    resource_type: 'image',
-    type: 'authenticated',
-    expires_at: Math.floor(Date.now() / 1000) + 60,
-  });
-  const response = await fetch(url);
-  if (!response.ok) return res.status(502).json({ message: 'The ID image could not be loaded. Please try again.' });
+  let image;
+  try {
+    image = await fetchIdImage(row.image_public_id);
+  } catch {
+    return res.status(502).json({ message: 'The ID image could not be loaded. Please try again.' });
+  }
 
   await logAccess(delegateId, req.user?.id, 'view');
   res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, no-store' });
-  res.send(Buffer.from(await response.arrayBuffer()));
+  res.send(image);
 });
 
 // Scanner step 1: show who this is and their ID. Attendance is only marked when staff confirm (POST /check-in).
@@ -252,38 +263,45 @@ const previewCheckIn = asyncHandler(async (req, res) => {
   });
 });
 
-const csvCell = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
-// Names come from a public form: a leading = + - @ would run as a formula when the venue opens the file.
-const csvText = (value) => csvCell(/^[=+\-@\t\r]/.test(String(value ?? '')) ? `'${value}` : value);
-// Written as a text formula so Excel keeps every digit (plain numbers are how 9.18E+11 phones happened).
-const csvExact = (value) => csvCell(`="${String(value ?? '').replace(/"/g, '')}"`);
+const EXPORT_BATCH_SIZE = 5;
 
-const buildVenueCsv = (rows) => {
-  const headers = ['S. No.', 'Registration ID', 'Name as on ID', 'Registered Name', 'Phone', 'Email', 'ID Type', 'ID Number', 'Verification Status'];
-  const lines = rows.map((row, index) => [
-    index + 1,
-    csvText(row.registration_id),
-    csvText(row.name_on_id),
-    csvText(row.full_name),
-    csvExact(row.id_phone),
-    csvText(row.email),
-    csvText(ID_TYPES[row.id_type]?.label || row.id_type),
-    csvExact(row.id_type === 'aadhaar_masked' ? `XXXX XXXX ${decryptIdNumber(row.id_number_enc)}` : decryptIdNumber(row.id_number_enc)),
-    csvText(row.id_status),
-  ].join(','));
-  // The byte-order mark makes Excel read names with non-English characters correctly.
-  return `﻿${[headers.join(','), ...lines].join('\r\n')}`;
+const toVenueDelegate = async (row) => {
+  let photo = null;
+  try {
+    photo = await shrinkIdImage(await fetchIdImage(row.image_public_id));
+  } catch (error) {
+    // One unreadable image should not stop the list; its row says so, for the team to follow up.
+    console.error('Venue list image failed:', row.registration_id, error.message);
+  }
+  const number = decryptIdNumber(row.id_number_enc);
+  return {
+    name: row.name_on_id,
+    email: row.email,
+    phone: row.id_phone,
+    idType: ID_TYPES[row.id_type]?.label || row.id_type,
+    idNumber: row.id_type === 'aadhaar_masked' ? `XXXX XXXX ${number}` : number,
+    photo,
+  };
 };
 
 const exportVenueList = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(`${DELEGATE_WITH_ID} WHERE i.status IN ('pending', 'verified') ORDER BY d.id ASC`);
+  const delegates = [];
+  // A few at a time, so a long list neither hammers Cloudinary nor holds every full-size image in memory.
+  for (let index = 0; index < rows.length; index += EXPORT_BATCH_SIZE) {
+    delegates.push(...await Promise.all(rows.slice(index, index + EXPORT_BATCH_SIZE).map(toVenueDelegate)));
+  }
+  const document = await buildVenueListDoc(delegates);
   await logAccess(null, req.user?.id, 'export');
-  res.set({ 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': 'attachment; filename="GHC_Venue_ID_List.csv"', 'Cache-Control': 'private, no-store' });
-  res.send(buildVenueCsv(rows));
+  res.set({
+    'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'Content-Disposition': 'attachment; filename="GHC_Venue_ID_List.docx"',
+    'Cache-Control': 'private, no-store',
+  });
+  res.send(document);
 });
 
 module.exports = {
-  buildVenueCsv,
   exportVenueList,
   getIdDocument,
   getIdForm,

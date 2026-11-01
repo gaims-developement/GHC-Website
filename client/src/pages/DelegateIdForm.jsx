@@ -188,7 +188,7 @@ export default function DelegateIdForm() {
 
               <label className="mt-6 flex items-start gap-3 rounded-2xl border border-gray-200 bg-slate-50 p-4 text-sm leading-6 text-[#475467]">
                 <input className="mt-1 h-5 w-5 shrink-0 accent-[#6C4AB6]" type="checkbox" checked={form.consent} onChange={(e) => setForm((current) => ({ ...current, consent: e.target.checked }))} required />
-                <span>I consent to GAIMS storing these details to verify me at the conclave and sharing my name, phone, email, ID type and ID number with the venue to confirm my participation.</span>
+                <span>I consent to GAIMS storing these details to verify me at the conclave and sharing my name, phone, email, ID type, ID number and a copy of my ID with the venue to confirm my participation.</span>
               </label>
 
               {submitError && <p role="alert" className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm font-semibold text-rose-700">{submitError}</p>}
