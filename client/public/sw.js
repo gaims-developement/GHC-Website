@@ -1,41 +1,13 @@
-const CACHE_NAME = "ghc-launch-v1";
-const CORE_ASSETS = [
-  "/",
-  "/register",
-  "/offline.html",
-  "/ghc%20favicon/favicon.ico",
-  "/ghc%20favicon/favicon-32x32.png",
-  "/ghc%20favicon/favicon-16x16.png",
-  "/ghc%20favicon/apple-touch-icon.png",
-  "/ghc%20favicon/android-chrome-192x192.png",
-  "/ghc%20favicon/android-chrome-512x512.png",
-  "/manifest.webmanifest"
-];
-
-self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS)));
-  self.skipWaiting();
-});
+// Retired. The old worker served saved pages forever, so returning visitors never got updates.
+// Keep this file: it is what clears that worker from browsers that already have it.
+self.addEventListener("install", () => self.skipWaiting());
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
-  );
-  self.clients.claim();
-});
-
-self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
-  const url = new URL(event.request.url);
-  if (url.pathname.startsWith("/api")) return;
-
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request)
-      .then((response) => {
-        const copy = response.clone();
-        if (response.ok) caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-        return response;
-      })
-      .catch(() => caches.match("/offline.html")))
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map((key) => caches.delete(key)));
+    await self.registration.unregister();
+    const pages = await self.clients.matchAll({ type: "window" });
+    await Promise.all(pages.map((page) => page.navigate(page.url).catch(() => {})));
+  })());
 });

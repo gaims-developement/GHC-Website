@@ -4,10 +4,6 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import "./index.css";
 
-if ("serviceWorker" in navigator && import.meta.env.PROD) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {}));
-}
-
 // The delegate ID form URL contains a private token, so that page never loads analytics.
 if (import.meta.env.VITE_GA_MEASUREMENT_ID && !window.location.pathname.startsWith("/delegate-id/")) {
   const script = document.createElement("script");
