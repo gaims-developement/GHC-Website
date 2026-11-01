@@ -1,0 +1,989 @@
+{
+  "stays": [
+    {
+      "id": "stay-1",
+      "status": "active",
+      "name": "Checkpoint Backpacker",
+      "address": "F-66 Lajpat Nagar II · Lajpat Nagar Metro",
+      "price": "₹799",
+      "description": "Check women-only dorms, shared bathrooms and late check-in.",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Checkpoint%20Backpacker%20F-66%20Lajpat%20Nagar%20II%20Delhi",
+      "bookingLink": "https://www.google.com/search?q=Checkpoint%20Backpacker%20Delhi%20booking%20hotel",
+      "category": "Student stays under ₹1,000",
+      "displayOrder": 1
+    },
+    {
+      "id": "stay-2",
+      "status": "active",
+      "name": "The Hosteller Delhi",
+      "address": "A-10 Mathura Road · Ashram / Friends Colony East",
+      "price": "₹795",
+      "description": "Verify age rules, lockers, female dorms and cancellation.",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=The%20Hosteller%20Delhi%20A-10%20Mathura%20Road",
+      "bookingLink": "https://www.google.com/search?q=The%20Hosteller%20Delhi%20Delhi%20booking%20hotel",
+      "category": "Student stays under ₹1,000",
+      "displayOrder": 2
+    },
+    {
+      "id": "stay-3",
+      "status": "active",
+      "name": "Moustache Delhi",
+      "address": "C-794 New Friends Colony · Sukhdev Vihar area",
+      "price": "₹863",
+      "description": "Confirm female dorms, lockers and route to metro.",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Moustache%20Delhi%20C-794%20New%20Friends%20Colony",
+      "bookingLink": "https://www.google.com/search?q=Moustache%20Delhi%20Delhi%20booking%20hotel",
+      "category": "Student stays under ₹1,000",
+      "displayOrder": 3
+    },
+    {
+      "id": "stay-4",
+      "status": "active",
+      "name": "goSTOPS Delhi",
+      "address": "Delhi Gate / Daryaganj · approx. 2.6 km",
+      "price": "₹900–₹2,500",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=goSTOPS%20Delhi%20Daryaganj",
+      "bookingLink": "https://www.goibibo.com/hotels/hostels-in-delhi/near-bharat-mandapam-iecc-lp/",
+      "category": "More low-cost stays",
+      "displayOrder": 1
+    },
+    {
+      "id": "stay-5",
+      "status": "active",
+      "name": "Joey’s Hostel Delhi",
+      "address": "Laxmi Nagar · approx. 4.7 km",
+      "price": "₹900–₹2,500",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Joeys%20Hostel%20Delhi%20Laxmi%20Nagar",
+      "bookingLink": "https://www.makemytrip.com/hotels/poi-hostels-near-bharat_mandapam_iecc-delhi.html",
+      "category": "More low-cost stays",
+      "displayOrder": 2
+    },
+    {
+      "id": "stay-6",
+      "status": "active",
+      "name": "The Metrostay Pod",
+      "address": "Ajmeri Gate / New Delhi Railway Station · approx. 4.1 km",
+      "price": "₹700–₹1,800",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=The%20Metrostay%20Pod%20New%20Delhi%20Railway%20Station",
+      "bookingLink": "https://www.makemytrip.com/hotels/poi-hostels-near-bharat_mandapam_iecc-delhi.html",
+      "category": "More low-cost stays",
+      "displayOrder": 3
+    },
+    {
+      "id": "stay-7",
+      "status": "active",
+      "name": "Budget private rooms",
+      "address": "Paharganj / New Delhi Railway Station / ITO",
+      "price": "₹1,000–₹3,000",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=budget%20hotels%20Paharganj%20Delhi",
+      "bookingLink": "https://www.goibibo.com/hotels/hotels-in-delhi/near-pragati-maidan-lp/",
+      "category": "More low-cost stays",
+      "displayOrder": 4
+    },
+    {
+      "id": "stay-8",
+      "status": "active",
+      "name": "Hotel LaSagrita",
+      "address": "Sunder Nagar · approx. 0.8–1.0 km",
+      "price": "₹5,000–₹9,000",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Hotel%20LaSagrita%20Sunder%20Nagar%20Delhi",
+      "bookingLink": "https://www.booking.com/landmark/in/pragati-maidan1.html",
+      "category": "Mid-range near the venue",
+      "displayOrder": 1
+    },
+    {
+      "id": "stay-9",
+      "status": "active",
+      "name": "Ahuja Residency Sunder Nagar",
+      "address": "Sunder Nagar · approx. 1–2 km",
+      "price": "₹5,000–₹12,000",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Ahuja%20Residency%20Sunder%20Nagar%20Delhi",
+      "bookingLink": "https://www.booking.com/landmark/in/pragati-maidan1.html",
+      "category": "Mid-range near the venue",
+      "displayOrder": 2
+    },
+    {
+      "id": "stay-10",
+      "status": "active",
+      "name": "Jukaso Inn Pragati Maidan",
+      "address": "Sunder Nagar · approx. 1 km",
+      "price": "₹4,000–₹8,000",
+      "description": "Check that the hotel is currently operating.",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Jukaso%20Inn%20Pragati%20Maidan%20Delhi",
+      "bookingLink": "https://www.booking.com/landmark/in/pragati-maidan1.html",
+      "category": "Mid-range near the venue",
+      "displayOrder": 3
+    },
+    {
+      "id": "stay-11",
+      "status": "active",
+      "name": "Bloom Boutique | Connaught Place Area",
+      "address": "Central Delhi · approx. 3–4 km",
+      "price": "₹4,000–₹8,000",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Bloom%20Boutique%20Connaught%20Place%20Delhi",
+      "bookingLink": "https://www.booking.com/landmark/in/pragati-maidan1.html",
+      "category": "Mid-range in central Delhi",
+      "displayOrder": 1
+    },
+    {
+      "id": "stay-12",
+      "status": "active",
+      "name": "Connaught Royale",
+      "address": "Connaught Place / central Delhi · approx. 4–5 km",
+      "price": "₹3,500–₹7,000",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Connaught%20Royale%20Delhi",
+      "bookingLink": "https://www.booking.com/landmark/in/pragati-maidan1.html",
+      "category": "Mid-range in central Delhi",
+      "displayOrder": 2
+    },
+    {
+      "id": "stay-13",
+      "status": "active",
+      "name": "Homlee-Heritage 2 Bedroom Apartment",
+      "address": "Vikram Nagar / ITO area",
+      "price": "₹4,000–₹8,000 per apartment",
+      "description": "Not per person. Confirm guests permitted, taxes, deposit and cleaning charges before sharing.",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Homlee%20Heritage%20Bharat%20Mandapam%20ITO%20Delhi",
+      "bookingLink": "https://www.booking.com/accommodation/landmark/in/pragati-maidan1.html",
+      "category": "Mid-range in central Delhi",
+      "displayOrder": 3
+    },
+    {
+      "id": "stay-14",
+      "status": "active",
+      "name": "New Delhi YMCA Tourist Hostel",
+      "address": "Jai Singh Road / Connaught Place · approx. 3.7 km",
+      "price": "₹3,500–₹6,000",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=New%20Delhi%20YMCA%20Tourist%20Hostel",
+      "bookingLink": "https://www.goibibo.com/hotels/hostels-in-delhi/near-bharat-mandapam-iecc-lp/",
+      "category": "Guesthouses and family stays",
+      "displayOrder": 1
+    },
+    {
+      "id": "stay-15",
+      "status": "active",
+      "name": "YWCA Blue Triangle Family Hostel",
+      "address": "Ashoka Road / central Delhi · approx. 4.1 km",
+      "price": "₹3,000–₹5,000",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=YWCA%20Blue%20Triangle%20Family%20Hostel%20Delhi",
+      "bookingLink": "https://www.makemytrip.com/hotels/poi-hostels-near-bharat_mandapam_iecc-delhi.html",
+      "category": "Guesthouses and family stays",
+      "displayOrder": 2
+    },
+    {
+      "id": "stay-16",
+      "status": "active",
+      "name": "The Hans, New Delhi",
+      "address": "Barakhamba Road / Connaught Place · approx. 2.2 km",
+      "price": "₹7,000–₹12,000",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=The%20Hans%20New%20Delhi",
+      "bookingLink": "https://www.makemytrip.com/hotels/hotels-near-bharat_mandapam_iecc-delhi-four_star.html",
+      "category": "Business and private hotels",
+      "displayOrder": 1
+    },
+    {
+      "id": "stay-17",
+      "status": "active",
+      "name": "The Vanson Pride",
+      "address": "Paharganj · approx. 5 km",
+      "price": "₹3,000–₹6,000",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=The%20Vanson%20Pride%20Delhi",
+      "bookingLink": "https://www.makemytrip.com/hotels/hotels-near-bharat_mandapam_iecc-delhi-four_star.html",
+      "category": "Business and private hotels",
+      "displayOrder": 2
+    },
+    {
+      "id": "stay-18",
+      "status": "active",
+      "name": "The Delhi Dreams – A Luxury Hotel",
+      "address": "Paharganj · approx. 5 km",
+      "price": "₹3,000–₹6,000",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=The%20Delhi%20Dreams%20A%20Luxury%20Hotel%20Paharganj",
+      "bookingLink": "https://www.makemytrip.com/hotels/hotels-near-bharat_mandapam_iecc-delhi-four_star.html",
+      "category": "Business and private hotels",
+      "displayOrder": 3
+    },
+    {
+      "id": "stay-19",
+      "status": "active",
+      "name": "Hotel Regent Grand",
+      "address": "East Patel Nagar",
+      "price": "₹3,500–₹7,000",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Hotel%20Regent%20Grand%20New%20Delhi",
+      "bookingLink": "https://www.makemytrip.com/hotels/hotels-near-bharat_mandapam_iecc-delhi-four_star.html",
+      "category": "Business and private hotels",
+      "displayOrder": 4
+    },
+    {
+      "id": "stay-20",
+      "status": "active",
+      "name": "The LaLiT New Delhi",
+      "address": "Barakhamba Road / central Delhi · approx. 2 km",
+      "price": "₹10,000–₹20,000+",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=The%20Lalit%20New%20Delhi",
+      "bookingLink": "https://www.booking.com/landmark/in/pragati-maidan1.html",
+      "category": "Premium hotels",
+      "displayOrder": 1
+    },
+    {
+      "id": "stay-21",
+      "status": "active",
+      "name": "The Connaught, New Delhi – IHCL SeleQtions",
+      "address": "Connaught Place / Shivaji Stadium · approx. 4 km",
+      "price": "₹10,000–₹20,000+",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=The%20Connaught%20New%20Delhi%20IHCL%20SeleQtions",
+      "bookingLink": "https://www.booking.com/landmark/in/pragati-maidan1.html",
+      "category": "Premium hotels",
+      "displayOrder": 2
+    },
+    {
+      "id": "stay-22",
+      "status": "active",
+      "name": "Ambassador, New Delhi – IHCL SeleQtions",
+      "address": "Khan Market · approx. 3–4 km",
+      "price": "₹12,000–₹25,000+",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Ambassador%20New%20Delhi%20IHCL%20SeleQtions",
+      "bookingLink": "https://www.booking.com/landmark/in/pragati-maidan1.html",
+      "category": "Premium hotels",
+      "displayOrder": 3
+    },
+    {
+      "id": "stay-23",
+      "status": "active",
+      "name": "The Oberoi, New Delhi",
+      "address": "Dr. Zakir Hussain Marg · approx. 2 km",
+      "price": "₹25,000–₹45,000+",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=The%20Oberoi%20New%20Delhi",
+      "bookingLink": "https://www.booking.com/landmark/in/pragati-maidan1.html",
+      "category": "Premium hotels",
+      "displayOrder": 4
+    },
+    {
+      "id": "stay-24",
+      "status": "active",
+      "name": "Taj Mahal, New Delhi",
+      "address": "Man Singh Road · approx. 2–3 km",
+      "price": "₹25,000–₹45,000+",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Taj%20Mahal%20New%20Delhi%20hotel",
+      "bookingLink": "https://www.booking.com/landmark/in/pragati-maidan1.html",
+      "category": "Premium hotels",
+      "displayOrder": 5
+    },
+    {
+      "id": "stay-25",
+      "status": "active",
+      "name": "The Lodhi",
+      "address": "Lodhi Road · approx. 3 km",
+      "price": "₹30,000–₹60,000+",
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=The%20Lodhi%20New%20Delhi",
+      "bookingLink": "https://www.booking.com/landmark/in/pragati-maidan1.html",
+      "category": "Premium hotels",
+      "displayOrder": 6
+    }
+  ],
+  "cafes": [
+    {
+      "id": "cafe-1",
+      "status": "active",
+      "name": "Jain Chawal Wale",
+      "address": "Connaught Place",
+      "price": "₹100–250",
+      "category": "Student-friendly food",
+      "displayOrder": 1,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Jain%20Chawal%20Wale%20Connaught%20Place%20Delhi"
+    },
+    {
+      "id": "cafe-2",
+      "status": "active",
+      "name": "Wenger’s",
+      "address": "Connaught Place",
+      "price": "₹150–350",
+      "category": "Student-friendly food",
+      "displayOrder": 2,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Wenger%E2%80%99s%20Connaught%20Place%20Delhi"
+    },
+    {
+      "id": "cafe-3",
+      "status": "active",
+      "name": "Depaul’s",
+      "address": "Janpath",
+      "price": "₹150–300",
+      "category": "Student-friendly food",
+      "displayOrder": 3,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Depaul%E2%80%99s%20Janpath%20Delhi"
+    },
+    {
+      "id": "cafe-4",
+      "status": "active",
+      "name": "Saravana Bhavan",
+      "address": "Janpath",
+      "price": "₹350–600",
+      "category": "Student-friendly food",
+      "displayOrder": 4,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Saravana%20Bhavan%20Janpath%20Delhi"
+    },
+    {
+      "id": "cafe-5",
+      "status": "active",
+      "name": "Taco Bell",
+      "address": "Connaught Place",
+      "price": "₹250–450",
+      "category": "Student-friendly food",
+      "displayOrder": 5,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Taco%20Bell%20Connaught%20Place%20Delhi"
+    },
+    {
+      "id": "cafe-6",
+      "status": "active",
+      "name": "Big Yellow Door",
+      "address": "Satya Niketan",
+      "price": "₹350–650",
+      "category": "Student-friendly food",
+      "displayOrder": 6,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Big%20Yellow%20Door%20Satya%20Niketan%20Delhi"
+    },
+    {
+      "id": "cafe-7",
+      "status": "active",
+      "name": "Karim’s",
+      "address": "Jama Masjid",
+      "price": "₹400–700",
+      "category": "Student-friendly food",
+      "displayOrder": 7,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Karim%E2%80%99s%20Jama%20Masjid%20Delhi"
+    },
+    {
+      "id": "cafe-8",
+      "status": "active",
+      "name": "Dolma House",
+      "address": "Majnu ka Tila",
+      "price": "₹250–450",
+      "category": "Student-friendly food",
+      "displayOrder": 8,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Dolma%20House%20Majnu%20ka%20Tila%20Delhi"
+    },
+    {
+      "id": "cafe-9",
+      "status": "active",
+      "name": "Yeti, The Himalayan Kitchen",
+      "address": "Hauz Khas",
+      "price": null,
+      "description": "Himalayan / Nepali",
+      "category": "President’s recommendations",
+      "displayOrder": 1,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Yeti%2C%20The%20Himalayan%20Kitchen%20Hauz%20Khas%20Delhi"
+    },
+    {
+      "id": "cafe-10",
+      "status": "active",
+      "name": "Hauz Khas SOCIAL",
+      "address": "Hauz Khas",
+      "price": null,
+      "description": "Café and casual dining",
+      "category": "President’s recommendations",
+      "displayOrder": 2,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Hauz%20Khas%20SOCIAL%20Hauz%20Khas%20Delhi"
+    },
+    {
+      "id": "cafe-11",
+      "status": "active",
+      "name": "Kake Da Hotel",
+      "address": "Connaught Place",
+      "price": null,
+      "description": "Butter chicken",
+      "category": "President’s recommendations",
+      "displayOrder": 3,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Kake%20Da%20Hotel%20Connaught%20Place%20Delhi"
+    },
+    {
+      "id": "cafe-12",
+      "status": "active",
+      "name": "Rajinder Da Dhaba",
+      "address": "Safdarjung Enclave",
+      "price": null,
+      "description": "Kebabs and butter chicken",
+      "category": "President’s recommendations",
+      "displayOrder": 4,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Rajinder%20Da%20Dhaba%20Safdarjung%20Enclave%20Delhi"
+    },
+    {
+      "id": "cafe-13",
+      "status": "active",
+      "name": "Nizam’s Kathi Kabab",
+      "address": "Connaught Place",
+      "price": null,
+      "description": "Kathi rolls",
+      "category": "President’s recommendations",
+      "displayOrder": 5,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Nizam%E2%80%99s%20Kathi%20Kabab%20Connaught%20Place%20Delhi"
+    },
+    {
+      "id": "cafe-14",
+      "status": "active",
+      "name": "Khan Chacha",
+      "address": "Khan Market",
+      "price": null,
+      "description": "Chicken and mutton rolls",
+      "category": "President’s recommendations",
+      "displayOrder": 6,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Khan%20Chacha%20Khan%20Market%20Delhi"
+    },
+    {
+      "id": "cafe-15",
+      "status": "active",
+      "name": "Karim’s",
+      "address": "Jama Masjid",
+      "price": null,
+      "description": "Traditional Mughlai",
+      "category": "President’s recommendations",
+      "displayOrder": 7,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Karim%E2%80%99s%20Jama%20Masjid%20Delhi"
+    },
+    {
+      "id": "cafe-16",
+      "status": "active",
+      "name": "Al Jawahar Restaurant",
+      "address": "Jama Masjid",
+      "price": null,
+      "description": "Nihari, korma and Mughlai",
+      "category": "President’s recommendations",
+      "displayOrder": 8,
+      "googleMapsLink": "https://www.google.com/maps/search/?api=1&query=Al%20Jawahar%20Restaurant%20Jama%20Masjid%20Delhi"
+    }
+  ],
+  "guideItems": [
+    {
+      "id": "guide-1",
+      "status": "active",
+      "section": "bharat_info",
+      "displayOrder": 1,
+      "title": "Bharat Mandapam",
+      "subtitle": "Day 1 main venue · Supreme Court Metro Station (Blue Line)",
+      "detail": "Routes are indicative. Check live interchange directions and allow time for your assigned entry gate and security.",
+      "link": "https://www.google.com/maps/search/?api=1&query=Bharat%20Mandapam%20Pragati%20Maidan%20New%20Delhi"
+    },
+    {
+      "id": "guide-2",
+      "status": "active",
+      "section": "bharat_route",
+      "displayOrder": 1,
+      "title": "IGI T3",
+      "detail": "Airport Express → New Delhi → Yellow to Rajiv Chowk → Blue to Supreme Court"
+    },
+    {
+      "id": "guide-3",
+      "status": "active",
+      "section": "bharat_route",
+      "displayOrder": 2,
+      "title": "IGI T1",
+      "detail": "Magenta to Hauz Khas → Yellow to Rajiv Chowk → Blue to Supreme Court"
+    },
+    {
+      "id": "guide-4",
+      "status": "active",
+      "section": "bharat_route",
+      "displayOrder": 3,
+      "title": "NDLS",
+      "detail": "Yellow Line → Rajiv Chowk → Blue to Supreme Court"
+    },
+    {
+      "id": "guide-5",
+      "status": "active",
+      "section": "bharat_route",
+      "displayOrder": 4,
+      "title": "NZM",
+      "detail": "Pink Line from Sarai Kale Khan → Mayur Vihar I → Blue to Supreme Court"
+    },
+    {
+      "id": "guide-6",
+      "status": "active",
+      "section": "bharat_route",
+      "displayOrder": 5,
+      "title": "Old Delhi",
+      "detail": "Chandni Chowk Yellow → Rajiv Chowk → Blue to Supreme Court"
+    },
+    {
+      "id": "guide-7",
+      "status": "active",
+      "section": "bharat_route",
+      "displayOrder": 6,
+      "title": "Anand Vihar",
+      "detail": "Blue Line direct to Supreme Court"
+    },
+    {
+      "id": "guide-8",
+      "status": "active",
+      "section": "safdarjung_info",
+      "displayOrder": 1,
+      "title": "VMMC & Safdarjung",
+      "subtitle": "Day 2 workshops · AIIMS Metro Station (Yellow Line)",
+      "detail": "Day 2 is planned for this area but remains subject to final confirmation. Confirm the workshop gate and exact location with the GAIMS team.",
+      "link": "https://www.google.com/maps/search/?api=1&query=VMMC%20Safdarjung%20Hospital%20New%20Delhi"
+    },
+    {
+      "id": "guide-9",
+      "status": "active",
+      "section": "safdarjung_route",
+      "displayOrder": 1,
+      "title": "IGI T3",
+      "detail": "Airport Express → New Delhi → Yellow Line to AIIMS"
+    },
+    {
+      "id": "guide-10",
+      "status": "active",
+      "section": "safdarjung_route",
+      "displayOrder": 2,
+      "title": "IGI T1",
+      "detail": "Magenta to Hauz Khas → Yellow Line to AIIMS"
+    },
+    {
+      "id": "guide-11",
+      "status": "active",
+      "section": "safdarjung_route",
+      "displayOrder": 3,
+      "title": "NDLS",
+      "detail": "Yellow Line directly to AIIMS"
+    },
+    {
+      "id": "guide-12",
+      "status": "active",
+      "section": "safdarjung_route",
+      "displayOrder": 4,
+      "title": "NZM",
+      "detail": "Sarai Kale Khan Pink → Dilli Haat INA → Yellow to AIIMS"
+    },
+    {
+      "id": "guide-13",
+      "status": "active",
+      "section": "safdarjung_route",
+      "displayOrder": 5,
+      "title": "Old Delhi",
+      "detail": "Chandni Chowk → Yellow Line directly to AIIMS"
+    },
+    {
+      "id": "guide-14",
+      "status": "active",
+      "section": "safdarjung_route",
+      "displayOrder": 6,
+      "title": "Anand Vihar",
+      "detail": "Blue to Rajiv Chowk → Yellow Line to AIIMS"
+    },
+    {
+      "id": "guide-15",
+      "status": "active",
+      "section": "safdarjung_route",
+      "displayOrder": 7,
+      "title": "From Day 1 venue",
+      "detail": "Supreme Court Metro → Blue to Rajiv Chowk → Yellow to AIIMS"
+    },
+    {
+      "id": "guide-16",
+      "status": "active",
+      "section": "area",
+      "displayOrder": 1,
+      "title": "Lajpat Nagar",
+      "subtitle": "Budget hostels, market, Pink / Violet metro",
+      "detail": "Popular for shared-stay comparisons"
+    },
+    {
+      "id": "guide-17",
+      "status": "active",
+      "section": "area",
+      "displayOrder": 2,
+      "title": "Ashram",
+      "subtitle": "Hostels, Pink Line access",
+      "detail": "Look at metro transfers and late-night travel"
+    },
+    {
+      "id": "guide-18",
+      "status": "active",
+      "section": "area",
+      "displayOrder": 3,
+      "title": "Sunder Nagar",
+      "subtitle": "Closer to Bharat Mandapam",
+      "detail": "Often better for private rooms, at higher rates"
+    },
+    {
+      "id": "guide-19",
+      "status": "active",
+      "section": "area",
+      "displayOrder": 4,
+      "title": "Delhi Gate / ITO",
+      "subtitle": "Budget hotels and central access",
+      "detail": "Compare metro and road connections"
+    },
+    {
+      "id": "guide-20",
+      "status": "active",
+      "section": "area",
+      "displayOrder": 5,
+      "title": "Connaught Place",
+      "subtitle": "Central hotels, restaurants and connections",
+      "detail": "Good for a city-centre stay"
+    },
+    {
+      "id": "guide-21",
+      "status": "active",
+      "section": "area",
+      "displayOrder": 6,
+      "title": "Paharganj / NDLS",
+      "subtitle": "Budget rooms, New Delhi station area",
+      "detail": "Check recent reviews, safety and exact address"
+    },
+    {
+      "id": "guide-22",
+      "status": "active",
+      "section": "stay_group",
+      "displayOrder": 1,
+      "title": "Student stays under ₹1,000",
+      "subtitle": "Hostel dorm",
+      "detail": "Rates are per person, per dorm bed, per night. Confirm female-only dorms, lockers, age and ID rules, and check-in times with each hostel."
+    },
+    {
+      "id": "guide-23",
+      "status": "active",
+      "section": "stay_group",
+      "displayOrder": 2,
+      "title": "More low-cost stays",
+      "subtitle": "Budget",
+      "detail": "Hostels, pods and budget rooms. Compare bed rates with room rates, and verify the exact address before planning your route."
+    },
+    {
+      "id": "guide-24",
+      "status": "active",
+      "section": "stay_group",
+      "displayOrder": 3,
+      "title": "Mid-range near the venue",
+      "subtitle": "Private room",
+      "detail": "Sunder Nagar is among the most convenient areas for Day 1. Rates are approximate per room, per night."
+    },
+    {
+      "id": "guide-25",
+      "status": "active",
+      "section": "stay_group",
+      "displayOrder": 4,
+      "title": "Mid-range in central Delhi",
+      "subtitle": "City centre",
+      "detail": "Useful for private rooms, group sharing and central metro connections."
+    },
+    {
+      "id": "guide-26",
+      "status": "active",
+      "section": "stay_group",
+      "displayOrder": 5,
+      "title": "Guesthouses and family stays",
+      "subtitle": "Guesthouse",
+      "detail": "For a central, guesthouse-style stay. Verify membership or eligibility rules, room type, check-in hours and current tariffs directly."
+    },
+    {
+      "id": "guide-27",
+      "status": "active",
+      "section": "stay_group",
+      "displayOrder": 6,
+      "title": "Business and private hotels",
+      "subtitle": "Hotel",
+      "detail": "Compare recent reviews, exact location and commute to both venues."
+    },
+    {
+      "id": "guide-28",
+      "status": "active",
+      "section": "stay_group",
+      "displayOrder": 7,
+      "title": "Premium hotels",
+      "subtitle": "Premium",
+      "detail": "Higher-cost options, not student-budget recommendations. Rates can be significantly higher during major events."
+    },
+    {
+      "id": "guide-29",
+      "status": "active",
+      "section": "stay_note",
+      "displayOrder": 1,
+      "title": "Check before you pay",
+      "detail": "Confirm whether the price is per bed, room or apartment, along with taxes, location and refund rules. A hotel 1–2 km away is not always walkable to your assigned Bharat Mandapam gate, so check the route and security approach too."
+    },
+    {
+      "id": "guide-30",
+      "status": "active",
+      "section": "stay_note",
+      "displayOrder": 2,
+      "title": "Independent listings",
+      "detail": "These listings are independent references, not endorsements. GAIMS, its office-bearers and members receive no commission or payment from any hotel or travel agency, and each booking is your own responsibility."
+    },
+    {
+      "id": "guide-31",
+      "status": "active",
+      "section": "stay_help",
+      "displayOrder": 1,
+      "title": "Optional group travel help",
+      "subtitle": "+91 98390 99922",
+      "detail": "For group flight, train or hotel quotes, you can contact Mr Alok at Infinitecare Holidays by call or WhatsApp. This is an independent third party, and they may suggest different hotels from this list. Get the price and refund terms in writing before paying.",
+      "link": "tel:+919839099922"
+    },
+    {
+      "id": "guide-32",
+      "status": "active",
+      "section": "place",
+      "displayOrder": 1,
+      "title": "Hauz Khas Village",
+      "subtitle": "Green Park · Yellow + local ride",
+      "detail": "Historic fort ruins meeting modern art galleries.",
+      "imageUrl": "/assets/places/hauz%20khas%20village.jpg",
+      "link": "https://www.google.com/maps/search/?api=1&query=Hauz%20Khas%20Village%20New%20Delhi"
+    },
+    {
+      "id": "guide-33",
+      "status": "active",
+      "section": "place",
+      "displayOrder": 2,
+      "title": "Dilli Haat INA",
+      "subtitle": "Dilli Haat INA · Pink / Yellow",
+      "detail": "Open-air food plaza and craft bazaar.",
+      "imageUrl": "/assets/places/dilli%20haat.jpg",
+      "link": "https://www.google.com/maps/search/?api=1&query=Dilli%20Haat%20INA%20New%20Delhi"
+    },
+    {
+      "id": "guide-34",
+      "status": "active",
+      "section": "place",
+      "displayOrder": 3,
+      "title": "Connaught Place",
+      "subtitle": "Rajiv Chowk · Blue / Yellow",
+      "detail": "Circular market hub for shopping and street food.",
+      "imageUrl": "/assets/places/connaught%20place.jpg",
+      "link": "https://www.google.com/maps/search/?api=1&query=Connaught%20Place%20New%20Delhi"
+    },
+    {
+      "id": "guide-35",
+      "status": "active",
+      "section": "place",
+      "displayOrder": 4,
+      "title": "India Gate",
+      "detail": "Iconic monument surrounded by lush lawns.",
+      "imageUrl": "/assets/places/india%20gate.jpg",
+      "link": "https://www.google.com/maps/search/?api=1&query=India%20Gate%20New%20Delhi"
+    },
+    {
+      "id": "guide-36",
+      "status": "active",
+      "section": "place",
+      "displayOrder": 5,
+      "title": "Lotus Temple",
+      "subtitle": "Kalkaji Mandir · Violet / Magenta",
+      "link": "https://www.google.com/maps/search/?api=1&query=Lotus%20Temple%20New%20Delhi"
+    },
+    {
+      "id": "guide-37",
+      "status": "active",
+      "section": "place",
+      "displayOrder": 6,
+      "title": "Old Delhi & Chandni Chowk",
+      "subtitle": "Chandni Chowk · Yellow",
+      "link": "https://www.google.com/maps/search/?api=1&query=Old%20Delhi%20Chandni%20Chowk%20New%20Delhi"
+    },
+    {
+      "id": "guide-38",
+      "status": "active",
+      "section": "place",
+      "displayOrder": 7,
+      "title": "Majnu ka Tila",
+      "subtitle": "Vishwavidyalaya · Yellow + local ride",
+      "link": "https://www.google.com/maps/search/?api=1&query=Majnu%20ka%20Tila%20New%20Delhi"
+    },
+    {
+      "id": "guide-39",
+      "status": "active",
+      "section": "place_pick",
+      "displayOrder": 1,
+      "title": "Swaminarayan Akshardham",
+      "detail": "Magnificent temple architecture, cultural exhibitions and the spectacular Sahaj Anand Light & Water Show."
+    },
+    {
+      "id": "guide-40",
+      "status": "active",
+      "section": "place_pick",
+      "displayOrder": 2,
+      "title": "Gurudwara Bangla Sahib",
+      "detail": "One of Delhi’s most beautiful and peaceful Sikh shrines, famous for its golden dome, sacred sarovar, kirtan and langar."
+    },
+    {
+      "id": "guide-41",
+      "status": "active",
+      "section": "place_pick",
+      "displayOrder": 3,
+      "title": "Lotus Temple",
+      "detail": "A stunning Bahá’í House of Worship, welcoming all faiths. Ideal for silent meditation, reflection and peaceful surroundings."
+    },
+    {
+      "id": "guide-42",
+      "status": "active",
+      "section": "place_pick",
+      "displayOrder": 4,
+      "title": "Shri Kalkaji Mandir",
+      "detail": "Historic and spiritually significant temple dedicated to Maa Kali, conveniently located near Lotus Temple."
+    },
+    {
+      "id": "guide-43",
+      "status": "active",
+      "section": "place_pick",
+      "displayOrder": 5,
+      "title": "Gurdwara Sis Ganj Sahib",
+      "detail": "Chandni Chowk. Historic Sikh shrine commemorating the martyrdom of Guru Tegh Bahadur Ji in 1675."
+    },
+    {
+      "id": "guide-44",
+      "status": "active",
+      "section": "place_pick",
+      "displayOrder": 6,
+      "title": "Chhatarpur Mandir",
+      "detail": "Grand temple complex dedicated to Maa Katyayani, known for its beautiful marble architecture and multiple shrines."
+    },
+    {
+      "id": "guide-45",
+      "status": "active",
+      "section": "market",
+      "displayOrder": 1,
+      "title": "Sarojini Nagar",
+      "subtitle": "Pink Line · Budget fashion",
+      "detail": "Often closed on Mondays.",
+      "link": "https://www.google.com/maps/search/?api=1&query=Sarojini%20Nagar%20Delhi"
+    },
+    {
+      "id": "guide-46",
+      "status": "active",
+      "section": "market",
+      "displayOrder": 2,
+      "title": "Janpath",
+      "subtitle": "Violet / nearby CP · Jewellery and souvenirs",
+      "link": "https://www.google.com/maps/search/?api=1&query=Janpath%20Delhi"
+    },
+    {
+      "id": "guide-47",
+      "status": "active",
+      "section": "market",
+      "displayOrder": 3,
+      "title": "Lajpat Nagar",
+      "subtitle": "Pink / Violet · Ethnic wear and local shopping",
+      "detail": "Often closed on Mondays.",
+      "link": "https://www.google.com/maps/search/?api=1&query=Lajpat%20Nagar%20Delhi"
+    },
+    {
+      "id": "guide-48",
+      "status": "active",
+      "section": "market",
+      "displayOrder": 4,
+      "title": "Chandni Chowk",
+      "subtitle": "Yellow Line · Traditional textiles and old Delhi markets",
+      "link": "https://www.google.com/maps/search/?api=1&query=Chandni%20Chowk%20Delhi"
+    },
+    {
+      "id": "guide-49",
+      "status": "active",
+      "section": "checklist",
+      "displayOrder": 1,
+      "title": "Confirm your registration, the 28–29 November dates and your assigned entry gate."
+    },
+    {
+      "id": "guide-50",
+      "status": "active",
+      "section": "checklist",
+      "displayOrder": 2,
+      "title": "Confirm the exact Day 2 workshop room and location."
+    },
+    {
+      "id": "guide-51",
+      "status": "active",
+      "section": "checklist",
+      "displayOrder": 3,
+      "title": "Check whether the accommodation price is per bed, room or apartment."
+    },
+    {
+      "id": "guide-52",
+      "status": "active",
+      "section": "checklist",
+      "displayOrder": 4,
+      "title": "Confirm the final hotel price with taxes, check-in and check-out times, and number of guests."
+    },
+    {
+      "id": "guide-53",
+      "status": "active",
+      "section": "checklist",
+      "displayOrder": 5,
+      "title": "Check female dorm availability, lockers, ID policies and safety."
+    },
+    {
+      "id": "guide-54",
+      "status": "active",
+      "section": "checklist",
+      "displayOrder": 6,
+      "title": "Get booking confirmations and cancellation and refund rules in writing."
+    },
+    {
+      "id": "guide-55",
+      "status": "active",
+      "section": "checklist",
+      "displayOrder": 7,
+      "title": "Download Metro Sarthi and one ride-hailing app, and check your route transfers."
+    },
+    {
+      "id": "guide-56",
+      "status": "active",
+      "section": "checklist",
+      "displayOrder": 8,
+      "title": "Carry your college ID and a government-issued photo ID."
+    },
+    {
+      "id": "guide-57",
+      "status": "active",
+      "section": "checklist",
+      "displayOrder": 9,
+      "title": "Carry a power bank, medication and essentials, and check the weather and AQI."
+    },
+    {
+      "id": "guide-58",
+      "status": "active",
+      "section": "checklist",
+      "displayOrder": 10,
+      "title": "Share your travel and accommodation details with family or a friend."
+    },
+    {
+      "id": "guide-59",
+      "status": "active",
+      "section": "app",
+      "displayOrder": 1,
+      "title": "Delhi Metro Sarthi",
+      "detail": "Routes, line changes and QR tickets"
+    },
+    {
+      "id": "guide-60",
+      "status": "active",
+      "section": "app",
+      "displayOrder": 2,
+      "title": "Uber",
+      "detail": "Cab and auto quotes and app bookings"
+    },
+    {
+      "id": "guide-61",
+      "status": "active",
+      "section": "app",
+      "displayOrder": 3,
+      "title": "Ola",
+      "detail": "Cabs and local mobility choices"
+    },
+    {
+      "id": "guide-62",
+      "status": "active",
+      "section": "app",
+      "displayOrder": 4,
+      "title": "Rapido",
+      "detail": "Auto and cab options where available"
+    },
+    {
+      "id": "guide-63",
+      "status": "active",
+      "section": "app",
+      "displayOrder": 5,
+      "title": "112",
+      "detail": "Emergency number in India. Match driver and vehicle details, share your live trip and travel together for late arrivals."
+    }
+  ]
+}

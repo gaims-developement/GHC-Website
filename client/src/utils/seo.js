@@ -111,7 +111,7 @@ export const buildEventSchema = ({ path = "/" } = {}) => ({
   isAccessibleForFree: false,
   location: {
     "@type": "Place",
-    name: "All India Institute of Medical Sciences (AIIMS), New Delhi",
+    name: "Bharat Mandapam, Pragati Maidan, New Delhi",
     address: {
       "@type": "PostalAddress",
       addressLocality: "New Delhi",

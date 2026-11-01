@@ -459,6 +459,14 @@ function AdminApp({ initialPage = "dashboard" }) {
     }
   };
 
+  // Hospitality Managers have one page, so any other route (including /admin) lands there.
+  useEffect(() => {
+    if ((user?.role || "").toUpperCase() === "HOSPITALITY_MANAGER" && activePage !== "hospitality") {
+      setActivePage("hospitality");
+      window.history.replaceState(null, "", "/admin/hospitality");
+    }
+  }, [user, activePage]);
+
   const handleLogout = async () => {
     try {
       await api.post("/api/auth/logout");
@@ -552,7 +560,7 @@ function AdminApp({ initialPage = "dashboard" }) {
     : isWorkshopTeamUser
     ? WorkshopTeamDashboard
     : Dashboard;
-  const Page = activePage === "dashboard" ? ResolvedDashboard : (pages[activePage] || (activePage.startsWith("team-") ? TeamManagement : activePage.startsWith("registration-") ? Registrations : activePage.startsWith("event-") ? Events : activePage.match(/^form-\d+-submissions$/) ? FormSubmissions : activePage.match(/^form-\d+$/) ? FormBuilder : activePage.startsWith("visa-application-") ? VisaApplicationDetails : null));
+  const Page = userRole === "HOSPITALITY_MANAGER" ? pages.hospitality : activePage === "dashboard" ? ResolvedDashboard : (pages[activePage] || (activePage.startsWith("team-") ? TeamManagement : activePage.startsWith("registration-") ? Registrations : activePage.startsWith("event-") ? Events : activePage.match(/^form-\d+-submissions$/) ? FormSubmissions : activePage.match(/^form-\d+$/) ? FormBuilder : activePage.startsWith("visa-application-") ? VisaApplicationDetails : null));
 
   return (
     <DashboardLayout

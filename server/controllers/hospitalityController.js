@@ -11,10 +11,13 @@ const mapKeys = (obj, fn) => {
   return newObj;
 };
 
-const createHandlers = (tableName, itemName) => ({
+// `columns` limits which request fields can reach the SQL column list.
+const createHandlers = (tableName, itemName, { orderBy, columns } = {}) => {
+  const allowed = (key) => !columns || columns.includes(key);
+  return {
   getAll: async (req, res) => {
     try {
-      const [rows] = await pool.query(`SELECT * FROM ${tableName}`);
+      const [rows] = await pool.query(`SELECT * FROM ${tableName}${orderBy ? ` ORDER BY ${orderBy}` : ''}`);
       const camelRows = rows.map(row => mapKeys(row, toCamelCase));
       res.json({ [`${itemName}s`]: camelRows });
     } catch (error) {
@@ -25,7 +28,7 @@ const createHandlers = (tableName, itemName) => ({
   create: async (req, res) => {
     try {
       const snakedBody = mapKeys(req.body, toSnakeCase);
-      const entries = Object.entries(snakedBody).filter(([k, v]) => k !== 'id' && k !== '_id' && v !== '');
+      const entries = Object.entries(snakedBody).filter(([k, v]) => allowed(k) && k !== 'id' && k !== '_id' && v !== '');
       if (entries.length === 0) return res.status(400).json({ message: 'No valid fields provided' });
       
       const keys = entries.map(([k]) => k);
@@ -47,7 +50,7 @@ const createHandlers = (tableName, itemName) => ({
   update: async (req, res) => {
     try {
       const snakedBody = mapKeys(req.body, toSnakeCase);
-      const entries = Object.entries(snakedBody).filter(([k]) => k !== 'id' && k !== '_id' && k !== 'created_at' && k !== 'updated_at');
+      const entries = Object.entries(snakedBody).filter(([k]) => allowed(k) && k !== 'id' && k !== '_id' && k !== 'created_at' && k !== 'updated_at');
       if (entries.length === 0) return res.status(400).json({ message: 'No valid fields provided to update' });
 
       const keys = entries.map(([k]) => k);
@@ -76,10 +79,15 @@ const createHandlers = (tableName, itemName) => ({
       res.status(500).json({ message: `Error deleting ${itemName}`, error: error.message });
     }
   }
-});
+  };
+};
 
 module.exports = {
   venue: createHandlers('venues', 'venue'),
-  cafe: createHandlers('cafes', 'cafe'),
-  stay: createHandlers('stays', 'stay')
+  cafe: createHandlers('cafes', 'cafe', { orderBy: 'display_order, id' }),
+  stay: createHandlers('stays', 'stay', { orderBy: 'display_order, id' }),
+  guideItem: createHandlers('venue_guide_items', 'guideItem', {
+    orderBy: 'section, display_order, id',
+    columns: ['section', 'title', 'subtitle', 'detail', 'link', 'image_url', 'display_order', 'status'],
+  })
 };

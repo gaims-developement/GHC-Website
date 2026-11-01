@@ -4,7 +4,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const { pool } = require('./db');
 
-const roles = ['SUPER_ADMIN', 'SYSTEM_ADMIN', 'ADMIN', 'TEAM_ADMIN', 'FORM_MANAGER', 'EDITOR', 'VIEWER', 'MEDIA', 'RESEARCH', 'VOLUNTEER', 'CHECKIN', 'OPERATIONS', 'AWARD_JUDGE', 'JUDGE', 'SPONSOR'];
+const roles = ['SUPER_ADMIN', 'SYSTEM_ADMIN', 'ADMIN', 'TEAM_ADMIN', 'FORM_MANAGER', 'EDITOR', 'VIEWER', 'MEDIA', 'RESEARCH', 'VOLUNTEER', 'CHECKIN', 'OPERATIONS', 'AWARD_JUDGE', 'JUDGE', 'SPONSOR', 'HOSPITALITY_MANAGER'];
 
 const permissions = [
   ['dashboard.view', 'View CMS dashboard'],
@@ -55,6 +55,7 @@ const permissions = [
   ['manage_tracks', 'Manage agenda tracks'],
   ['manage_halls', 'Manage halls'],
   ['manage_venues', 'Manage logistics venues'],
+  ['hospitality.manage', 'Manage Venue page stays, food and travel guide'],
   ['manage_accommodation', 'Manage accommodation logistics'],
   ['manage_transport', 'Manage transport logistics'],
   ['manage_vendors', 'Manage vendors'],
@@ -277,6 +278,7 @@ const rolePermissionMap = {
   CHECKIN: ['dashboard.view', 'checkin.scan', 'attendance.manage', 'delegate_id.scan'],
   // Sponsor booth accounts can only scan delegates.
   SPONSOR: ['sponsor_scan'],
+  HOSPITALITY_MANAGER: ['hospitality.manage'],
   OPERATIONS: ['dashboard.view', 'analytics.view', 'checkin.scan', 'attendance.manage', 'operations.view', 'certificates.manage'],
 };
 
@@ -805,6 +807,27 @@ const createWorkshopTables = async () => {
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS venue_guide_items (
+      id INT PRIMARY KEY AUTO_INCREMENT,
+      section VARCHAR(40) NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      subtitle VARCHAR(255),
+      detail TEXT,
+      link TEXT,
+      image_url TEXT,
+      display_order INT DEFAULT 0,
+      status ENUM('active', 'inactive') DEFAULT 'active',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+  for (const table of ['stays', 'cafes']) {
+    await addColumnIfMissing(table, 'category', 'VARCHAR(120) NULL');
+    await addColumnIfMissing(table, 'price', 'VARCHAR(80) NULL');
+    await addColumnIfMissing(table, 'display_order', 'INT DEFAULT 0');
+  }
+  await addColumnIfMissing('stays', 'booking_link', 'TEXT NULL');
   await addColumnIfMissing('venues', 'address', 'TEXT');
   await addColumnIfMissing('venues', 'city', 'VARCHAR(120)');
   await addColumnIfMissing('venues', 'state', 'VARCHAR(120)');
@@ -3114,7 +3137,7 @@ const seedSeoPages = async () => {
     ['abstract-revision', 'Revise Abstract — Global Healthcare Conclave 2026', 'Review and update your submitted abstract for the Global Healthcare Conclave 2026 research program.', 'abstract revision, GHC 2026 abstract, research update, poster revision', null, 'https://ghc.gaims.org/abstract-revision', null],
     ['nominations', 'GHC Awards Nominations — Global Healthcare Conclave 2026', 'Nominate outstanding healthcare professionals, educators, researchers and leaders for the GHC Awards 2026.', 'GHC awards, healthcare achiever award, medical leadership award, nominations, GAIMS awards', null, 'https://ghc.gaims.org/nominations', null],
     ['committees', 'Committees — Global Healthcare Conclave 2026', 'Meet the organizing committees behind the Global Healthcare Conclave 2026 by GAIMS.', 'GHC committees, organizing committee, GAIMS, conclave team, advisory board', null, 'https://ghc.gaims.org/committees', null],
-    ['venue', 'Venue & Travel — Global Healthcare Conclave 2026', 'Venue, transport and travel guide for the Global Healthcare Conclave 2026 at AIIMS, New Delhi — including local attractions and metro directions.', 'GHC 2026 venue, AIIMS New Delhi, conclave location, travel guide New Delhi, metro directions', null, 'https://ghc.gaims.org/venue', null],
+    ['venue', 'Venue & Travel — Global Healthcare Conclave 2026', 'Venue, transport and travel guide for the Global Healthcare Conclave 2026 at Bharat Mandapam, New Delhi — including local attractions and metro directions.', 'GHC 2026 venue, Bharat Mandapam New Delhi, conclave location, travel guide New Delhi, metro directions', null, 'https://ghc.gaims.org/venue', null],
     ['about', 'About — Global Healthcare Conclave 2026', 'About the Global Healthcare Conclave 2026 — GAIMS\u2019 flagship global healthcare summit in New Delhi, built for clinicians, researchers, students and policy leaders.', 'about GHC 2026, Global Healthcare Conclave, GAIMS, healthcare summit, mission', null, 'https://ghc.gaims.org/about', null],
     ['visa-application', 'Visa Application — Global Healthcare Conclave 2026', 'Apply for a visa invitation letter for international delegates attending the Global Healthcare Conclave 2026 in India.', 'GHC 2026 visa, visa invitation letter, international delegates, travel to India', null, 'https://ghc.gaims.org/visa-application', null],
     ['board-meeting-register', 'Board Meeting Registration — Global Healthcare Conclave 2026', 'Register for the GAIMS board meeting hosted during the Global Healthcare Conclave 2026.', 'GAIMS board meeting, board registration, GHC 2026 board', null, 'https://ghc.gaims.org/board-meeting-register', null],
@@ -3135,6 +3158,52 @@ const seedSeoPages = async () => {
        ON DUPLICATE KEY UPDATE page_key = page_key`,
       [pageKey, seoTitle, seoDescription, seoKeywords, ogImage, canonicalUrl, schemaMarkup]
     );
+  }
+};
+
+// Runs once only, so later CMS edits and deletions are never overwritten at boot.
+const seedVenueGuide = async () => {
+  const [[seeded]] = await pool.query("SELECT 1 AS done FROM app_settings WHERE setting_key = 'venue_guide_seeded' LIMIT 1");
+  if (seeded) return;
+  const { stays, cafes, guideItems } = require('../data/venueGuideSeed');
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [[{ stayCount }]] = await conn.query('SELECT COUNT(*) AS stayCount FROM stays');
+    const [[{ cafeCount }]] = await conn.query('SELECT COUNT(*) AS cafeCount FROM cafes');
+    if (!stayCount) {
+      for (const stay of stays) {
+        await conn.query(
+          "INSERT INTO stays (name, address, google_maps_link, booking_link, description, category, price, display_order, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')",
+          [stay.name, stay.address, stay.googleMapsLink, stay.bookingLink, stay.description || null, stay.category, stay.price, stay.displayOrder]
+        );
+      }
+    }
+    if (!cafeCount) {
+      for (const cafe of cafes) {
+        await conn.query(
+          "INSERT INTO cafes (name, address, google_maps_link, description, category, price, display_order, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'active')",
+          [cafe.name, cafe.address, cafe.googleMapsLink, cafe.description || null, cafe.category, cafe.price || null, cafe.displayOrder]
+        );
+      }
+    }
+    for (const item of guideItems) {
+      await conn.query(
+        "INSERT INTO venue_guide_items (section, title, subtitle, detail, link, image_url, display_order, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'active')",
+        [item.section, item.title, item.subtitle || null, item.detail || null, item.link || null, item.imageUrl || null, item.displayOrder]
+      );
+    }
+    await conn.query(
+      `UPDATE seo_pages SET seo_description = REPLACE(seo_description, 'AIIMS, New Delhi', 'Bharat Mandapam, New Delhi'),
+       seo_keywords = REPLACE(seo_keywords, 'AIIMS New Delhi', 'Bharat Mandapam New Delhi') WHERE page_key = 'venue'`
+    );
+    await conn.query("INSERT INTO app_settings (setting_key, setting_value) VALUES ('venue_guide_seeded', 'true')");
+    await conn.commit();
+  } catch (error) {
+    await conn.rollback();
+    throw error;
+  } finally {
+    conn.release();
   }
 };
 
@@ -4272,6 +4341,7 @@ const initializeDatabase = async () => {
     await seedTickets();
     await seedCoupons();
     await seedSeoPages();
+    await seedVenueGuide();
     console.log('Auth, speaker, workshop, partner, media, settings, research, award nominations, registration and payment schema ready; default data seeded');
   } catch (error) {
     console.warn(`Auth schema setup skipped: ${error.message}`);
@@ -4302,6 +4372,7 @@ module.exports = {
   seedAuthData,
   seedCoupons,
   seedSeoPages,
+  seedVenueGuide,
   seedSpeakers,
   seedResearch,
   seedAwardNominationData,

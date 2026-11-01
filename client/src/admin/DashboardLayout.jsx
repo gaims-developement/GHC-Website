@@ -324,6 +324,14 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
           items: [{ id: "dashboard", label: "Scan Delegate", icon: ScanLine, navigationId: "dashboard" }],
         },
       ]
+    : userRole === "HOSPITALITY_MANAGER"
+    ? [
+        {
+          id: "hospitality-main",
+          title: "",
+          items: [{ id: "hospitality", label: "Hospitality", icon: Hotel, navigationId: "hospitality" }],
+        },
+      ]
     : isAwardJudge
     ? [
         {
