@@ -1,6 +1,7 @@
 import { Check, Download, Eye, Search, Send, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import PhoneCell from "../components/PhoneCell";
+import { matchDelegateNames } from "../utils/matchDelegateNames";
 
 const STATUS_STYLES = {
   none: { label: "Not submitted", color: "#b45309", background: "#fef3c7" },
@@ -24,6 +25,8 @@ function DelegateIds({ api, user }) {
   const [busyId, setBusyId] = useState(null);
   const [bulk, setBulk] = useState(null);
   const [viewing, setViewing] = useState(null);
+  const [listText, setListText] = useState("");
+  const [checkedText, setCheckedText] = useState(null);
   const stopBulkRef = useRef(false);
 
   const load = useCallback(async () => {
@@ -65,17 +68,20 @@ function DelegateIds({ api, user }) {
   }, [delegates, search, filter]);
   const unsent = delegates.filter((d) => !d.requestSentAt && !d.submission && d.email);
 
+  const listMatches = useMemo(() => (checkedText === null ? [] : matchDelegateNames(checkedText, delegates)), [checkedText, delegates]);
+  const listReady = listMatches.filter((match) => !match.problem);
+  const listProblems = listMatches.filter((match) => match.problem);
+
   // One email at a time with a short pause, the same as the reminder emails.
-  const sendAll = async () => {
-    if (!unsent.length || !window.confirm(`Send the photo ID request to ${unsent.length} delegate(s) who haven't received it yet?`)) return;
+  const runBulk = async (recipients, body) => {
     stopBulkRef.current = false;
     setError("");
-    const progress = { running: true, total: unsent.length, done: 0, sent: 0, failed: 0, failures: [] };
+    const progress = { running: true, total: recipients.length, done: 0, sent: 0, failed: 0, failures: [] };
     setBulk({ ...progress });
-    for (const delegate of unsent) {
+    for (const delegate of recipients) {
       if (stopBulkRef.current) break;
       try {
-        const response = await api.post(`/api/delegates/${delegate.id}/send-id-request`, { onlyIfNotSent: true });
+        const response = await api.post(`/api/delegates/${delegate.id}/send-id-request`, body);
         applyUpdate(response.data.delegate);
         progress.sent += 1;
       } catch (err) {
@@ -90,6 +96,16 @@ function DelegateIds({ api, user }) {
       await new Promise((resolve) => setTimeout(resolve, 700));
     }
     setBulk({ ...progress, running: false });
+  };
+
+  const sendAll = () => {
+    if (!unsent.length || !window.confirm(`Send the photo ID request to ${unsent.length} delegate(s) who haven't received it yet?`)) return;
+    runBulk(unsent, { onlyIfNotSent: true });
+  };
+
+  const sendToList = () => {
+    if (!listReady.length || !window.confirm(`Send the College ID update email to ${listReady.length} delegate(s)? Each one can then re-upload their ID once.`)) return;
+    runBulk(listReady.map((match) => match.delegate), { collegeIdUpdate: true });
   };
 
   const sendOne = async (delegate) => {
@@ -187,6 +203,36 @@ function DelegateIds({ api, user }) {
           </div>
         )}
       </section>
+
+      {canManage && (
+        <section className="admin-panel">
+          <h2 style={{ margin: "0 0 0.4rem", fontSize: "1.1rem" }}>Send College ID Update to a List</h2>
+          <p className="admin-muted" style={{ margin: "0 0 0.75rem" }}>Paste one name per line. Nothing is sent until you check the matches and press Send.</p>
+          <textarea value={listText} onChange={(e) => setListText(e.target.value)} rows={6} aria-label="Names to email, one per line" placeholder={"Dr. First Last\nMs. First Last"} style={{ display: "block", width: "100%", boxSizing: "border-box", border: "1px solid #d1d5db", borderRadius: "0.6rem", padding: "0.6rem 0.75rem", fontSize: "1rem", fontFamily: "inherit" }} />
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.6rem" }}>
+            <button className="admin-secondary-button" type="button" disabled={!listText.trim() || loading} onClick={() => setCheckedText(listText)}><Search size={16} /> Check Names</button>
+            {checkedText !== null && <button className="admin-primary-button" type="button" disabled={!listReady.length || bulk?.running} onClick={sendToList}><Send size={16} /> Send to {listReady.length}</button>}
+          </div>
+          {checkedText !== null && (
+            <div style={{ marginTop: "0.9rem", display: "grid", gap: "0.9rem", fontSize: "0.85rem" }}>
+              {listProblems.length > 0 && (
+                <div>
+                  <strong style={{ color: "#b91c1c" }}>Will not be sent ({listProblems.length})</strong>
+                  <ul style={{ margin: "0.3rem 0 0 1.1rem" }}>{listProblems.map((match) => <li key={match.listed}>{match.listed}: {match.problem}{match.delegate?.email ? ` (${match.delegate.email})` : ""}</li>)}</ul>
+                </div>
+              )}
+              {listReady.length > 0 && (
+                <div>
+                  <strong style={{ color: "#047857" }}>Ready to send ({listReady.length})</strong>
+                  <ul style={{ margin: "0.3rem 0 0 1.1rem" }}>
+                    {listReady.map(({ listed, delegate }) => <li key={delegate.id} style={{ overflowWrap: "anywhere" }}>{listed} → {delegate.fullName} · {delegate.registrationId} · {delegate.email} · {delegate.submission.idTypeLabel}, {STATUS_STYLES[statusOf(delegate)].label.toLowerCase()}</li>)}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
 
       {error && <section className="admin-panel" style={{ borderColor: "#fecaca", background: "#fef2f2", color: "#b91c1c" }}>{error}</section>}
 

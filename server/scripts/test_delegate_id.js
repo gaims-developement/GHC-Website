@@ -25,7 +25,9 @@ assert.strictEqual(canUploadId({ id_status: 'pending', id_type: 'pan', submitted
 assert.strictEqual(canUploadId({ id_status: 'pending', id_type: 'pan', submitted_at: before, college_id_update_sent_at: after }), true, 'the mail opens one re-upload');
 assert.strictEqual(canUploadId({ id_status: 'verified', id_type: 'pan', submitted_at: before, college_id_update_sent_at: after }), true, 'a verified government ID can be replaced after the mail');
 assert.strictEqual(canUploadId({ id_status: 'pending', id_type: 'college_id', submitted_at: after, college_id_update_sent_at: before }), false, 'locked after the re-upload');
-assert.strictEqual(canUploadId({ id_status: 'verified', id_type: 'college_id', submitted_at: before, college_id_update_sent_at: after }), false, 'a verified College ID stays locked');
+assert.strictEqual(canUploadId({ id_status: 'verified', id_type: 'college_id', submitted_at: before }), false, 'a verified College ID stays locked without the mail');
+assert.strictEqual(canUploadId({ id_status: 'verified', id_type: 'college_id', submitted_at: before, college_id_update_sent_at: after }), true, 'the mail also opens an ID wrongly labelled College ID');
+assert.strictEqual(canUploadId({ id_status: 'verified', id_type: 'college_id', submitted_at: after, college_id_update_sent_at: before }), false, 'locked again after that re-upload');
 
 const stored = encryptIdNumber('ABCDE1234F');
 assert.ok(!stored.includes('ABCDE1234F'));
@@ -46,6 +48,32 @@ const isAllowed = async (method, path, user) => {
 };
 
 (async () => {
+  const { matchDelegateNames } = await import('../../client/src/admin/utils/matchDelegateNames.js');
+  const submitted = { idTypeLabel: 'PAN Card', nameOnId: '' };
+  const people = [
+    { id: 1, fullName: 'Nandita Dash', email: 'n@x.co', submission: submitted },
+    { id: 2, fullName: 'Dr. K.B. Yuktha', email: 'k@x.co', submission: submitted },
+    { id: 3, fullName: 'Anmol Singh', email: 'a1@x.co', submission: submitted },
+    { id: 4, fullName: 'Anmol  Singh', email: 'a2@x.co', submission: submitted },
+    { id: 5, fullName: 'Drishti Rao', email: 'd@x.co', submission: { ...submitted, nameOnId: 'Drishti M Rao' } },
+    { id: 6, fullName: 'Rishab R', email: 'r@x.co', submission: null },
+    { id: 7, fullName: 'Zoya Akram', email: '', submission: submitted },
+    { id: 8, fullName: 'Soumya Mahajan', email: 's@x.co', submission: submitted, collegeIdUpdateSentAt: '2026-11-02' },
+  ];
+  const match = (name) => matchDelegateNames(name, people)[0];
+  assert.strictEqual(match('Ms.Nandita Dash').delegate.id, 1, 'a title with no space');
+  assert.strictEqual(match('Dr KB Yuktha\tignored').delegate.id, 2, 'punctuation, and a pasted spreadsheet row');
+  assert.strictEqual(match('Mr. Drishti M Rao').delegate.id, 5, 'the name on their ID also matches');
+  assert.strictEqual(match('Drishti').problem, 'Not found', 'part of a name is not a match');
+  assert.strictEqual(match('Rao Drishti').problem, 'Not found', 'nothing is guessed');
+  assert.match(match('Mr. Anmol Singh').problem, /2 delegates/, 'an unclear name is not sent');
+  assert.strictEqual(match('Mr. Rishab R').problem, 'Has not submitted an ID');
+  assert.strictEqual(match('Dr. Zoya Akram').problem, 'No email address');
+  assert.strictEqual(match('Mr. Soumya Mahajan').problem, 'Already sent this mail', 'running a list twice mails nobody twice');
+  const twice = matchDelegateNames('Nandita Dash\n\nMs. Nandita Dash\n', people);
+  assert.deepStrictEqual(twice.map((m) => m.problem), [null, 'Listed twice'], 'one mail per person, blank lines ignored');
+  assert.strictEqual(match('Dr.').problem, 'Not found', 'a bare title matches nobody');
+
   const verifier = { role: 'PHOTO_ID_VERIFIER', permissions: [] };
   assert.deepStrictEqual(rolePermissionMap.PHOTO_ID_VERIFIER, ['delegate_id.verify'], 'the role stays this narrow');
   for (const [method, path] of [['get', '/ids'], ['patch', '/:id/id-status'], ['get', '/:id/id-document']]) {

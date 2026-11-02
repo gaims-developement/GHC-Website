@@ -77,7 +77,6 @@ const toDelegateRow = (row) => ({
 // uploading moves submitted_at past the mail's time, which locks the form again.
 const canUploadId = (row) => {
   if (!row.id_status || row.id_status === 'rejected') return true;
-  if (row.id_status === 'verified' && row.id_type === 'college_id') return false;
   return Boolean(row.college_id_update_sent_at) && row.college_id_update_sent_at > row.submitted_at;
 };
 
