@@ -4,6 +4,7 @@ const { sendTemplateEmail, verifyConnection } = require('../services/mailService
 const { buildConfirmationEmail } = require('../services/delegateEmailService');
 const { buildInvitationEmail } = require('../services/invitationImageService');
 const { buildAbstractReminderEmail } = require('../services/abstractReminderEmailService');
+const { buildDelegateIdEmail } = require('../services/delegateIdEmailService');
 const { buildWhatsappInviteAttachments, HERO_HEIGHT: WHATSAPP_HERO_HEIGHT } = require('../services/whatsappInviteImageService');
 const { getDelegateWhatsappGroupUrl } = require('../config/links');
 
@@ -302,6 +303,16 @@ const testEmailTemplate = asyncHandler(async (req, res) => {
     } else if (template.template_key === 'delegate_whatsapp_invite') {
       variables = { name: testName, whatsappLink: getDelegateWhatsappGroupUrl(), heroHeight: WHATSAPP_HERO_HEIGHT };
       attachments = await buildWhatsappInviteAttachments();
+    } else if (['delegate_id_request', 'delegate_college_id_update'].includes(template.template_key)) {
+      const built = await buildDelegateIdEmail({
+        fullName: testName,
+        email,
+        registrationId: sampleVariables.registrationId || 'GHC26-DEL-00000',
+        // No delegate behind a test send, so the button opens the form's "Link Not Valid" page.
+        formLink: 'https://ghc.gaims.org/delegate-id/TEST-LINK-NOT-A-DELEGATE',
+      });
+      variables = built.variables;
+      attachments = built.attachments;
     } else if (template.template_key === 'delegate_registration_confirmation') {
       const built = await buildConfirmationEmail({
         fullName: sampleVariables.fullName || defaults.fullName,

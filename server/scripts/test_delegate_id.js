@@ -5,18 +5,25 @@ const crypto = require('crypto');
 
 process.env.ID_ENCRYPTION_KEY = crypto.randomBytes(32).toString('base64');
 const { decryptIdNumber, encryptIdNumber } = require('../utils/idEncryption');
-const { parseIdSubmission } = require('../controllers/delegateIdController');
+const { canUploadId, parseIdSubmission } = require('../controllers/delegateIdController');
 const { buildVenueListDoc, shrinkIdImage } = require('../services/venueListDocService');
 
-const valid = { nameOnId: 'Khushi  Sharma', idType: 'pan', idNumber: 'abcde 1234f', phone: '+91 98765-43210', consent: 'true' };
-assert.deepStrictEqual(parseIdSubmission(valid).value, { nameOnId: 'Khushi Sharma', idType: 'pan', idNumber: 'ABCDE1234F', phone: '+919876543210' });
-assert.strictEqual(parseIdSubmission({ ...valid, idType: 'college_id', idNumber: 'gmc/2024-118' }).value.idNumber, 'GMC/2024-118');
+const valid = { nameOnId: 'Khushi  Sharma', idType: 'college_id', idNumber: 'gmc/2024 118', phone: '+91 98765-43210', consent: 'true' };
+assert.deepStrictEqual(parseIdSubmission(valid).value, { nameOnId: 'Khushi Sharma', idType: 'college_id', idNumber: 'GMC/2024118', phone: '+919876543210' });
 assert.ok(parseIdSubmission({ ...valid, consent: 'false' }).error, 'consent is required');
-assert.ok(parseIdSubmission({ ...valid, idType: 'constructor' }).error, 'only known ID types');
+['pan', 'passport', 'aadhaar_masked', 'constructor'].forEach((idType) => assert.ok(parseIdSubmission({ ...valid, idType }).error, `${idType} is refused`));
 assert.ok(parseIdSubmission({ ...valid, phone: '9.18E+11' }).error, 'corrupted phones are refused');
-assert.ok(parseIdSubmission({ ...valid, idNumber: 'NOTAPAN' }).error, 'number must fit the type');
-assert.match(parseIdSubmission({ ...valid, idType: 'aadhaar_masked', idNumber: '1234 5678 9012' }).error, /last 4/, 'full Aadhaar is refused');
-assert.strictEqual(parseIdSubmission({ ...valid, idType: 'aadhaar_masked', idNumber: 'XXXX XXXX 9012' }).value.idNumber, '9012');
+assert.ok(parseIdSubmission({ ...valid, idNumber: 'A!' }).error, 'number must fit the type');
+
+const before = new Date('2026-11-01T10:00:00Z');
+const after = new Date('2026-11-02T10:00:00Z');
+assert.strictEqual(canUploadId({}), true, 'first upload is allowed');
+assert.strictEqual(canUploadId({ id_status: 'rejected', id_type: 'pan', submitted_at: after }), true, 'a rejected ID can be redone');
+assert.strictEqual(canUploadId({ id_status: 'pending', id_type: 'pan', submitted_at: before }), false, 'locked when no update mail was sent');
+assert.strictEqual(canUploadId({ id_status: 'pending', id_type: 'pan', submitted_at: before, college_id_update_sent_at: after }), true, 'the mail opens one re-upload');
+assert.strictEqual(canUploadId({ id_status: 'verified', id_type: 'pan', submitted_at: before, college_id_update_sent_at: after }), true, 'a verified government ID can be replaced after the mail');
+assert.strictEqual(canUploadId({ id_status: 'pending', id_type: 'college_id', submitted_at: after, college_id_update_sent_at: before }), false, 'locked after the re-upload');
+assert.strictEqual(canUploadId({ id_status: 'verified', id_type: 'college_id', submitted_at: before, college_id_update_sent_at: after }), false, 'a verified College ID stays locked');
 
 const stored = encryptIdNumber('ABCDE1234F');
 assert.ok(!stored.includes('ABCDE1234F'));

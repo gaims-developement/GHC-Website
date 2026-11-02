@@ -104,6 +104,22 @@ function DelegateIds({ api }) {
     }
   };
 
+  const sendCollegeIdUpdate = async (delegate) => {
+    const again = delegate.collegeIdUpdateSentAt ? ` They were already asked on ${formatDateTime(delegate.collegeIdUpdateSentAt)}.` : "";
+    if (!window.confirm(`Email ${delegate.fullName} asking them to upload their College ID?${again}`)) return;
+    setBusyId(delegate.id);
+    setError("");
+    try {
+      const response = await api.post(`/api/delegates/${delegate.id}/send-id-request`, { collegeIdUpdate: true });
+      applyUpdate(response.data.delegate);
+    } catch (err) {
+      if (err.response?.data?.delegate) applyUpdate(err.response.data.delegate);
+      setError(err.response?.data?.message || `Could not email ${delegate.fullName}.`);
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const view = async (delegate) => {
     setBusyId(delegate.id);
     setError("");
@@ -223,10 +239,12 @@ function DelegateIds({ api }) {
                       ? `Emailed ${formatDateTime(d.requestSentAt)}`
                       : "Not emailed yet"}
                   </div>
+                  {d.collegeIdUpdateSentAt && <div style={{ fontSize: "0.75rem", color: "#6b7280", marginTop: "0.15rem" }}>Asked for College ID {formatDateTime(d.collegeIdUpdateSentAt)}</div>}
                 </div>
                 <span style={{ padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 700, color: style.color, background: style.background }}>{style.label}</span>
                 {d.submission && <button className="admin-secondary-button" type="button" disabled={busyId === d.id} onClick={() => view(d)}><Eye size={16} /> View</button>}
-                {statusOf(d) !== "verified" && <button className="admin-secondary-button" type="button" disabled={busyId === d.id || !d.email} onClick={() => sendOne(d)}><Send size={16} /> {d.requestSentAt ? "Resend" : "Email"}</button>}
+                {d.submission && !(statusOf(d) === "verified" && d.submission.idType === "college_id") && <button className="admin-secondary-button" type="button" disabled={busyId === d.id || !d.email} onClick={() => sendCollegeIdUpdate(d)}><Send size={16} /> Ask for College ID</button>}
+                {!["verified", "pending"].includes(statusOf(d)) && <button className="admin-secondary-button" type="button" disabled={busyId === d.id || !d.email} onClick={() => sendOne(d)}><Send size={16} /> {d.requestSentAt ? "Resend" : "Email"}</button>}
               </div>
             );
           })}

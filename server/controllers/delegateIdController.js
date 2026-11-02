@@ -8,14 +8,15 @@ const { EVENT } = require('../services/delegateEmailService');
 const { buildDelegateIdEmail } = require('../services/delegateIdEmailService');
 const { buildVenueListDoc, shrinkIdImage } = require('../services/venueListDocService');
 
-const ID_TYPES = {
-  college_id: { label: 'College ID', pattern: /^[A-Z0-9/.-]{3,30}$/ },
-  passport: { label: 'Passport', pattern: /^[A-Z0-9]{6,12}$/ },
-  driving_licence: { label: 'Driving Licence', pattern: /^[A-Z0-9/-]{8,20}$/ },
-  pan: { label: 'PAN Card', pattern: /^[A-Z]{5}\d{4}[A-Z]$/ },
-  voter_id: { label: 'Voter ID', pattern: /^[A-Z0-9/]{8,14}$/ },
-  // Full Aadhaar numbers are never stored: only the last 4 digits and a masked copy.
-  aadhaar_masked: { label: 'Masked Aadhaar', pattern: /^\d{4}$/ },
+const COLLEGE_ID_PATTERN = /^[A-Z0-9/.-]{3,30}$/;
+// Only college_id is accepted now; the others stay so IDs submitted before that change still display correctly.
+const ID_TYPE_LABELS = {
+  college_id: 'College ID',
+  passport: 'Passport',
+  driving_licence: 'Driving Licence',
+  pan: 'PAN Card',
+  voter_id: 'Voter ID',
+  aadhaar_masked: 'Masked Aadhaar',
 };
 const REVIEW_STATUSES = ['verified', 'rejected'];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -31,26 +32,20 @@ const parseIdSubmission = (body = {}) => {
   const nameOnId = String(body.nameOnId ?? '').replace(/\s+/g, ' ').trim();
   const idType = String(body.idType ?? '');
   const phone = String(body.phone ?? '').replace(/[\s()-]/g, '');
-  const type = Object.prototype.hasOwnProperty.call(ID_TYPES, idType) ? ID_TYPES[idType] : null;
   if (nameOnId.length < 2 || nameOnId.length > 150) return { error: 'Please enter your name exactly as it appears on your ID.' };
-  if (!type) return { error: 'Please choose a valid ID type.' };
+  if (idType !== 'college_id') return { error: 'Please submit your College ID.' };
   if (!/^\+?\d{10,15}$/.test(phone)) return { error: 'Please enter a valid phone number.' };
   if (String(body.consent) !== 'true') return { error: 'Please give your consent to continue.' };
 
-  const idNumber = idType === 'aadhaar_masked'
-    ? String(body.idNumber ?? '').replace(/\D/g, '')
-    : String(body.idNumber ?? '').toUpperCase().replace(/\s/g, '');
-  if (idType === 'aadhaar_masked' && idNumber.length >= 12) {
-    return { error: 'Please enter only the last 4 digits of your Aadhaar, not the full number.' };
-  }
-  if (!type.pattern.test(idNumber)) return { error: `Please enter a valid ${type.label} number.` };
+  const idNumber = String(body.idNumber ?? '').toUpperCase().replace(/\s/g, '');
+  if (!COLLEGE_ID_PATTERN.test(idNumber)) return { error: 'Please enter a valid College ID number.' };
   return { value: { nameOnId, idType, idNumber, phone } };
 };
 
 const toIdSummary = (row) => ({
   status: row.id_status,
   idType: row.id_type,
-  idTypeLabel: ID_TYPES[row.id_type]?.label || row.id_type,
+  idTypeLabel: ID_TYPE_LABELS[row.id_type] || row.id_type,
   nameOnId: row.name_on_id,
   phone: row.id_phone,
   numberLast4: lastFour(decryptIdNumber(row.id_number_enc)),
@@ -74,8 +69,17 @@ const toDelegateRow = (row) => ({
   requestSendCount: Number(row.id_request_send_count || 0),
   requestLastAttemptAt: row.id_request_last_attempt_at || null,
   requestLastError: row.id_request_last_error || null,
+  collegeIdUpdateSentAt: row.college_id_update_sent_at || null,
   submission: row.id_status ? toIdSummary(row) : null,
 });
+
+// First upload is free and a rejected ID must be redone. Otherwise one re-upload per College ID update mail:
+// uploading moves submitted_at past the mail's time, which locks the form again.
+const canUploadId = (row) => {
+  if (!row.id_status || row.id_status === 'rejected') return true;
+  if (row.id_status === 'verified' && row.id_type === 'college_id') return false;
+  return Boolean(row.college_id_update_sent_at) && row.college_id_update_sent_at > row.submitted_at;
+};
 
 const getIdForm = asyncHandler(async (req, res) => {
   const [[row]] = await pool.query(`${DELEGATE_WITH_ID} WHERE d.id_token = ? LIMIT 1`, [req.params.token]);
@@ -86,9 +90,26 @@ const getIdForm = asyncHandler(async (req, res) => {
     registrationId: row.registration_id,
     // Imported spreadsheets left some numbers as 9.18E+11, so those are not offered as the default.
     phone: /^\+?[\d\s-]{10,}$/.test(row.phone || '') ? row.phone : '',
-    idTypes: Object.entries(ID_TYPES).map(([value, { label }]) => ({ value, label })),
     submission: submission && { ...submission, phone: undefined },
+    canUpload: canUploadId(row),
   });
+});
+
+// Lets a delegate check the ID they uploaded; the private link is the only credential, so every view is logged.
+const getOwnIdDocument = asyncHandler(async (req, res) => {
+  const [[row]] = await pool.query('SELECT i.delegate_id, i.image_public_id FROM delegates d JOIN delegate_ids i ON i.delegate_id = d.id WHERE d.id_token = ? LIMIT 1', [req.params.token]);
+  if (!row) return res.status(404).json({ message: 'No ID on file for this link.' });
+
+  let image;
+  try {
+    image = await fetchIdImage(row.image_public_id);
+  } catch {
+    return res.status(502).json({ message: 'The ID image could not be loaded. Please try again.' });
+  }
+
+  await logAccess(row.delegate_id, null, 'self_view');
+  res.set({ 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, no-store' });
+  res.send(image);
 });
 
 const uploadIdImage = (buffer) => new Promise((resolve, reject) => {
@@ -120,15 +141,15 @@ const destroyIdImage = (publicId) =>
 
 const submitIdForm = asyncHandler(async (req, res) => {
   getKey(); // Fail before uploading anything if the number could not be stored safely.
-  const [[delegate]] = await pool.query('SELECT id FROM delegates WHERE id_token = ? LIMIT 1', [req.params.token]);
+  const [[delegate]] = await pool.query(`${DELEGATE_WITH_ID} WHERE d.id_token = ? LIMIT 1`, [req.params.token]);
   if (!delegate) return res.status(404).json({ message: 'This link is not valid. Please use the link from your email.' });
 
   const { error, value } = parseIdSubmission(req.body);
   if (error) return res.status(400).json({ message: error });
   if (!req.file) return res.status(400).json({ message: 'Please upload a photo of your ID.' });
 
-  const [[existing]] = await pool.query('SELECT status, image_public_id FROM delegate_ids WHERE delegate_id = ?', [delegate.id]);
-  if (existing?.status === 'verified') return res.status(409).json({ message: 'Your ID has already been verified. No further action is needed.' });
+  // shortcut: two uploads sent at the same instant could both pass this check; add a row lock if that is ever abused.
+  if (!canUploadId(delegate)) return res.status(409).json({ message: 'Your ID has already been submitted and can no longer be changed.' });
 
   let image;
   try {
@@ -147,8 +168,8 @@ const submitIdForm = asyncHandler(async (req, res) => {
     [delegate.id, value.nameOnId, value.idType, encryptIdNumber(value.idNumber), value.phone, image.public_id, now, now]
   );
   // A replaced ID must not linger in storage; a failed delete is logged rather than failing the delegate's submission.
-  if (existing?.image_public_id) {
-    await destroyIdImage(existing.image_public_id).catch((err) => console.error('Old ID image not deleted:', existing.image_public_id, err.message));
+  if (delegate.image_public_id) {
+    await destroyIdImage(delegate.image_public_id).catch((err) => console.error('Old ID image not deleted:', delegate.image_public_id, err.message));
   }
   res.json({ success: true });
 });
@@ -169,6 +190,7 @@ const sendIdRequest = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: `${row.full_name} does not have a valid email address.` });
   }
 
+  const collegeIdUpdate = Boolean(req.body?.collegeIdUpdate);
   let idToken = row.id_token;
   if (!idToken) {
     idToken = newIdToken();
@@ -178,17 +200,21 @@ const sendIdRequest = asyncHandler(async (req, res) => {
   const now = new Date();
   try {
     const { attachments, variables } = await buildDelegateIdEmail({ fullName: row.full_name, email: row.email, registrationId: row.registration_id, formLink: `${EVENT.url}delegate-id/${idToken}` });
-    await sendTemplateEmail('delegate_id_request', row.email, variables, { attachments });
+    await sendTemplateEmail(collegeIdUpdate ? 'delegate_college_id_update' : 'delegate_id_request', row.email, variables, { attachments });
   } catch (error) {
     await pool.query('UPDATE delegates SET id_request_last_attempt_at = ?, id_request_last_error = ? WHERE id = ?', [now, String(error.message || error).slice(0, 1000), row.id]);
     const [[failed]] = await pool.query(`${DELEGATE_WITH_ID} WHERE d.id = ?`, [row.id]);
     return res.status(502).json({ message: `Email to ${row.email} could not be sent: ${error.message}`, delegate: toDelegateRow(failed) });
   }
 
-  await pool.query(
-    'UPDATE delegates SET id_request_sent_at = ?, id_request_last_attempt_at = ?, id_request_last_error = NULL, id_request_send_count = id_request_send_count + 1 WHERE id = ?',
-    [now, now, row.id]
-  );
+  if (collegeIdUpdate) {
+    await pool.query('UPDATE delegates SET college_id_update_sent_at = ?, id_request_last_attempt_at = ?, id_request_last_error = NULL WHERE id = ?', [now, now, row.id]);
+  } else {
+    await pool.query(
+      'UPDATE delegates SET id_request_sent_at = ?, id_request_last_attempt_at = ?, id_request_last_error = NULL, id_request_send_count = id_request_send_count + 1 WHERE id = ?',
+      [now, now, row.id]
+    );
+  }
   const [[updated]] = await pool.query(`${DELEGATE_WITH_ID} WHERE d.id = ?`, [row.id]);
   res.json({ delegate: toDelegateRow(updated) });
 });
@@ -278,7 +304,7 @@ const toVenueDelegate = async (row) => {
     name: row.name_on_id,
     email: row.email,
     phone: row.id_phone,
-    idType: ID_TYPES[row.id_type]?.label || row.id_type,
+    idType: ID_TYPE_LABELS[row.id_type] || row.id_type,
     idNumber: row.id_type === 'aadhaar_masked' ? `XXXX XXXX ${number}` : number,
     photo,
   };
@@ -302,9 +328,11 @@ const exportVenueList = asyncHandler(async (req, res) => {
 });
 
 module.exports = {
+  canUploadId,
   exportVenueList,
   getIdDocument,
   getIdForm,
+  getOwnIdDocument,
   listDelegateIds,
   parseIdSubmission,
   previewCheckIn,

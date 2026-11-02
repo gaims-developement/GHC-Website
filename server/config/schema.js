@@ -3734,7 +3734,8 @@ const createInviteTables = async () => {
   await seedTemplate('conclave_invitation', 'conclave-invitation.html', 'You are cordially invited to the GAIMS Global Healthcare Conclave 2026');
   await seedTemplate('delegate_whatsapp_invite', 'delegate-whatsapp-invite.html', "You're invited: join the GHC 2026 Delegate WhatsApp Group");
   await seedTemplate('abstract_registration_reminder', 'abstract-registration-reminder.html', 'Action Required: Complete Your GHC 2026 Registration');
-  await seedTemplate('delegate_id_request', 'delegate-id-request.html', 'Action Required: Submit Your Photo ID for GHC 2026');
+  await seedTemplate('delegate_id_request', 'delegate-id-request.html', 'Action Required: Submit Your College ID for GHC 2026');
+  await seedTemplate('delegate_college_id_update', 'delegate-college-id-update.html', 'Important Update Regarding ID Submission for GHC');
 };
 
 const createDelegateTables = async () => {
@@ -3781,6 +3782,7 @@ const createDelegateTables = async () => {
   await addColumnIfMissing('delegates', 'id_request_send_count', 'INT NOT NULL DEFAULT 0');
   await addColumnIfMissing('delegates', 'id_request_last_attempt_at', 'DATETIME NULL');
   await addColumnIfMissing('delegates', 'id_request_last_error', 'TEXT NULL');
+  await addColumnIfMissing('delegates', 'college_id_update_sent_at', 'DATETIME NULL');
   // id_number_enc is AES-256-GCM (utils/idEncryption.js); image_public_id is a private Cloudinary asset.
   await pool.query(`
     CREATE TABLE IF NOT EXISTS delegate_ids (

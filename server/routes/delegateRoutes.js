@@ -2,7 +2,7 @@ const router = require('express').Router();
 const multer = require('multer');
 const rateLimit = require('express-rate-limit');
 const { checkIn, importDelegates, listDelegates, sendConfirmation, sendWhatsappInvite, setAttendance, sponsorScan } = require('../controllers/delegateController');
-const { exportVenueList, getIdDocument, getIdForm, listDelegateIds, previewCheckIn, reviewId, sendIdRequest, submitIdForm } = require('../controllers/delegateIdController');
+const { exportVenueList, getIdDocument, getIdForm, getOwnIdDocument, listDelegateIds, previewCheckIn, reviewId, sendIdRequest, submitIdForm } = require('../controllers/delegateIdController');
 const { requireAuth, requirePermission, requireRole } = require('../middleware/authMiddleware');
 
 // Delegates and attendance are restricted to Super Admin and Admin.
@@ -31,6 +31,7 @@ router.post('/check-in', ...canCheckId, checkIn);
 
 // Photo ID: the public form is reached by the private link in the delegate's email.
 router.get('/id-form/:token', idFormLimiter, getIdForm);
+router.get('/id-form/:token/document', idFormLimiter, getOwnIdDocument);
 router.post('/id-form/:token', idFormLimiter, receiveIdImage, submitIdForm);
 router.get('/ids', ...adminOnly, listDelegateIds);
 router.get('/ids/export', ...adminOnly, exportVenueList);
