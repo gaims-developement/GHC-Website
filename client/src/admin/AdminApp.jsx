@@ -467,6 +467,14 @@ function AdminApp({ initialPage = "dashboard" }) {
     }
   }, [user, activePage]);
 
+  // Photo ID Verifiers likewise only have the Photo IDs page.
+  useEffect(() => {
+    if ((user?.role || "").toUpperCase() === "PHOTO_ID_VERIFIER" && activePage !== "delegate-ids") {
+      setActivePage("delegate-ids");
+      window.history.replaceState(null, "", "/admin/delegate-ids");
+    }
+  }, [user, activePage]);
+
   const handleLogout = async () => {
     try {
       await api.post("/api/auth/logout");
@@ -560,7 +568,7 @@ function AdminApp({ initialPage = "dashboard" }) {
     : isWorkshopTeamUser
     ? WorkshopTeamDashboard
     : Dashboard;
-  const Page = userRole === "HOSPITALITY_MANAGER" ? pages.hospitality : activePage === "dashboard" ? ResolvedDashboard : (pages[activePage] || (activePage.startsWith("team-") ? TeamManagement : activePage.startsWith("registration-") ? Registrations : activePage.startsWith("event-") ? Events : activePage.match(/^form-\d+-submissions$/) ? FormSubmissions : activePage.match(/^form-\d+$/) ? FormBuilder : activePage.startsWith("visa-application-") ? VisaApplicationDetails : null));
+  const Page = userRole === "HOSPITALITY_MANAGER" ? pages.hospitality : userRole === "PHOTO_ID_VERIFIER" ? pages["delegate-ids"] : activePage === "dashboard" ? ResolvedDashboard : (pages[activePage] || (activePage.startsWith("team-") ? TeamManagement : activePage.startsWith("registration-") ? Registrations : activePage.startsWith("event-") ? Events : activePage.match(/^form-\d+-submissions$/) ? FormSubmissions : activePage.match(/^form-\d+$/) ? FormBuilder : activePage.startsWith("visa-application-") ? VisaApplicationDetails : null));
 
   return (
     <DashboardLayout

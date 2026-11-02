@@ -5,7 +5,9 @@ const crypto = require('crypto');
 
 process.env.ID_ENCRYPTION_KEY = crypto.randomBytes(32).toString('base64');
 const { decryptIdNumber, encryptIdNumber } = require('../utils/idEncryption');
-const { canUploadId, parseIdSubmission } = require('../controllers/delegateIdController');
+const { canUploadId, parseIdSubmission, toReviewerRow } = require('../controllers/delegateIdController');
+const { rolePermissionMap } = require('../config/schema');
+const delegateRoutes = require('../routes/delegateRoutes');
 const { buildVenueListDoc, shrinkIdImage } = require('../services/venueListDocService');
 
 const valid = { nameOnId: 'Khushi  Sharma', idType: 'college_id', idNumber: 'gmc/2024 118', phone: '+91 98765-43210', consent: 'true' };
@@ -33,7 +35,32 @@ const parts = stored.split('.');
 parts[2] = Buffer.from('tampered').toString('base64');
 assert.throws(() => decryptIdNumber(parts.join('.')), 'tampered values are rejected');
 
+// Runs a route's guards (not its handler) as this user; true means the request would reach the handler.
+const isAllowed = async (method, path, user) => {
+  const { route } = delegateRoutes.stack.find((layer) => layer.route?.path === path && layer.route.methods[method]);
+  for (const { handle } of route.stack.slice(0, -1).filter(({ handle }) => handle.name !== 'requireAuth')) {
+    const passed = await new Promise((resolve) => handle({ user }, { status: () => ({ json: () => resolve(false) }) }, () => resolve(true)));
+    if (!passed) return false;
+  }
+  return true;
+};
+
 (async () => {
+  const verifier = { role: 'PHOTO_ID_VERIFIER', permissions: [] };
+  assert.deepStrictEqual(rolePermissionMap.PHOTO_ID_VERIFIER, ['delegate_id.verify'], 'the role stays this narrow');
+  for (const [method, path] of [['get', '/ids'], ['patch', '/:id/id-status'], ['get', '/:id/id-document']]) {
+    assert.strictEqual(await isAllowed(method, path, verifier), true, `verifier can ${method} ${path}`);
+    assert.strictEqual(await isAllowed(method, path, { role: 'ADMIN', permissions: [] }), true, `admin can still ${method} ${path}`);
+  }
+  for (const [method, path] of [['get', '/'], ['get', '/ids/export'], ['post', '/:id/send-id-request'], ['post', '/import'], ['patch', '/:id/attendance'], ['post', '/check-in']]) {
+    assert.strictEqual(await isAllowed(method, path, verifier), false, `verifier cannot ${method} ${path}`);
+  }
+  assert.strictEqual(await isAllowed('get', '/ids', { role: 'CHECKIN', permissions: [] }), false, 'door staff cannot list IDs');
+
+  const reviewerRow = toReviewerRow({ id: 1, registration_id: 'R1', full_name: 'A', email: 'a@b.c', phone: '999', id_request_last_error: 'x', id_status: 'pending', id_type: 'college_id', name_on_id: 'A', id_phone: '888', id_number_enc: encryptIdNumber('GMC118') });
+  assert.ok(!/a@b\.c|999|888/.test(JSON.stringify(reviewerRow)), 'no contact details reach a reviewer');
+  assert.strictEqual(reviewerRow.submission.numberLast4, 'C118');
+
   const { createCanvas } = require('@napi-rs/canvas');
   const big = createCanvas(1600, 1000).toBuffer('image/png');
   const photo = await shrinkIdImage(big);

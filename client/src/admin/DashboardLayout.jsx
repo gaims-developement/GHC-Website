@@ -332,6 +332,14 @@ function DashboardLayout({ api, children, user, activePage, eventContext, impers
           items: [{ id: "hospitality", label: "Hospitality", icon: Hotel, navigationId: "hospitality" }],
         },
       ]
+    : userRole === "PHOTO_ID_VERIFIER"
+    ? [
+        {
+          id: "photo-id-main",
+          title: "",
+          items: [{ id: "delegate-ids", label: "Photo IDs", icon: ShieldCheck, navigationId: "delegate-ids" }],
+        },
+      ]
     : isAwardJudge
     ? [
         {

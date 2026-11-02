@@ -12,7 +12,10 @@ const FILTERS = [["all", "All"], ["none", "Not submitted"], ["pending", "To revi
 const statusOf = (delegate) => delegate.submission?.status || "none";
 const formatDateTime = (value) => (value ? new Date(value).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "");
 
-function DelegateIds({ api }) {
+function DelegateIds({ api, user }) {
+  // Everyone else who reaches this page only reviews IDs; the server leaves out contact details for them too.
+  const canManage = ["SUPER_ADMIN", "ADMIN"].includes((user?.role || "").toUpperCase());
+  const visibleFilters = canManage ? FILTERS : FILTERS.filter(([id]) => id !== "none");
   const [delegates, setDelegates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -172,15 +175,17 @@ function DelegateIds({ api }) {
       <section className="admin-panel">
         <p className="admin-eyebrow">Delegates</p>
         <h1>Photo IDs</h1>
-        <p className="admin-muted">Email each delegate their private ID form, review what they submit, and download the list for the venue. Every view and download is logged.</p>
+        <p className="admin-muted">{canManage ? "Email each delegate their private ID form, review what they submit, and download the list for the venue. Every view and download is logged." : "Open each submitted ID, then verify or reject it. Every view is logged."}</p>
         <div style={{ display: "flex", gap: "1.25rem", flexWrap: "wrap", alignItems: "center", marginTop: "0.75rem", fontSize: "0.95rem" }}>
-          {FILTERS.slice(1).map(([id, label]) => <span key={id} style={{ color: STATUS_STYLES[id].color }}><strong>{counts[id] || 0}</strong> {label.toLowerCase()}</span>)}
+          {visibleFilters.slice(1).map(([id, label]) => <span key={id} style={{ color: STATUS_STYLES[id].color }}><strong>{counts[id] || 0}</strong> {label.toLowerCase()}</span>)}
         </div>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.9rem" }}>
-          <button className="admin-primary-button" type="button" disabled={!unsent.length || bulk?.running} onClick={sendAll}><Send size={16} /> Email All Not Sent ({unsent.length})</button>
-          <button className="admin-secondary-button" type="button" onClick={exportList}><Download size={16} /> Download Venue List</button>
-          {bulk?.running && <button className="admin-secondary-button" type="button" onClick={() => { stopBulkRef.current = true; }}>Stop</button>}
-        </div>
+        {canManage && (
+          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginTop: "0.9rem" }}>
+            <button className="admin-primary-button" type="button" disabled={!unsent.length || bulk?.running} onClick={sendAll}><Send size={16} /> Email All Not Sent ({unsent.length})</button>
+            <button className="admin-secondary-button" type="button" onClick={exportList}><Download size={16} /> Download Venue List</button>
+            {bulk?.running && <button className="admin-secondary-button" type="button" onClick={() => { stopBulkRef.current = true; }}>Stop</button>}
+          </div>
+        )}
       </section>
 
       {error && <section className="admin-panel" style={{ borderColor: "#fecaca", background: "#fef2f2", color: "#b91c1c" }}>{error}</section>}
@@ -211,10 +216,10 @@ function DelegateIds({ api }) {
         <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginBottom: "1rem" }}>
           <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", border: "1px solid #d1d5db", borderRadius: "0.6rem", padding: "0.6rem 0.75rem", flex: "1 1 260px" }}>
             <Search size={18} color="#6b7280" />
-            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by name, registration ID, email or phone" aria-label="Search delegates" style={{ border: "none", outline: "none", flex: 1, fontSize: "1rem", minWidth: 0 }} />
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={canManage ? "Search by name, registration ID, email or phone" : "Search by name or registration ID"} aria-label="Search delegates" style={{ border: "none", outline: "none", flex: 1, fontSize: "1rem", minWidth: 0 }} />
           </label>
           <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap" }}>
-            {FILTERS.map(([id, label]) => (
+            {visibleFilters.map(([id, label]) => (
               <button key={id} type="button" className={filter === id ? "admin-primary-button" : "admin-secondary-button"} onClick={() => setFilter(id)}>{label}</button>
             ))}
           </div>
@@ -228,7 +233,7 @@ function DelegateIds({ api }) {
                 <div style={{ flex: "1 1 240px", minWidth: 0 }}>
                   <div style={{ fontWeight: 700, color: "#111827", overflowWrap: "anywhere" }}>{d.fullName}</div>
                   <div style={{ fontSize: "0.8rem", color: "#6b7280", overflowWrap: "anywhere" }}>
-                    {d.registrationId} · {d.email || "No email"} · <PhoneCell phone={d.submission?.phone || d.phone} />
+                    {d.registrationId}{canManage && <> · {d.email || "No email"} · <PhoneCell phone={d.submission?.phone || d.phone} /></>}
                   </div>
                   <div style={{ fontSize: "0.75rem", color: d.requestLastError ? "#b91c1c" : "#6b7280", marginTop: "0.15rem" }}>
                     {d.submission
@@ -243,8 +248,8 @@ function DelegateIds({ api }) {
                 </div>
                 <span style={{ padding: "0.2rem 0.6rem", borderRadius: "999px", fontSize: "0.75rem", fontWeight: 700, color: style.color, background: style.background }}>{style.label}</span>
                 {d.submission && <button className="admin-secondary-button" type="button" disabled={busyId === d.id} onClick={() => view(d)}><Eye size={16} /> View</button>}
-                {d.submission && !(statusOf(d) === "verified" && d.submission.idType === "college_id") && <button className="admin-secondary-button" type="button" disabled={busyId === d.id || !d.email} onClick={() => sendCollegeIdUpdate(d)}><Send size={16} /> Ask for College ID</button>}
-                {!["verified", "pending"].includes(statusOf(d)) && <button className="admin-secondary-button" type="button" disabled={busyId === d.id || !d.email} onClick={() => sendOne(d)}><Send size={16} /> {d.requestSentAt ? "Resend" : "Email"}</button>}
+                {canManage && d.submission && !(statusOf(d) === "verified" && d.submission.idType === "college_id") && <button className="admin-secondary-button" type="button" disabled={busyId === d.id || !d.email} onClick={() => sendCollegeIdUpdate(d)}><Send size={16} /> Ask for College ID</button>}
+                {canManage && !["verified", "pending"].includes(statusOf(d)) && <button className="admin-secondary-button" type="button" disabled={busyId === d.id || !d.email} onClick={() => sendOne(d)}><Send size={16} /> {d.requestSentAt ? "Resend" : "Email"}</button>}
               </div>
             );
           })}

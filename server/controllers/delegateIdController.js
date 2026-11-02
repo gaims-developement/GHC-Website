@@ -81,6 +81,16 @@ const canUploadId = (row) => {
   return Boolean(row.college_id_update_sent_at) && row.college_id_update_sent_at > row.submitted_at;
 };
 
+const isFullAdmin = (user) => ['SUPER_ADMIN', 'ADMIN'].includes(user?.role);
+const canVerifyAnyId = (user) => isFullAdmin(user) || user?.role === 'PHOTO_ID_VERIFIER' || Boolean(user?.permissions?.includes('delegate_id.verify'));
+
+// Reviewers only need to match the person to their ID, so contact details never leave the server for them.
+const toReviewerRow = (row) => {
+  const { id, registrationId, fullName, submission } = toDelegateRow(row);
+  return { id, registrationId, fullName, submission: submission && { ...submission, phone: undefined } };
+};
+const toRowFor = (user, row) => (isFullAdmin(user) ? toDelegateRow(row) : toReviewerRow(row));
+
 const getIdForm = asyncHandler(async (req, res) => {
   const [[row]] = await pool.query(`${DELEGATE_WITH_ID} WHERE d.id_token = ? LIMIT 1`, [req.params.token]);
   if (!row) return res.status(404).json({ message: 'This link is not valid. Please use the link from your email.' });
@@ -174,9 +184,10 @@ const submitIdForm = asyncHandler(async (req, res) => {
   res.json({ success: true });
 });
 
-const listDelegateIds = asyncHandler(async (_req, res) => {
+const listDelegateIds = asyncHandler(async (req, res) => {
   const [rows] = await pool.query(`${DELEGATE_WITH_ID} ORDER BY d.id ASC`);
-  res.json({ delegates: rows.map(toDelegateRow) });
+  const visible = isFullAdmin(req.user) ? rows : rows.filter((row) => row.id_status);
+  res.json({ delegates: visible.map((row) => toRowFor(req.user, row)) });
 });
 
 const sendIdRequest = asyncHandler(async (req, res) => {
@@ -232,14 +243,14 @@ const reviewId = asyncHandler(async (req, res) => {
   if (!result.affectedRows) return res.status(404).json({ message: 'This delegate has not submitted an ID.' });
   await logAccess(req.params.id, req.user?.id, status);
   const [[row]] = await pool.query(`${DELEGATE_WITH_ID} WHERE d.id = ?`, [req.params.id]);
-  res.json({ delegate: toDelegateRow(row) });
+  res.json({ delegate: toRowFor(req.user, row) });
 });
 
 // The image is streamed through this route rather than linked: Cloudinary's signed delivery URLs do not expire.
 const getIdDocument = asyncHandler(async (req, res) => {
   const delegateId = Number(req.params.id);
   // Door staff can only open the ID of the person they have just scanned, never browse them by number.
-  if (!['SUPER_ADMIN', 'ADMIN'].includes(req.user?.role)) {
+  if (!canVerifyAnyId(req.user)) {
     const since = new Date(Date.now() - SCAN_ACCESS_MINUTES * 60 * 1000);
     const [[scan]] = await pool.query(
       "SELECT id FROM delegate_id_access_log WHERE delegate_id = ? AND user_id = ? AND action = 'scan' AND created_at >= ? LIMIT 1",
@@ -336,6 +347,7 @@ module.exports = {
   listDelegateIds,
   parseIdSubmission,
   previewCheckIn,
+  toReviewerRow,
   reviewId,
   sendIdRequest,
   submitIdForm,

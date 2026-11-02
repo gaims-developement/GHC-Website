@@ -9,6 +9,8 @@ const { requireAuth, requirePermission, requireRole } = require('../middleware/a
 const adminOnly = [requireAuth, requireRole('SUPER_ADMIN', 'ADMIN')];
 // Door staff (CHECKIN role) can scan, see that person's ID and mark them present, and nothing else.
 const canCheckId = [requireAuth, requirePermission('delegate_id.scan')];
+// Photo ID Verifiers can list submitted IDs, open them and verify or reject them, and nothing else.
+const canVerifyId = [requireAuth, requirePermission('delegate_id.verify')];
 
 const idFormLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false });
 const idImageUpload = multer({
@@ -33,11 +35,11 @@ router.post('/check-in', ...canCheckId, checkIn);
 router.get('/id-form/:token', idFormLimiter, getIdForm);
 router.get('/id-form/:token/document', idFormLimiter, getOwnIdDocument);
 router.post('/id-form/:token', idFormLimiter, receiveIdImage, submitIdForm);
-router.get('/ids', ...adminOnly, listDelegateIds);
+router.get('/ids', ...canVerifyId, listDelegateIds);
 router.get('/ids/export', ...adminOnly, exportVenueList);
 router.post('/:id/send-id-request', ...adminOnly, sendIdRequest);
-router.patch('/:id/id-status', ...adminOnly, reviewId);
-router.get('/:id/id-document', ...canCheckId, getIdDocument);
+router.patch('/:id/id-status', ...canVerifyId, reviewId);
+router.get('/:id/id-document', requireAuth, requirePermission('delegate_id.scan', 'delegate_id.verify'), getIdDocument);
 
 // Sponsor booths scan delegates for coupons; admins can use it too for testing.
 router.post('/sponsor-scan', requireAuth, requirePermission('sponsor_scan'), sponsorScan);
