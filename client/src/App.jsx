@@ -909,6 +909,9 @@ function Tracks() {
   );
 }
 
+// Phone cards show one whole sentence rather than cutting a longer text off mid-word.
+const firstSentence = (text) => String(text).match(/^.+?(?<!\b(?:Dr|Prof|Mr|Mrs|Ms|Lt|Gen|Col|Maj|St|Sr|Jr|No|vs))[.!?](?=\s|$)/)?.[0] || String(text);
+
 function SpeakerPhoto({ speaker, featured = false }) {
   if (!speaker) return null;
   const [imgError, setImgError] = useState(false);
@@ -1026,18 +1029,18 @@ function WorldClassSpeakers() {
 
   return (
     <section id="world-class-speakers" className="section-shell reveal-section bg-white py-24">
-      <div className="mb-14 max-w-7xl mx-auto px-4 sm:px-6 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+      <div className="mb-14 max-w-7xl mx-auto sm:px-6 flex flex-col justify-between gap-5 md:flex-row md:items-end">
         <SectionHeading eyebrow="World Class Speakers" title="Keynotes and faculty shaping global care." />
       </div>
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6">
+      <div className="w-full max-w-7xl mx-auto sm:px-6">
         {speakerData?.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
             {speakerData.map((speaker) => (
-              <SpotlightCard key={speaker.id || speaker.name} className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgba(16,24,40,0.06)] p-8 flex flex-col items-center text-center">
+              <SpotlightCard key={speaker.id || speaker.name} className="bg-white rounded-3xl md:rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgba(16,24,40,0.06)] p-4 md:p-8 flex flex-col items-center text-center min-w-0">
                 <SpeakerPhoto speaker={speaker} />
-                <h3 className="mt-6 font-['Outfit'] text-xl font-extrabold text-[#101828] break-words">{speaker.name}</h3>
-                <p className="mt-2 text-sm font-bold text-[#173B8F] uppercase tracking-wider break-words">{speaker.designation}</p>
-                <p className="mt-5 text-sm text-[#475467] leading-relaxed border-t border-gray-100 pt-5 w-full font-medium break-words">
+                <h3 className="mt-3 md:mt-6 w-full font-['Outfit'] text-sm md:text-xl font-extrabold leading-snug text-[#101828] break-words max-md:text-balance">{speaker.name}</h3>
+                <p className="mt-1 md:mt-2 w-full text-[11px] md:text-sm font-semibold md:font-bold leading-snug text-[#173B8F] md:uppercase md:tracking-wider break-words max-md:text-balance">{speaker.designation}</p>
+                <p className="mt-3 md:mt-5 max-md:!text-xs md:text-sm text-[#475467] leading-normal md:leading-relaxed border-t border-gray-100 pt-3 md:pt-5 w-full md:font-medium break-words max-md:text-balance">
                   {speaker.topic || speaker.institution || "Speaker Topic"}
                 </p>
               </SpotlightCard>
@@ -1050,17 +1053,18 @@ function WorldClassSpeakers() {
         )}
       </div>
 
-      <div className="mt-24 max-w-7xl mx-auto px-4 sm:px-6">
+      <div className="mt-24 max-w-7xl mx-auto sm:px-6">
         <SectionHeading eyebrow="Legacy" title="Legacy Speakers" text="Distinguished faculty and visionaries from our previous editions." />
         {pastSpeakerData?.length > 0 ? (
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="mt-12 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-8">
             {pastSpeakerData.map(speaker => (
-              <SpotlightCard key={speaker.id || speaker.name} className="bg-white rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgba(16,24,40,0.04)] p-8 flex flex-col items-center text-center opacity-90">
+              <SpotlightCard key={speaker.id || speaker.name} className="bg-white rounded-3xl md:rounded-[2rem] border border-gray-100 shadow-[0_8px_30px_rgba(16,24,40,0.04)] p-4 md:p-8 flex flex-col items-center text-center opacity-90 min-w-0">
                 <SpeakerPhoto speaker={{ ...speaker, initials: speaker.initials || speaker.name?.split(" ").filter(Boolean).slice(0, 2).map(n => n[0]).join("").toUpperCase() }} />
-                <h3 className="mt-6 font-['Outfit'] text-xl font-extrabold text-[#101828] break-words">{speaker.name}</h3>
-                <p className="mt-2 text-sm font-bold text-[#173B8F] uppercase tracking-wider break-words">{speaker.designation}</p>
-                <p className="mt-5 text-sm text-[#475467] leading-relaxed border-t border-gray-100 pt-5 w-full font-medium break-words">
-                  {speaker.achievements || speaker.topic || speaker.bio || "Distinguished faculty and medical leader."}
+                <h3 className="mt-3 md:mt-6 w-full font-['Outfit'] text-sm md:text-xl font-extrabold leading-snug text-[#101828] break-words max-md:text-balance">{speaker.name}</h3>
+                <p className="mt-1 md:mt-2 w-full text-[11px] md:text-sm font-semibold md:font-bold leading-snug text-[#173B8F] md:uppercase md:tracking-wider break-words max-md:text-balance">{speaker.designation}</p>
+                <p className="mt-3 md:mt-5 max-md:!text-xs md:text-sm text-[#475467] leading-normal md:leading-relaxed border-t border-gray-100 pt-3 md:pt-5 w-full md:font-medium break-words max-md:text-balance">
+                  <span className="md:hidden">{firstSentence(speaker.achievements || speaker.topic || speaker.bio || "Distinguished faculty and medical leader.")}</span>
+                  <span className="hidden md:inline">{speaker.achievements || speaker.topic || speaker.bio || "Distinguished faculty and medical leader."}</span>
                 </p>
               </SpotlightCard>
             ))}
@@ -2182,10 +2186,6 @@ function ResearchHub() {
                       <li className="flex items-center gap-3">
                         <span className="font-bold text-white w-40">Gaurav Jayadev:</span>
                         <a href="tel:+917022408203" className="hover:text-[#ff3d7f] transition-colors">+91 7022408203</a>
-                      </li>
-                      <li className="flex items-center gap-3">
-                        <span className="font-bold text-white w-40">Dr Prakhar Bajpai:</span>
-                        <a href="tel:+919758523839" className="hover:text-[#ff3d7f] transition-colors">+91 97585 23839</a>
                       </li>
                     </ul>
                   </div>

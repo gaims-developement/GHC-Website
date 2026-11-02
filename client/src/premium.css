@@ -6492,3 +6492,10 @@ body.abstract-revision-active main,
 .abstract-revision-page p {
   color: #475467;
 }
+
+@media (max-width: 767px) {
+  .speaker-photo {
+    width: 5rem;
+    height: 5rem;
+  }
+}

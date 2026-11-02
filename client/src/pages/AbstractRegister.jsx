@@ -923,13 +923,6 @@ export default function AbstractRegister() {
                         +91 70224 08203
                       </a>
                     </div>
-                    <div className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-gray-200/70 shadow-2xs">
-                      <Phone className="w-4 h-4 text-[#6C4AB6] shrink-0" />
-                      <span className="text-gray-500 font-medium">Dr Prakhar Bajpai:</span>
-                      <a href="tel:+919758523839" className="font-bold text-[#101828] hover:text-[#6C4AB6]">
-                        +91 97585 23839
-                      </a>
-                    </div>
                   </div>
                 </div>
 
