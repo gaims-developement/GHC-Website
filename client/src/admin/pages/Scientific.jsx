@@ -48,6 +48,8 @@ import { apiUrl } from "../../config/api";
 import PhoneCell from "../components/PhoneCell";
 import RevisedBadge from "../components/RevisedBadge";
 
+const ABSTRACTS_PER_PAGE = 25;
+
 function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
   // ----------------------------------------------------
   // Role Detection & Hierarchical Workflow
@@ -112,8 +114,12 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
   const [abstracts, setAbstracts] = useState([]);
   const [reviewers, setReviewers] = useState([]);
   const [reportsData, setReportsData] = useState({});
-  const [abstractFilter, setAbstractFilter] = useState("all");
-  const [abstractSearch, setAbstractSearch] = useState("");
+  const [abstractFilter, setAbstractFilterValue] = useState("all");
+  const [abstractSearch, setAbstractSearchValue] = useState("");
+  const [abstractPage, setAbstractPage] = useState(1);
+  // A new filter or search has different results, so it starts again from page 1.
+  const setAbstractFilter = (value) => { setAbstractFilterValue(value); setAbstractPage(1); };
+  const setAbstractSearch = (value) => { setAbstractSearchValue(value); setAbstractPage(1); };
   const [rankingsData, setRankingsData] = useState({ rankings: [], summary: {}, pagination: { page: 1, limit: 25, total: 0, totalPages: 0 } });
   const [rankingLoading, setRankingLoading] = useState(false);
   const [rankingFilters, setRankingFilters] = useState({
@@ -247,7 +253,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
     try {
       const [statsRes, abstractsRes, reviewersRes, settingsRes, teamsRes] = await Promise.all([
         api.get("/api/research/stats").catch(() => ({ data: { stats: {}, recentActivity: [] } })),
-        api.get("/api/research?admin=1&compact=1&limit=75").catch(() => ({ data: { submissions: [] } })),
+        api.get("/api/research?admin=1&compact=1").catch(() => ({ data: { submissions: [] } })),
         api.get("/api/research/reviewers").catch(() => ({ data: { reviewers: [] } })),
         api.get("/api/research/settings").catch(() => ({ data: { settings: {} } })),
         api.get("/api/research/teams").catch(() => ({ data: { teams: [] } })),
@@ -514,6 +520,15 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
       return true;
     });
   }, [abstracts, abstractFilter, abstractSearch]);
+
+  const abstractPageCount = Math.max(1, Math.ceil(filteredAbstracts.length / ABSTRACTS_PER_PAGE));
+  // A reload can leave fewer pages than the one being viewed.
+  const currentAbstractPage = Math.min(abstractPage, abstractPageCount);
+  const firstAbstractOnPage = (currentAbstractPage - 1) * ABSTRACTS_PER_PAGE;
+  const goToAbstractPage = (page, event) => {
+    setAbstractPage(page);
+    event.currentTarget.closest("section")?.scrollIntoView({ block: "start" });
+  };
 
   // Filtered Reviews for Chairperson Abstract Report
   const filteredAbstractReviews = useMemo(() => {
@@ -1726,7 +1741,7 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAbstracts.map((sub) => (
+                  {filteredAbstracts.slice(firstAbstractOnPage, firstAbstractOnPage + ABSTRACTS_PER_PAGE).map((sub) => (
                     <tr key={sub.id}>
                       <td>
                         <span style={{ fontFamily: "monospace", fontWeight: 700, color: "#6C4AB6", background: "rgba(108,74,182,0.06)", padding: "0.2rem 0.5rem", borderRadius: "6px" }}>
@@ -1838,6 +1853,30 @@ function Scientific({ api, user, onNavigate, initialTab = "overview" }) {
                 </tbody>
               </table>
             </div>
+          )}
+
+          {filteredAbstracts.length > 0 && (
+            <nav aria-label="Abstract pages" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "1rem", gap: "1rem", flexWrap: "wrap" }}>
+              <span className="admin-muted">
+                Showing {firstAbstractOnPage + 1}–{Math.min(firstAbstractOnPage + ABSTRACTS_PER_PAGE, filteredAbstracts.length)} of {filteredAbstracts.length}
+              </span>
+              <div style={{ display: "flex", gap: "0.35rem", flexWrap: "wrap" }}>
+                <button type="button" className="admin-secondary-button" disabled={currentAbstractPage <= 1} onClick={(e) => goToAbstractPage(currentAbstractPage - 1, e)}>Previous</button>
+                {Array.from({ length: abstractPageCount }, (_, index) => index + 1).map((page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    className={page === currentAbstractPage ? "admin-primary-button" : "admin-secondary-button"}
+                    aria-label={`Page ${page}`}
+                    aria-current={page === currentAbstractPage ? "page" : undefined}
+                    onClick={(e) => goToAbstractPage(page, e)}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button type="button" className="admin-secondary-button" disabled={currentAbstractPage >= abstractPageCount} onClick={(e) => goToAbstractPage(currentAbstractPage + 1, e)}>Next</button>
+              </div>
+            </nav>
           )}
         </section>
       )}
