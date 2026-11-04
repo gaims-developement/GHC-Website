@@ -4,7 +4,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const { sendTemplateEmail } = require('../services/mailService');
 const { buildConfirmationEmail } = require('../services/delegateEmailService');
 const { buildWhatsappInviteAttachments, HERO_HEIGHT: WHATSAPP_HERO_HEIGHT } = require('../services/whatsappInviteImageService');
-const { getDelegateWhatsappGroupUrl } = require('../config/links');
+const { getDelegateLoginUrl, getDelegateWhatsappGroupUrl } = require('../config/links');
 
 const MAX_ROWS_PER_IMPORT = 2000;
 
@@ -37,11 +37,16 @@ const toDelegate = (row) => ({
   whatsappInviteSendCount: Number(row.whatsapp_invite_send_count || 0),
   whatsappInviteLastAttemptAt: row.whatsapp_invite_last_attempt_at || null,
   whatsappInviteLastError: row.whatsapp_invite_last_error || null,
+  dashboardInviteSentAt: row.dashboard_invite_sent_at || null,
+  dashboardInviteSendCount: Number(row.dashboard_invite_send_count || 0),
+  dashboardInviteLastAttemptAt: row.dashboard_invite_last_attempt_at || null,
+  dashboardInviteLastError: row.dashboard_invite_last_error || null,
+  claimedWorkshop: row.claimed_workshop_title || null,
   createdAt: row.created_at,
 });
 
 const listDelegates = asyncHandler(async (_req, res) => {
-  const [rows] = await pool.query('SELECT * FROM delegates ORDER BY id ASC');
+  const [rows] = await pool.query('SELECT d.*, w.title AS claimed_workshop_title FROM delegates d LEFT JOIN workshops w ON w.id = d.claimed_workshop_id ORDER BY d.id ASC');
   const delegates = rows.map(toDelegate);
   const present = delegates.filter((d) => d.isPresent).length;
   res.json({ delegates, stats: { total: delegates.length, present, absent: delegates.length - present } });
@@ -226,6 +231,51 @@ const checkIn = asyncHandler(async (req, res) => {
   res.json({ result: result.affectedRows ? 'marked' : 'already', delegate: toDelegate(updated) });
 });
 
+// Built from the CMS, so renaming or moving a workshop there also changes the email.
+const openToAllNote = async () => {
+  const [rows] = await pool.query("SELECT title, venue FROM workshops WHERE is_open_to_all = 1 AND status = 'published' ORDER BY display_order");
+  return rows
+    .map((w) => `The ${escapeHtml(w.title)} workshop${w.venue ? ` at ${escapeHtml(w.venue)}` : ''} is open for all delegates, so you do not need to apply for it.`)
+    .join(' ');
+};
+
+// "Your delegate dashboard is open" mail, sent from the "Delegate Accounts" tab.
+const sendDashboardInvite = asyncHandler(async (req, res) => {
+  const [[row]] = await pool.query('SELECT * FROM delegates WHERE id = ?', [req.params.id]);
+  if (!row) return res.status(404).json({ message: 'Delegate not found' });
+  // Bulk send passes onlyIfNotSent so a delegate emailed meanwhile (e.g. by another admin) is skipped.
+  if (req.body?.onlyIfNotSent && row.dashboard_invite_sent_at) {
+    return res.status(409).json({ skipped: true, message: `${row.full_name} has already been sent the dashboard email.`, delegate: toDelegate(row) });
+  }
+  if (!row.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
+    return res.status(400).json({ message: `${row.full_name} does not have a valid email address.` });
+  }
+
+  const now = new Date();
+  try {
+    await sendTemplateEmail('delegate_dashboard_open', row.email, {
+      name: escapeHtml(row.full_name),
+      delegateId: escapeHtml(row.registration_id),
+      loginLink: escapeHtml(getDelegateLoginUrl()),
+      openToAllNote: await openToAllNote(),
+    });
+  } catch (error) {
+    await pool.query(
+      'UPDATE delegates SET dashboard_invite_last_attempt_at = ?, dashboard_invite_last_error = ? WHERE id = ?',
+      [now, String(error.message || error).slice(0, 1000), row.id]
+    );
+    const [[failed]] = await pool.query('SELECT * FROM delegates WHERE id = ?', [row.id]);
+    return res.status(502).json({ message: `Email to ${row.email} could not be sent: ${error.message}`, delegate: toDelegate(failed) });
+  }
+
+  await pool.query(
+    'UPDATE delegates SET dashboard_invite_sent_at = ?, dashboard_invite_last_attempt_at = ?, dashboard_invite_last_error = NULL, dashboard_invite_send_count = dashboard_invite_send_count + 1 WHERE id = ?',
+    [now, now, row.id]
+  );
+  const [[updated]] = await pool.query('SELECT * FROM delegates WHERE id = ?', [row.id]);
+  res.json({ delegate: toDelegate(updated), recipient: row.email });
+});
+
 // Sponsor booth scan: each sponsor account can scan a given delegate once (used for booth coupons).
 const sponsorScan = asyncHandler(async (req, res) => {
   const code = String(req.body?.code || '').trim();
@@ -248,4 +298,4 @@ const sponsorScan = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { checkIn, importDelegates, listDelegates, sendConfirmation, sendWhatsappInvite, setAttendance, sponsorScan };
+module.exports = { checkIn, escapeHtml, importDelegates, listDelegates, newCheckinToken, openToAllNote, sendConfirmation, sendDashboardInvite, sendWhatsappInvite, setAttendance, sponsorScan };

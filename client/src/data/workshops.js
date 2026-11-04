@@ -55,6 +55,12 @@ export const getWorkshopTimeRange = (workshop) => {
   return workshop.time || "Time TBA";
 };
 
+// One item per line when the CMS text has lines, so commas inside a sentence don't split it.
+const toOutcomeList = (value) => {
+  const text = String(value || "");
+  return text.split(text.includes("\n") ? "\n" : ",").map((item) => item.trim()).filter(Boolean);
+};
+
 export const normalizeWorkshop = (workshop) => ({
   ...workshop,
   id: workshop.id,
@@ -90,7 +96,7 @@ export const normalizeWorkshop = (workshop) => ({
     : String(workshop.requirements || "").split(",").map((item) => item.trim()).filter(Boolean),
   learningOutcomes: Array.isArray(workshop.learningOutcomes)
     ? workshop.learningOutcomes
-    : String(workshop.learningOutcomes || workshop.learning_outcomes || "").split(/\n|,/).map((item) => item.trim()).filter(Boolean),
+    : toOutcomeList(workshop.learningOutcomes || workshop.learning_outcomes),
   whoShouldAttend: Array.isArray(workshop.whoShouldAttend)
     ? workshop.whoShouldAttend
     : String(workshop.whoShouldAttend || workshop.who_should_attend || "").split(/\n|,/).map((item) => item.trim()).filter(Boolean),

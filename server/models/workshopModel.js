@@ -39,6 +39,7 @@ const normalize = (workshop) => workshop && ({
   isRegistrationOpen: workshop.is_registration_open !== undefined ? Boolean(workshop.is_registration_open) : true,
   // Disabled workshops stay listed on the website but show "Coming Soon" and take no applications.
   isEnabled: workshop.is_enabled !== undefined && workshop.is_enabled !== null ? Boolean(workshop.is_enabled) : true,
+  isOpenToAll: Boolean(workshop.is_open_to_all),
   startTime: workshop.start_time || null,
   endTime: workshop.end_time || null,
   registrationDeadline: workshop.registration_deadline || null,
@@ -78,8 +79,8 @@ const findBySlug = async (slug) => {
 const create = async (data) => {
   const [result] = await pool.query(
     `INSERT INTO workshops
-      (title, workshop_code, slug, faculty, description, workshop_type, requirements, learning_outcomes, who_should_attend, faq, prerequisites, capacity, registered_count, duration, venue, date, price, image_url, featured, status, display_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (title, workshop_code, slug, faculty, description, workshop_type, requirements, learning_outcomes, who_should_attend, faq, prerequisites, capacity, registered_count, duration, venue, date, price, image_url, featured, status, display_order, is_open_to_all)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       data.title,
       data.workshopCode || null,
@@ -102,6 +103,7 @@ const create = async (data) => {
       Boolean(data.featured),
       data.status || 'draft',
       Number(data.displayOrder || 0),
+      Boolean(data.isOpenToAll),
     ]
   );
   return findById(result.insertId);
@@ -130,7 +132,8 @@ const update = async (id, data) => {
       image_url = COALESCE(?, image_url),
       featured = ?,
       status = ?,
-      display_order = ?
+      display_order = ?,
+      is_open_to_all = ?
      WHERE id = ?`,
     [
       data.title,
@@ -154,6 +157,7 @@ const update = async (id, data) => {
       Boolean(data.featured),
       data.status || 'draft',
       Number(data.displayOrder || 0),
+      Boolean(data.isOpenToAll),
       id,
     ]
   );
@@ -161,6 +165,8 @@ const update = async (id, data) => {
 };
 
 const remove = async (id) => {
+  // Frees the delegates who chose it, so they can pick another instead of being locked out.
+  await pool.query('UPDATE delegates SET claimed_workshop_id = NULL, workshop_claimed_at = NULL WHERE claimed_workshop_id = ?', [id]);
   const [result] = await pool.query('DELETE FROM workshops WHERE id = ?', [id]);
   return result.affectedRows > 0;
 };

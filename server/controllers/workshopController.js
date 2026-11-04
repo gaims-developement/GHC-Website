@@ -71,6 +71,7 @@ const sanitizePayload = async (body, file) => ({
   price: body.price ?? 0,
   imageUrl: (await fileUrlFromUpload(file)) || body.imageUrl || body.image_url,
   featured: toBoolean(body.featured),
+  isOpenToAll: toBoolean(body.isOpenToAll),
   status: body.status || 'draft',
   displayOrder: body.displayOrder ?? body.display_order ?? 0,
 });

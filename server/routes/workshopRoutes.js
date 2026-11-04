@@ -16,7 +16,6 @@ const {
   workshopStats,
 } = require('../controllers/workshopController');
 const {
-  publicApply,
   publicGetApplicationStatus,
   getDashboardStats,
   listApplications,
@@ -61,9 +60,8 @@ const canViewReports = requirePermission('workshop_reports_view', 'manage_worksh
 
 // 1. Public Routes
 router.get('/', optionalAuth, listWorkshops);
-router.post('/applications', publicApply);
-router.post('/apply', publicApply);
-router.post('/:id/apply', publicApply);
+// Workshops are only claimed from the Delegate Dashboard. This answers old pages still open in a browser.
+router.post(['/applications', '/apply', '/:id/apply'], (_req, res) => res.status(410).json({ message: 'Workshops are now chosen from the Delegate Dashboard. Please log in with your Delegate ID.' }));
 router.get('/applications/status', publicGetApplicationStatus);
 router.get('/applications/lookup', publicGetApplicationStatus);
 

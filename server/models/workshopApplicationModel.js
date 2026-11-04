@@ -549,10 +549,10 @@ const issueCertificate = async (id, { reviewerId = null, reviewerName = 'Worksho
   );
 
   await pool.query(
-    `INSERT INTO certificates (certificate_id, recipient_name, recipient_email, recipient_type, reference_module, reference_record_id, status)
-     VALUES (?, ?, ?, 'WORKSHOP_PARTICIPANT', 'workshops', ?, 'issued')
-     ON DUPLICATE KEY UPDATE recipient_name = VALUES(recipient_name), status = 'issued'`,
-    [certificateId, application.fullName, application.email, String(application.id)]
+    `INSERT INTO certificates (certificate_id, verification_code, issue_date, recipient_name, recipient_email, recipient_type, reference_module, reference_record_id, status)
+     VALUES (?, ?, CURDATE(), ?, ?, 'WORKSHOP_PARTICIPANT', 'workshops', ?, 'generated')
+     ON DUPLICATE KEY UPDATE recipient_name = VALUES(recipient_name), status = 'generated'`,
+    [certificateId, certificateId, application.fullName, application.email, String(application.id)]
   ).catch(() => {});
 
   return findById(id);
@@ -608,6 +608,7 @@ const getReports = async () => {
 
 module.exports = {
   create,
+  getWorkshopCode,
   findById,
   findByApplicationId,
   findByWorkshopAndContact,

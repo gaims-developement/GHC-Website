@@ -1,0 +1,159 @@
+// Self-check for delegate login and the one free workshop. Run: node scripts/test_delegate_account.js
+// Uses TEMPORARY copies of the tables on one connection: they hide the real tables for this connection only,
+// so no real row is touched, and no email is sent. They vanish when the script ends.
+require('dotenv').config({ quiet: true });
+const assert = require('assert');
+const jwt = require('jsonwebtoken');
+const db = require('../config/db');
+
+const sent = [];
+const mailPath = require.resolve('../services/mailService');
+require(mailPath);
+require.cache[mailPath].exports.sendTemplateEmail = async (key, to, vars) => { sent.push({ key, to, vars }); };
+
+const call = (handler, { body = {}, params = {}, delegate, headers = {} } = {}) => new Promise((resolve, reject) => {
+  const res = {
+    statusCode: 200,
+    status(code) { this.statusCode = code; return this; },
+    json(data) { resolve({ status: this.statusCode, data }); return this; },
+    setHeader() {},
+    send(data) { resolve({ status: this.statusCode, data }); },
+  };
+  handler({ body, params, delegate, headers, method: 'POST', originalUrl: '/test' }, res, reject);
+});
+
+(async () => {
+  const connection = await db.pool.getConnection();
+  try {
+    for (const table of ['delegates', 'workshops', 'workshop_applications', 'workshop_registrations']) {
+      // MySQL refuses LIKE onto the same name, so copy under another name and rename the copy.
+      await connection.query('CREATE TEMPORARY TABLE tmp_' + table + ' LIKE ' + table);
+      await connection.query('ALTER TABLE tmp_' + table + ' RENAME TO ' + table);
+    }
+    for (const [column, type] of Object.entries({
+      login_otp_hash: 'VARCHAR(64) NULL', login_otp_expires_at: 'DATETIME NULL', login_otp_attempts: 'INT NOT NULL DEFAULT 0', login_otp_sent_at: 'DATETIME NULL',
+      claimed_workshop_id: 'INT NULL', workshop_claimed_at: 'DATETIME NULL',
+    })) {
+      const [[found]] = await connection.query("SELECT COUNT(*) AS n FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'delegates' AND column_name = ?", [column]);
+      if (!found.n) await connection.query(`ALTER TABLE delegates ADD COLUMN ${column} ${type}`);
+    }
+    // Every query below runs on this one connection, so it only ever sees the temporary tables.
+    const realPool = db.getPool();
+    realPool.query = connection.query.bind(connection);
+    realPool.getConnection = async () => Object.assign(Object.create(connection), { release() {} });
+    const [[{ total }]] = await db.pool.query('SELECT COUNT(*) AS total FROM delegates');
+    assert.strictEqual(total, 0, 'stop: the code under test must see the empty temporary table, not the real one');
+
+    const account = require('../controllers/delegateAccountController');
+    const { requireDelegate, requireAuth } = require('../middleware/authMiddleware');
+
+    await connection.query(`INSERT INTO delegates (id, registration_id, full_name, name_key, email, phone, checkin_token) VALUES
+      (1, 'GHC26-DEL-00001', 'Test One', 'test one', 'one@example.test', '9000000001', 'GHCDEL-ONE'),
+      (2, 'GHC26-DEL-00002', 'Test Two', 'test two', 'two@example.test', '9000000002', 'GHCDEL-TWO'),
+      (3, 'GHC26-DEL-00003', 'No Email', 'no email', NULL, NULL, 'GHCDEL-THREE')`);
+    await connection.query(`INSERT INTO workshops (id, title, capacity, registered_count, status, is_enabled, is_registration_open, is_open_to_all) VALUES
+      (10, 'Basic Life Support', 1, 0, 'published', 1, 1, 0),
+      (11, 'Suturing', 5, 0, 'published', 1, 1, 0),
+      (12, 'Hidden Draft', 5, 0, 'draft', 1, 1, 0),
+      (13, 'Coming Soon', 5, 0, 'published', 0, 1, 0),
+      (14, 'Toolkit', 0, 0, 'published', 1, 1, 1)`);
+
+    // Requesting a code: same answer for every ID, one email per cooldown.
+    const known = await call(account.requestOtp, { body: { delegateId: ' ghc26-del-00001 ' } });
+    const unknown = await call(account.requestOtp, { body: { delegateId: 'GHC26-DEL-99999' } });
+    const noEmail = await call(account.requestOtp, { body: { delegateId: 'GHC26-DEL-00003' } });
+    assert.strictEqual(known.status, 200);
+    assert.deepStrictEqual(known.data, unknown.data, 'an unknown ID looks the same as a real one');
+    assert.deepStrictEqual(known.data, noEmail.data, 'a delegate without email looks the same too');
+    assert.strictEqual(sent.length, 1, 'only the real delegate gets a mail');
+    assert.ok(!JSON.stringify(known.data).includes('example.test'), 'the email address is never returned');
+    await call(account.requestOtp, { body: { delegateId: 'GHC26-DEL-00001' } });
+    assert.strictEqual(sent.length, 1, 'a second request inside the cooldown sends nothing');
+
+    // Checking a code.
+    const { otp } = sent[0].vars;
+    assert.match(otp, /^\d{6}$/);
+    const verify = (code, delegateId = 'GHC26-DEL-00001') => call(account.verifyOtp, { body: { delegateId, otp: code } });
+    const wrong = otp === '000000' ? '000001' : '000000';
+    assert.strictEqual((await verify(wrong)).status, 401, 'a wrong code fails');
+    assert.strictEqual((await verify(otp, 'GHC26-DEL-00002')).status, 401, 'the code only works for its own delegate');
+    const [[{ login_otp_hash: stored }]] = await connection.query('SELECT login_otp_hash FROM delegates WHERE id = 1');
+    assert.ok(!stored.includes(otp), 'the code is not stored in plain text');
+
+    const good = await verify(otp);
+    assert.strictEqual(good.status, 200, 'the right code logs in');
+    assert.strictEqual((await verify(otp)).status, 401, 'a code works only once');
+
+    // The token works for delegate routes and nowhere else.
+    const auth = { authorization: `Bearer ${good.data.token}` };
+    const asDelegate = await new Promise((resolve) => {
+      const req = { headers: auth };
+      requireDelegate(req, { status: () => ({ json: () => resolve(null) }) }, () => resolve(req.delegate));
+    });
+    assert.strictEqual(asDelegate.id, 1);
+    assert.strictEqual(jwt.decode(good.data.token).id, undefined, 'no id claim, because /api/auth/me reads id without checking the type');
+    const adminStatus = await new Promise((resolve, reject) => {
+      requireAuth({ headers: auth, originalUrl: '/x' }, { status: (code) => ({ json: () => resolve(code) }) }, () => reject(new Error('A delegate token passed requireAuth')));
+    });
+    assert.strictEqual(adminStatus, 401, 'a delegate token is refused on admin routes');
+
+    // Too many wrong codes burn the code, even if the right one follows.
+    await connection.query('UPDATE delegates SET login_otp_sent_at = NULL WHERE id = 2');
+    await call(account.requestOtp, { body: { delegateId: 'GHC26-DEL-00002' } });
+    const otp2 = sent[sent.length - 1].vars.otp;
+    const wrong2 = otp2 === '000000' ? '000001' : '000000';
+    for (let i = 0; i < 5; i += 1) await verify(wrong2, 'GHC26-DEL-00002');
+    assert.strictEqual((await verify(otp2, 'GHC26-DEL-00002')).status, 401, 'locked after five wrong tries');
+
+    // Claiming: one per delegate, seats go down, the last seat goes once.
+    const load = async (id) => (await connection.query('SELECT * FROM delegates WHERE id = ?', [id]))[0][0];
+    const claim = async (delegateId, id) => call(account.claimWorkshop, { params: { id }, delegate: await load(delegateId) });
+    const seats = async (id) => (await connection.query('SELECT registered_count FROM workshops WHERE id = ?', [id]))[0][0].registered_count;
+
+    assert.strictEqual((await claim(1, 12)).status, 409, 'a draft cannot be claimed');
+    assert.strictEqual((await claim(1, 13)).status, 409, 'a coming soon workshop cannot be claimed');
+    assert.strictEqual((await claim(1, 14)).status, 409, 'the open-to-all workshop is not something to claim');
+    assert.strictEqual(await seats(14), 0, 'and it takes no seat');
+    assert.strictEqual((await load(1)).claimed_workshop_id, null, 'so the delegate can still choose a limited one');
+    const first = await claim(1, 10);
+    assert.strictEqual(first.status, 201, 'the first claim works');
+    assert.strictEqual(await seats(10), 1, 'the seat count goes up, so available seats go down');
+    assert.strictEqual(first.data.claimedWorkshop.availableSeats, 0);
+    assert.strictEqual((await load(1)).claimed_workshop_id, 10);
+
+    const [[application]] = await connection.query('SELECT * FROM workshop_applications WHERE workshop_id = 10');
+    assert.strictEqual(application.application_status, 'CONFIRMED', 'the workshop team sees it as a confirmed attendee');
+    assert.strictEqual(application.ghc_registration_id, 'GHC26-DEL-00001');
+
+    assert.strictEqual((await claim(1, 11)).status, 409, 'a second claim is refused');
+    assert.strictEqual(await seats(11), 0, 'a refused claim takes no seat');
+    assert.strictEqual((await claim(2, 10)).status, 409, 'someone else cannot take a full workshop');
+    assert.strictEqual(await seats(10), 1, 'a full workshop never goes over capacity');
+    assert.strictEqual((await load(2)).claimed_workshop_id, null, 'a failed claim leaves the delegate free to choose again');
+    assert.strictEqual((await claim(2, 11)).status, 201, 'they can then choose another');
+
+    const [[{ n }]] = await connection.query('SELECT COUNT(*) AS n FROM workshop_applications');
+    assert.strictEqual(n, 2, 'one application per successful claim');
+
+    const list = await call(account.listWorkshops, { delegate: await load(1) });
+    assert.strictEqual(list.data.claimedWorkshop.id, 10, 'the dashboard shows the chosen workshop');
+    assert.ok(list.data.workshops.every((w) => w.status === 'published'), 'drafts are not listed');
+
+    // The email names whatever the CMS has marked open to all, and nothing else.
+    const { openToAllNote } = require('../controllers/delegateController');
+    assert.strictEqual(await openToAllNote(), 'The Toolkit workshop is open for all delegates, so you do not need to apply for it.');
+    await connection.query("UPDATE workshops SET title = 'Renamed <Kit>', venue = 'Hall B' WHERE id = 14");
+    assert.strictEqual(await openToAllNote(), 'The Renamed &lt;Kit&gt; workshop at Hall B is open for all delegates, so you do not need to apply for it.');
+    await connection.query("UPDATE workshops SET status = 'draft' WHERE id = 14");
+    assert.strictEqual(await openToAllNote(), '', 'an unpublished workshop is not mentioned');
+
+    console.log('Delegate account self-check passed.');
+  } finally {
+    // Ending the connection removes the temporary tables.
+    connection.release();
+    await db.closePool();
+  }
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

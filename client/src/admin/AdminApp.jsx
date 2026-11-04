@@ -86,6 +86,7 @@ import Invites from "./pages/Invites";
 import Reminders from "./pages/Reminders";
 import InvitationPosterGenerator from "./pages/InvitationPosterGenerator";
 import DelegateWhatsapp from "./pages/DelegateWhatsapp";
+import DelegateAccounts from "./pages/DelegateAccounts";
 import "./admin.css";
 
 const api = axios.create({
@@ -164,6 +165,7 @@ const pages = {
   reminders: Reminders,
   "invitation-poster": InvitationPosterGenerator,
   "delegate-whatsapp": DelegateWhatsapp,
+  "delegate-accounts": DelegateAccounts,
   tickets: AdminTickets,
   payments: Payments,
   badges: Badges,

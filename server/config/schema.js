@@ -693,6 +693,8 @@ const createWorkshopTables = async () => {
   await addColumnIfMissing('workshops', 'full_description', 'TEXT NULL');
   // Website visibility switch from the CMS: disabled workshops are shown as "Coming Soon".
   await addColumnIfMissing('workshops', 'is_enabled', 'BOOLEAN NOT NULL DEFAULT TRUE');
+  // On = every delegate attends, no application or seat limit. Off = limited seats, and a delegate may apply for one.
+  await addColumnIfMissing('workshops', 'is_open_to_all', 'BOOLEAN NOT NULL DEFAULT FALSE');
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS workshop_applications (
@@ -3738,6 +3740,8 @@ const createInviteTables = async () => {
   await seedTemplate('abstract_registration_reminder', 'abstract-registration-reminder.html', 'Action Required: Complete Your GHC 2026 Registration');
   await seedTemplate('delegate_id_request', 'delegate-id-request.html', 'Action Required: Submit Your College ID for GHC 2026');
   await seedTemplate('delegate_college_id_update', 'delegate-college-id-update.html', 'Important Update Regarding ID Submission for GHC');
+  await seedTemplate('delegate_login_otp', 'delegate-login-otp.html', 'Your GHC 2026 Delegate Login Code');
+  await seedTemplate('delegate_dashboard_open', 'delegate-dashboard-open.html', 'Your GHC 2026 Delegate Dashboard Is Now Open');
 };
 
 const createDelegateTables = async () => {
@@ -3785,6 +3789,17 @@ const createDelegateTables = async () => {
   await addColumnIfMissing('delegates', 'id_request_last_attempt_at', 'DATETIME NULL');
   await addColumnIfMissing('delegates', 'id_request_last_error', 'TEXT NULL');
   await addColumnIfMissing('delegates', 'college_id_update_sent_at', 'DATETIME NULL');
+  // Delegate dashboard: the one-time login code, the "dashboard is open" mail and the one free workshop.
+  await addColumnIfMissing('delegates', 'login_otp_hash', 'VARCHAR(64) NULL');
+  await addColumnIfMissing('delegates', 'login_otp_expires_at', 'DATETIME NULL');
+  await addColumnIfMissing('delegates', 'login_otp_attempts', 'INT NOT NULL DEFAULT 0');
+  await addColumnIfMissing('delegates', 'login_otp_sent_at', 'DATETIME NULL');
+  await addColumnIfMissing('delegates', 'dashboard_invite_sent_at', 'DATETIME NULL');
+  await addColumnIfMissing('delegates', 'dashboard_invite_send_count', 'INT NOT NULL DEFAULT 0');
+  await addColumnIfMissing('delegates', 'dashboard_invite_last_attempt_at', 'DATETIME NULL');
+  await addColumnIfMissing('delegates', 'dashboard_invite_last_error', 'TEXT NULL');
+  await addColumnIfMissing('delegates', 'claimed_workshop_id', 'INT NULL');
+  await addColumnIfMissing('delegates', 'workshop_claimed_at', 'DATETIME NULL');
   // id_number_enc is AES-256-GCM (utils/idEncryption.js); image_public_id is a private Cloudinary asset.
   await pool.query(`
     CREATE TABLE IF NOT EXISTS delegate_ids (

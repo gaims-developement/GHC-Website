@@ -5,4 +5,7 @@ const getDelegateWhatsappGroupUrl = () =>
 const getRegistrationUrl = () =>
   process.env.REGISTRATION_URL || 'https://mc.clirnet.com/mastercast/connect/D0921-Conclave-1';
 
-module.exports = { getDelegateWhatsappGroupUrl, getRegistrationUrl };
+const getDelegateLoginUrl = () =>
+  process.env.DELEGATE_LOGIN_URL || 'https://ghc.gaims.org/delegate-login';
+
+module.exports = { getDelegateLoginUrl, getDelegateWhatsappGroupUrl, getRegistrationUrl };

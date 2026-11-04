@@ -21,6 +21,7 @@ const emptyWorkshop = {
   prerequisites: "",
   faq: "",
   featured: false,
+  isOpenToAll: false,
   displayOrder: 0,
   status: "draft",
 };
@@ -269,6 +270,10 @@ function WorkshopForm({ onCancel, onSubmit, workshop }) {
                 <option value="published">Published</option>
                 <option value="closed">Closed</option>
               </select>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
+              <input type="checkbox" checked={Boolean(form.isOpenToAll)} onChange={(event) => setValue("isOpenToAll", event.target.checked)} />
+              Open for all delegates (every delegate attends, with no application or seat limit)
             </label>
           </div>
         </section>

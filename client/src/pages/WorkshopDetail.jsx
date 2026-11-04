@@ -198,17 +198,21 @@ export default function WorkshopDetail() {
   const registeredCount = Number(workshop.registeredCount || workshop.seats?.filled || 0);
   const remaining = Math.max(0, capacity - registeredCount);
   const filledPercent = capacity ? Math.min(100, Math.round((registeredCount / capacity) * 100)) : 0;
-  const isFull = capacity > 0 && remaining <= 0;
+  // Open-to-all workshops have no seat limit and nobody applies.
+  const isOpenToAll = Boolean(workshop.isOpenToAll);
+  const isFull = !isOpenToAll && capacity > 0 && remaining <= 0;
   const isRegistrationOpen = workshop.isRegistrationOpen !== false;
   // Workshops switched off in the CMS are shown as "Coming Soon" and cannot be applied for.
   const isComingSoon = workshop.isEnabled === false;
   const canApply = !isComingSoon && isRegistrationOpen && !isFull;
   const closedLabel = isComingSoon ? "Coming Soon" : "Applications Closed";
-  const applySlug = workshop.slug || createWorkshopSlug(workshop.title) || rawSlug || workshop.id;
-  const applyHref = `/workshops/${encodeURIComponent(applySlug)}/apply`;
+  // Workshops are only chosen from the Delegate Dashboard, one per delegate.
+  const applyHref = "/delegate-login";
+  const applyLabel = isOpenToAll ? "Open Delegate Dashboard" : "Apply for Workshop";
   const displayImage = resolveImage(workshop.imageUrl || workshop.image);
 
-  const faqsList = useMemo(() => {
+  // Not a hook: this runs after the loading and not-found returns above, where hooks would crash the page.
+  const faqsList = (() => {
     const raw = workshop.faqs || workshop.faq;
     if (Array.isArray(raw)) return raw.filter((f) => f && (f.question || f.answer));
     if (typeof raw === "string") {
@@ -220,7 +224,7 @@ export default function WorkshopDetail() {
       }
     }
     return [];
-  }, [workshop]);
+  })();
 
   return (
     <div className="bg-[#F7FBFF] text-[#081B33] min-h-screen pt-24 pb-28">
@@ -254,7 +258,7 @@ export default function WorkshopDetail() {
                   : "bg-emerald-50 text-emerald-700 border border-emerald-100"
               }`}
             >
-              {isComingSoon ? "Coming Soon" : !isRegistrationOpen ? "Applications Closed" : isFull ? "Seats Full" : "Applications Open"}
+              {isComingSoon ? "Coming Soon" : !isRegistrationOpen ? "Applications Closed" : isFull ? "Seats Full" : isOpenToAll ? "Open for All Delegates" : "Applications Open"}
             </span>
           </div>
         </div>
@@ -308,7 +312,7 @@ export default function WorkshopDetail() {
               </div>
               <div className="min-w-0">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#475467]">Capacity</p>
-                <p className="text-xs sm:text-sm font-bold text-[#101828] truncate">{capacity} Seats Total</p>
+                <p className="text-xs sm:text-sm font-bold text-[#101828] truncate">{isOpenToAll ? "All Delegates" : `${capacity} Seats Total`}</p>
               </div>
             </div>
 
@@ -318,7 +322,7 @@ export default function WorkshopDetail() {
               </div>
               <div className="min-w-0">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[#475467]">Available</p>
-                <p className="text-xs sm:text-sm font-bold text-emerald-600 truncate">{remaining} Seats Left</p>
+                <p className="text-xs sm:text-sm font-bold text-emerald-600 truncate">{isOpenToAll ? "No Seat Limit" : `${remaining} Seats Left`}</p>
               </div>
             </div>
           </div>
@@ -328,20 +332,14 @@ export default function WorkshopDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left 2 Columns: Speaker, Details, Curriculum, Venue */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Optional Banner Image */}
+            {/* Workshop flyer, shown whole so none of its text is cut off */}
             {displayImage && (
-              <div className="rounded-3xl overflow-hidden shadow-sm border border-gray-200 h-64 sm:h-80 w-full relative">
+              <div className="rounded-3xl overflow-hidden shadow-sm border border-gray-200 w-full">
                 <img
                   src={displayImage}
                   alt={workshop.title}
-                  className="w-full h-full object-cover"
+                  className="w-full h-auto block"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#081B33]/60 via-transparent to-transparent" />
-                <div className="absolute bottom-4 left-6 text-white">
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/20 backdrop-blur-md">
-                    <Sparkles className="w-3.5 h-3.5 text-yellow-300" /> Hands-on Clinical Training
-                  </span>
-                </div>
               </div>
             )}
 
@@ -490,13 +488,16 @@ export default function WorkshopDetail() {
             {/* 4. WORKSHOP CAPACITY & AVAILABILITY */}
             <div className="bg-white rounded-3xl p-7 border border-gray-100 shadow-[0_8px_30px_rgba(16,24,40,0.04)] sticky top-28">
               <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold uppercase tracking-wider text-[#667085]">Seat Capacity</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-[#667085]">{isOpenToAll ? "Who Can Attend" : "Seat Capacity"}</span>
                 <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${canApply ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
-                  {canApply ? `${remaining} Seats Available` : isComingSoon ? "Coming Soon" : isFull ? "Seats Full" : "Closed"}
+                  {isOpenToAll && canApply ? "No Application Needed" : canApply ? `${remaining} Seats Available` : isComingSoon ? "Coming Soon" : isFull ? "Seats Full" : "Closed"}
                 </span>
               </div>
 
               {/* Capacity Progress Bar */}
+              {isOpenToAll ? (
+                <p className="mb-6 text-sm leading-relaxed text-[#475467]">Every registered delegate can attend this workshop, with no application or seat limit.</p>
+              ) : (
               <div className="space-y-2 mb-6">
                 <div className="flex items-baseline justify-between">
                   <span className="text-3xl font-['Outfit'] font-black text-[#101828]">{remaining}</span>
@@ -512,6 +513,7 @@ export default function WorkshopDetail() {
                 </div>
                 <p className="text-[11px] text-[#667085] text-right">{filledPercent}% seats allocated</p>
               </div>
+              )}
 
               {/* Quick Details List */}
               <div className="space-y-3 pt-5 border-t border-gray-100 text-sm text-[#475467] mb-7">
@@ -525,7 +527,7 @@ export default function WorkshopDetail() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-[#667085]">Total Capacity</span>
-                  <span className="font-bold text-[#101828]">{capacity} Delegates</span>
+                  <span className="font-bold text-[#101828]">{isOpenToAll ? "All Delegates" : `${capacity} Delegates`}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium text-[#667085]">Certification</span>
@@ -541,7 +543,7 @@ export default function WorkshopDetail() {
                   onClick={() => window.scrollTo(0, 0)}
                   className="w-full inline-flex items-center justify-center gap-2.5 py-4 px-6 rounded-2xl font-extrabold text-base bg-gradient-to-r from-[#173B8F] via-[#7C3AED] to-[#EC4899] text-white hover:brightness-110 shadow-md hover:shadow-lg transition-all duration-200"
                 >
-                  Apply for Workshop <ArrowRight className="w-4 h-4" />
+                  {applyLabel} <ArrowRight className="w-4 h-4" />
                 </Link>
               ) : (
                 <div className="w-full text-center py-3.5 px-4 rounded-2xl bg-gray-100 text-gray-400 font-bold text-sm">
@@ -564,15 +566,15 @@ export default function WorkshopDetail() {
 
           <div className="relative z-10 max-w-2xl mx-auto">
             <span className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-white/10 backdrop-blur-md text-white/90 border border-white/15 mb-4">
-              <Sparkles className="w-3.5 h-3.5 text-yellow-300" /> Limited Capacity • {capacity} Delegates
+              <Sparkles className="w-3.5 h-3.5 text-yellow-300" /> {isOpenToAll ? "Open for All Delegates" : `Limited Capacity • ${capacity} Delegates`}
             </span>
 
             <h2 className="font-['Outfit'] text-2xl sm:text-3xl md:text-4xl font-black text-white leading-tight mb-4">
-              Apply for {workshop.title}
+              {isOpenToAll ? workshop.title : `Apply for ${workshop.title}`}
             </h2>
 
             <p className="text-white/80 text-sm sm:text-base leading-relaxed mb-8">
-              Join speaker <strong>{speakerName}</strong> in New Delhi for this comprehensive hands-on session. Seats are allocated on a verified registration basis.
+              Join speaker <strong>{speakerName}</strong> in New Delhi for this comprehensive hands-on session. {isOpenToAll ? "Every registered delegate can attend, with no application needed." : "Seats are allocated on a verified registration basis."}
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -583,7 +585,7 @@ export default function WorkshopDetail() {
                   onClick={() => window.scrollTo(0, 0)}
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-10 py-4.5 rounded-full font-extrabold text-base sm:text-lg bg-gradient-to-r from-[#00A6A6] via-[#173B8F] to-[#EC4899] text-white hover:brightness-110 shadow-2xl hover:scale-105 transition-all duration-300"
                 >
-                  Apply for Workshop
+                  {applyLabel}
                   <ArrowRight className="w-5 h-5" />
                 </Link>
               ) : (
@@ -608,7 +610,7 @@ export default function WorkshopDetail() {
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] flex items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold text-[#101828] line-clamp-2 leading-tight break-words">{workshop.title}</p>
-          <p className={`text-[11px] font-semibold ${isComingSoon ? "text-amber-600" : "text-emerald-600"}`}>{isComingSoon ? "Coming Soon" : `${remaining} of ${capacity} seats left`}</p>
+          <p className={`text-[11px] font-semibold ${isComingSoon ? "text-amber-600" : "text-emerald-600"}`}>{isComingSoon ? "Coming Soon" : isOpenToAll ? "Open for all delegates" : `${remaining} of ${capacity} seats left`}</p>
         </div>
         {canApply ? (
           <Link
@@ -617,7 +619,7 @@ export default function WorkshopDetail() {
             onClick={() => window.scrollTo(0, 0)}
             className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm bg-gradient-to-r from-[#173B8F] to-[#00A6A6] text-white shadow-md shrink-0"
           >
-            Apply <ArrowRight className="w-4 h-4" />
+            {isOpenToAll ? "Dashboard" : "Apply"} <ArrowRight className="w-4 h-4" />
           </Link>
         ) : (
           <span className="px-4 py-2 rounded-xl text-xs font-bold bg-gray-100 text-gray-400">

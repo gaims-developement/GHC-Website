@@ -104,4 +104,25 @@ const requirePermission = (...permissions) => (req, res, next) => {
   return next();
 };
 
-module.exports = { optionalAuth, requireAuth, requirePermission, requireRole };
+// Delegate dashboard login. These tokens carry delegateId, never id, so no admin check can read them as a user.
+const requireDelegate = async (req, res, next) => {
+  const header = req.headers.authorization || '';
+  let payload;
+  try {
+    payload = jwt.verify(header.startsWith('Bearer ') ? header.slice(7) : '', getJwtSecret());
+    if (payload?.type !== 'delegate' || !payload.delegateId) throw new Error('Not a delegate token');
+  } catch {
+    return res.status(401).json({ message: 'Please log in again.' });
+  }
+
+  try {
+    const [[delegate]] = await pool.query('SELECT * FROM delegates WHERE id = ? LIMIT 1', [payload.delegateId]);
+    if (!delegate) return res.status(401).json({ message: 'Please log in again.' });
+    req.delegate = delegate;
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+};
+
+module.exports = { optionalAuth, requireAuth, requireDelegate, requirePermission, requireRole };

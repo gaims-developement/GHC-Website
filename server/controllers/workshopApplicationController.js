@@ -26,129 +26,6 @@ const writeAudit = async (req, action, recordId, oldValues = null, newValues = n
   }
 };
 
-/**
- * Public: Submit a workshop application
- */
-const publicApply = asyncHandler(async (req, res) => {
-  const {
-    workshopId,
-    fullName,
-    email,
-    mobile,
-    whatsapp,
-    country,
-    state,
-    city,
-    institution,
-    designation,
-    academicLevel,
-    ghcRegistrationId,
-  } = req.body;
-
-  // 1. Validate required fields
-  if (!workshopId || !fullName || !email || !mobile || !country || !state || !city || !institution || !designation || !academicLevel) {
-    return res.status(400).json({
-      message: 'All personal, academic and location fields are required.',
-    });
-  }
-
-  // 2. Validate email and mobile
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(String(email).trim())) {
-    return res.status(400).json({ message: 'Please provide a valid email address.' });
-  }
-
-  const cleanPhone = String(mobile).replace(/[^0-9+]/g, '').trim();
-  if (cleanPhone.length < 8 || cleanPhone.length > 20) {
-    return res.status(400).json({ message: 'Please provide a valid mobile number (8 to 20 digits).' });
-  }
-
-  // 3. Check workshop existence and registration state
-  const workshop = await Workshop.findById(workshopId);
-  if (!workshop) {
-    return res.status(404).json({ message: 'Workshop not found.' });
-  }
-
-  if (workshop.status !== 'published') {
-    return res.status(400).json({ message: 'This workshop is not published or accepting applications.' });
-  }
-
-  if (workshop.isEnabled === false) {
-    return res.status(400).json({ message: 'This workshop is coming soon and is not accepting applications yet.' });
-  }
-
-  if (workshop.isRegistrationOpen === false) {
-    return res.status(400).json({ message: 'Applications for this workshop are currently closed.' });
-  }
-
-  // 4. Duplicate Application Protection (Requirement 23)
-  const existingApp = await WorkshopApplication.findByWorkshopAndContact(workshopId, email, mobile);
-  if (existingApp) {
-    return res.status(409).json({
-      message: `You have already applied for this workshop (Application ID: ${existingApp.application_id || existingApp.applicationId}). Please check your registered email for your application details.`,
-      applicationId: existingApp.application_id || existingApp.applicationId,
-    });
-  }
-
-  // 5. Create Application
-  const application = await WorkshopApplication.create({
-    workshopId,
-    fullName,
-    email,
-    mobile: cleanPhone,
-    whatsapp: whatsapp ? String(whatsapp).replace(/[^0-9+]/g, '').trim() : cleanPhone,
-    country,
-    state,
-    city,
-    institution,
-    designation,
-    academicLevel,
-    ghcRegistrationId: ghcRegistrationId ? String(ghcRegistrationId).trim().toUpperCase() : null,
-  });
-
-  // 6. Write Audit Log
-  await writeAudit(req, 'WORKSHOP_APPLICATION_SUBMITTED', application.id, null, {
-    applicationId: application.applicationId,
-    workshopId: application.workshopId,
-    fullName: application.fullName,
-    ghcPassStatus: application.ghcPassStatus,
-  });
-
-  // 7. Send "workshop_application_received" email (graceful error handling)
-  try {
-    await sendTemplateEmail(
-      'workshop_application_received',
-      application.email,
-      {
-        fullName: application.fullName,
-        applicationId: application.applicationId,
-        workshopName: application.workshopTitle,
-        workshopVenue: application.workshopVenue || 'New Delhi',
-      }
-    );
-  } catch (emailErr) {
-    console.warn('Workshop application received email dispatch warning:', emailErr.message);
-  }
-
-  res.status(201).json({
-    success: true,
-    message: 'Congratulations! Your workshop application has been submitted successfully.',
-    application: {
-      id: application.id,
-      applicationId: application.applicationId,
-      workshopTitle: application.workshopTitle,
-      fullName: application.fullName,
-      email: application.email,
-      applicationStatus: application.applicationStatus,
-      ghcPassStatus: application.ghcPassStatus,
-      createdAt: application.createdAt,
-    },
-  });
-});
-
-/**
- * Public: Check application status safely
- */
 const publicGetApplicationStatus = asyncHandler(async (req, res) => {
   const applicationId = req.query.applicationId || req.query.reference || req.query.id;
   const { email, mobile } = req.query;
@@ -498,7 +375,6 @@ const getReports = asyncHandler(async (_req, res) => {
 });
 
 module.exports = {
-  publicApply,
   publicGetApplicationStatus,
   getDashboardStats,
   listApplications,

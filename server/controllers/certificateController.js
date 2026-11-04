@@ -326,6 +326,7 @@ const reports = asyncHandler(async (_req, res) => {
 module.exports = {
   bulkGenerate,
   dashboard,
+  certificatePdf,
   downloadCertificate,
   duplicateTemplate,
   generateCertificate,

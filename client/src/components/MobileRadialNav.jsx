@@ -22,6 +22,7 @@ const moreItems = [
   { label: "Venue", to: "/venue", icon: Home },
   { label: "Committees", to: "/committees", icon: MoreHorizontal },
   { label: "Contact", to: "/#contact", icon: MoreHorizontal },
+  { label: "Delegate Login", to: "/delegate-login", icon: Ticket },
   { label: "Register", to: registrationUrl, icon: Ticket, external: true },
 ];
 

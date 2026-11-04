@@ -4,7 +4,7 @@ import axios from "axios";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Lenis from "lenis";
-import { useLocation, Link } from "react-router-dom";
+import { useLocation, Link, Navigate } from "react-router-dom";
 import { buildEventSchema, findSeoEntry, mergeSeoEntry, setPageSeo } from "./utils/seo";
 import { apiUrl } from "./config/api";
 import { GHC_FAVICON_PATH, GHC_LOGO_PATH } from "./config/branding";
@@ -67,9 +67,10 @@ const AbstractRegister = lazy(() => import("./pages/AbstractRegister"));
 const AbstractRevision = lazy(() => import("./pages/AbstractRevision"));
 const AbstractParticipationConfirm = lazy(() => import("./pages/AbstractParticipationConfirm"));
 const DelegateIdForm = lazy(() => import("./pages/DelegateIdForm"));
+const DelegateLogin = lazy(() => import("./pages/DelegateLogin"));
+const DelegateDashboard = lazy(() => import("./pages/DelegateDashboard"));
 const PartnershipPortal = lazy(() => import("./pages/PartnershipPortal"));
 const WorkshopDetail = lazy(() => import("./pages/WorkshopDetail"));
-const WorkshopRegister = lazy(() => import("./pages/WorkshopRegister"));
 const GooglePayTest = lazy(() => import("./pages/GooglePayTest"));
 import Footer from "./components/Footer";
 const VerifyCertificate = lazy(() => import("./pages/VerifyCertificate"));
@@ -189,17 +190,17 @@ function Navbar() {
   return (
     <header className="site-navbar fixed left-0 right-0 top-4 z-50 px-4 sm:px-6 transition-all duration-300">
       <nav className="mx-auto flex max-w-[1400px] items-center justify-between pl-4 pr-3 py-2 sm:pl-5 sm:pr-3 bg-white/95 backdrop-blur-md rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.08)] border border-white/60">
-        <a href="/" className="flex items-center gap-3" aria-label="Global Healthcare Conclave home">
+        <a href="/" className="flex items-center gap-2 min-[1100px]:gap-3" aria-label="Global Healthcare Conclave home">
           <span className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-gray-100 bg-white">
             <img src={GHC_FAVICON_PATH} alt="GHC Logo" className="h-full w-full object-cover" />
           </span>
           <div className="flex flex-col">
-            <span className="block font-['Outfit'] text-[1.1rem] leading-tight font-extrabold text-[#081B33]">GHC 2026</span>
-            <span className="block font-['Inter'] text-[0.55rem] font-bold text-[#081B33]/50 tracking-wider">GLOBAL HEALTHCARE CONCLAVE</span>
+            <span className="block whitespace-nowrap font-['Outfit'] text-[1.1rem] leading-tight font-extrabold text-[#081B33]">GHC 2026</span>
+            <span className="block whitespace-nowrap font-['Inter'] text-[0.55rem] font-bold text-[#081B33]/50 tracking-wider lg:hidden min-[1400px]:block">GLOBAL HEALTHCARE CONCLAVE</span>
           </div>
         </a>
 
-        <div className="hidden items-center justify-center flex-1 gap-7 lg:flex ml-8">
+        <div className="hidden items-center justify-center flex-1 gap-1.5 lg:flex mx-2 min-[1100px]:gap-2 min-[1400px]:gap-3 min-[1560px]:gap-5">
           {navLinks?.map(([label, id]) => {
             const isActive = location.pathname === "/" && (location.hash === "" || location.hash === "#home") && id === "home";
             return (
@@ -209,7 +210,7 @@ function Navbar() {
                 target={label === "Register" ? "_blank" : undefined}
                 rel={label === "Register" ? "noopener noreferrer" : undefined}
                 onClick={(e) => handleNavClick(e, label, id)} 
-                className={`relative py-2 font-['Inter'] text-[0.85rem] font-bold transition-colors ${isActive ? 'text-[#173B8F]' : 'text-[#081B33] hover:text-[#173B8F]'}`}
+                className={`relative whitespace-nowrap py-2 font-['Inter'] text-[0.68rem] min-[1100px]:text-[0.72rem] min-[1400px]:text-[0.8rem] min-[1560px]:text-[0.85rem] font-bold transition-colors ${isActive ? 'text-[#173B8F]' : 'text-[#081B33] hover:text-[#173B8F]'}`}
               >
                 {label}
                 {isActive && (
@@ -220,9 +221,14 @@ function Navbar() {
           })}
         </div>
 
-        <a href={registrationUrl} target="_blank" rel="noopener noreferrer" className="hidden lg:flex items-center gap-2 rounded-full bg-[#173B8F] px-6 py-2.5 font-['Inter'] text-sm font-bold text-white shadow-md shadow-[#173B8F]/20 transition hover:-translate-y-0.5 hover:shadow-lg">
-          Register Now <ArrowRight className="h-4 w-4" />
-        </a>
+        <div className="hidden lg:flex items-center gap-2 shrink-0">
+          <Link to="/delegate-login" className="whitespace-nowrap rounded-full border border-[#173B8F] px-3 min-[1400px]:px-4 py-2 min-[1400px]:py-2.5 font-['Inter'] text-xs min-[1400px]:text-sm font-bold text-[#173B8F] transition hover:-translate-y-0.5 hover:bg-[#173B8F]/5">
+            Delegate Login
+          </Link>
+          <a href={registrationUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[#173B8F] px-3 min-[1400px]:px-5 py-2 min-[1400px]:py-2.5 font-['Inter'] text-xs min-[1400px]:text-sm font-bold text-white shadow-md shadow-[#173B8F]/20 transition hover:-translate-y-0.5 hover:shadow-lg">
+            Register Now <ArrowRight className="hidden h-4 w-4 min-[1200px]:block" />
+          </a>
+        </div>
 
         <button className="grid h-10 w-10 place-items-center rounded-full border border-[#081B33]/15 text-[#081B33] lg:hidden" onClick={() => setOpen((value) => !value)} aria-label="Toggle menu">
           {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -236,6 +242,9 @@ function Navbar() {
               {label}
             </a>
           ))}
+          <Link to="/delegate-login" onClick={() => setOpen(false)} className="block rounded-xl px-4 py-3 text-sm font-bold text-[#173B8F] hover:bg-[#173B8F]/5">
+            Delegate Login
+          </Link>
         </motion.div>
       )}
     </header>
@@ -1211,7 +1220,7 @@ function WorkshopsExperience() {
         >
         {workshopData?.map((workshop) => {
           const slug = workshop.slug || createWorkshopSlug(workshop.title);
-          const isClosed = !workshop.isRegistrationOpen || workshop.remaining <= 0;
+          const isClosed = !workshop.isRegistrationOpen || (!workshop.isOpenToAll && workshop.remaining <= 0);
           const { comingSoon } = workshop;
           const speakerName = workshop.faculty || workshop.organizer || "New Delhi Faculty";
 
@@ -1261,9 +1270,9 @@ function WorkshopsExperience() {
                     <CalendarDays className="h-4 w-4 text-[#00A6A6] shrink-0" />
                     <span className="truncate">{workshop.displayDate}</span>
                   </span>
-                  <span className="flex items-center gap-2 min-w-0" title={`${workshop.remaining} of ${workshop.capacity} seats left`}>
+                  <span className="flex items-center gap-2 min-w-0" title={workshop.isOpenToAll ? "Open for all delegates" : `${workshop.remaining} of ${workshop.capacity} seats left`}>
                     <Users className="h-4 w-4 text-[#00A6A6] shrink-0" />
-                    <span className="truncate">{workshop.remaining} / {workshop.capacity} seats</span>
+                    <span className="truncate">{workshop.isOpenToAll ? "Open for all" : `${workshop.remaining} / ${workshop.capacity} seats`}</span>
                   </span>
                   <span className="flex items-center gap-2 min-w-0" title={workshop.venue}>
                     <MapPin className="h-4 w-4 text-[#00A6A6] shrink-0" />
@@ -2996,6 +3005,18 @@ const routeSeoDefaults = {
     path: "/delegate-id",
     noindex: true,
   },
+  "delegate-login": {
+    title: "Delegate Login — Global Healthcare Conclave 2026",
+    description: "Log in to your GHC 2026 Delegate Dashboard.",
+    path: "/delegate-login",
+    noindex: true,
+  },
+  "delegate-dashboard": {
+    title: "Delegate Dashboard — Global Healthcare Conclave 2026",
+    description: "Your GHC 2026 QR code, certificates and workshops.",
+    path: "/delegate-dashboard",
+    noindex: true,
+  },
   "dynamic-form": {
     title: "GHC Form — Global Healthcare Conclave 2026",
     description: "GHC 2026 form.",
@@ -3050,6 +3071,8 @@ function App() {
   const isAbstractRevisionRoute = location.pathname.startsWith("/abstract/revise") || location.pathname.startsWith("/abstract-revision");
   const isAbstractParticipationRoute = location.pathname.startsWith("/abstract/confirm");
   const isDelegateIdRoute = location.pathname.startsWith("/delegate-id/");
+  const isDelegateLoginRoute = location.pathname.startsWith("/delegate-login");
+  const isDelegateDashboardRoute = location.pathname.startsWith("/delegate-dashboard");
   const isPartnerRoute = location.pathname.startsWith("/partners") || location.pathname.startsWith("/partnership");
   const isWorkshopDetailRoute = location.pathname.startsWith("/workshops/") && location.pathname !== "/workshops/" && !location.pathname.endsWith("/apply");
   const isGooglePayTestRoute = location.pathname.startsWith("/google-pay-test");
@@ -3094,6 +3117,8 @@ function App() {
       isAbstractRevisionRoute ||
       isAbstractParticipationRoute ||
       isDelegateIdRoute ||
+      isDelegateLoginRoute ||
+      isDelegateDashboardRoute ||
       isPartnerRoute ||
       isWorkshopDetailRoute ||
       isWorkshopRegisterRoute ||
@@ -3159,6 +3184,8 @@ function App() {
     isAbstractRevisionRoute,
     isAbstractParticipationRoute,
     isDelegateIdRoute,
+    isDelegateLoginRoute,
+    isDelegateDashboardRoute,
     isAdminRoute,
     isDynamicFormRoute,
     isGooglePayTestRoute,
@@ -3195,6 +3222,14 @@ function App() {
       key = "delegate-id";
       defaults = routeSeoDefaults["delegate-id"];
       path = "/delegate-id";
+    } else if (isDelegateLoginRoute) {
+      key = "delegate-login";
+      defaults = routeSeoDefaults["delegate-login"];
+      path = "/delegate-login";
+    } else if (isDelegateDashboardRoute) {
+      key = "delegate-dashboard";
+      defaults = routeSeoDefaults["delegate-dashboard"];
+      path = "/delegate-dashboard";
     } else if (isAbstractParticipationRoute) {
       key = "abstract-confirmation";
       defaults = routeSeoDefaults["abstract-confirmation"];
@@ -3318,7 +3353,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (isAdminRoute || isJudgeRoute || isRegisterRoute || isAbstractRoute || isAbstractRevisionRoute || isAbstractParticipationRoute || isDelegateIdRoute || isPartnerRoute || isWorkshopDetailRoute || isWorkshopRegisterRoute || isGooglePayTestRoute || isVerifyCertificateRoute || isDynamicFormRoute || isNominationsRoute || isVisaRoute) {
+    if (isAdminRoute || isJudgeRoute || isRegisterRoute || isAbstractRoute || isAbstractRevisionRoute || isAbstractParticipationRoute || isDelegateIdRoute || isDelegateLoginRoute || isDelegateDashboardRoute || isPartnerRoute || isWorkshopDetailRoute || isWorkshopRegisterRoute || isGooglePayTestRoute || isVerifyCertificateRoute || isDynamicFormRoute || isNominationsRoute || isVisaRoute) {
       return undefined;
     }
 
@@ -3406,7 +3441,7 @@ function App() {
       lenis.destroy();
       ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
     };
-  }, [isAbstractRoute, isAbstractRevisionRoute, isAbstractParticipationRoute, isDelegateIdRoute, isAdminRoute, isDynamicFormRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isVerifyCertificateRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute]);
+  }, [isAbstractRoute, isAbstractRevisionRoute, isAbstractParticipationRoute, isDelegateIdRoute, isDelegateLoginRoute, isDelegateDashboardRoute, isAdminRoute, isDynamicFormRoute, isGooglePayTestRoute, isPartnerRoute, isRegisterRoute, isVerifyCertificateRoute, isWorkshopDetailRoute, isWorkshopRegisterRoute]);
 
   let routeContent;
 
@@ -3424,16 +3459,7 @@ function App() {
       : undefined;
     routeContent = <Suspense fallback={<div className="admin-loading">Loading GHC CMS...</div>}><AdminApp initialPage={initialPage} /></Suspense>;
   } else if (isWorkshopRegisterRoute) {
-    routeContent = (
-      <div ref={appRef} className="min-h-screen overflow-hidden bg-[#F7FBFF] text-[#081B33]">
-        <Navbar />
-        <main>
-          <Suspense fallback={<div className="admin-loading">Loading workshop registration...</div>}><WorkshopRegister /></Suspense>
-        </main>
-        <Footer />
-        <MobileRadialNav />
-      </div>
-    );
+    routeContent = <Navigate to="/delegate-login" replace />;
   } else if (isRegisterRoute) {
     routeContent = (
       <>
@@ -3460,6 +3486,23 @@ function App() {
           <Suspense fallback={<div className="admin-loading">Loading abstract revision...</div>}><AbstractRevision /></Suspense>
         </main>
         <Footer />
+        <MobileRadialNav />
+      </div>
+    );
+  } else if (isDelegateDashboardRoute) {
+    // The dashboard has its own sidebar and tab bar, so it skips the website's header and footer.
+    routeContent = (
+      <div ref={appRef} className="text-[#081B33]">
+        <Suspense fallback={<div className="admin-loading">Loading...</div>}><DelegateDashboard /></Suspense>
+      </div>
+    );
+  } else if (isDelegateLoginRoute) {
+    routeContent = (
+      <div ref={appRef} className="min-h-screen overflow-hidden bg-white text-[#081B33]">
+        <Navbar />
+        <main className="bg-white">
+          <Suspense fallback={<div className="admin-loading">Loading...</div>}><DelegateLogin /></Suspense>
+        </main>
         <MobileRadialNav />
       </div>
     );
