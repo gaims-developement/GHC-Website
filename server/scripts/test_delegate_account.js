@@ -147,6 +147,35 @@ const call = (handler, { body = {}, params = {}, delegate, headers = {} } = {}) 
     await connection.query("UPDATE workshops SET status = 'draft' WHERE id = 14");
     assert.strictEqual(await openToAllNote(), '', 'an unpublished workshop is not mentioned');
 
+    // Login codes use Brevo only once it is fully set up; nothing else moves to it.
+    const { providerForTemplate, sendForTemplate } = require('../services/mailService');
+    const saved = { login: process.env.BREVO_SMTP_LOGIN, key: process.env.BREVO_SMTP_KEY };
+    delete process.env.BREVO_SMTP_KEY;
+    process.env.BREVO_SMTP_LOGIN = 'login@example.test';
+    assert.strictEqual(providerForTemplate('delegate_login_otp'), undefined, 'no key: the normal provider still sends login codes');
+    process.env.BREVO_SMTP_KEY = 'test-key';
+    assert.strictEqual(providerForTemplate('delegate_login_otp'), 'brevo');
+    assert.strictEqual(providerForTemplate('delegate_dashboard_open'), undefined, 'other emails stay where they are');
+    assert.strictEqual(providerForTemplate('abstract_accepted'), 'resend', 'abstract emails stay on Resend');
+
+    const tried = [];
+    const brevoDown = async ({ provider }) => {
+      tried.push(provider);
+      if (provider) throw new Error('down');
+      return 'sent';
+    };
+    assert.strictEqual(await sendForTemplate('delegate_login_otp', {}, brevoDown), 'sent', 'a Brevo failure still delivers the code');
+    assert.deepStrictEqual(tried, ['brevo', undefined], 'Brevo first, then the normal provider');
+    tried.length = 0;
+    await assert.rejects(sendForTemplate('abstract_accepted', {}, brevoDown), /down/, 'emails locked to Resend do not retry elsewhere');
+    assert.deepStrictEqual(tried, ['resend']);
+    tried.length = 0;
+    const bothDown = async ({ provider }) => { tried.push(provider); throw new Error('all down'); };
+    await assert.rejects(sendForTemplate('delegate_login_otp', {}, bothDown), /all down/, 'if both fail, the login page gets the error');
+    assert.strictEqual(tried.length, 2);
+    if (saved.login === undefined) delete process.env.BREVO_SMTP_LOGIN; else process.env.BREVO_SMTP_LOGIN = saved.login;
+    if (saved.key === undefined) delete process.env.BREVO_SMTP_KEY; else process.env.BREVO_SMTP_KEY = saved.key;
+
     console.log('Delegate account self-check passed.');
   } finally {
     // Ending the connection removes the temporary tables.

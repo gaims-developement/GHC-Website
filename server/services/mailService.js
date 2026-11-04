@@ -6,11 +6,14 @@ const { pool } = require('../config/db');
 let resend = null;
 let smtpTransporter = null;
 let smtpSignature = null;
+let brevoTransporter = null;
 const RESEND_ONLY_TEMPLATE_KEYS = new Set([
   'abstract_revision_required',
   'abstract_accepted',
   'abstract_rejected',
 ]);
+// Sent through Brevo once its key is set; otherwise they use the normal provider, so login never depends on it.
+const BREVO_TEMPLATE_KEYS = new Set(['delegate_login_otp']);
 const getResendClient = () => {
   const key = process.env.RESEND_API_KEY;
   if (!key) return null;
@@ -63,6 +66,26 @@ const formatAddress = (name, emailOrAddress) => {
   if (!value) return '';
   if (value.includes('<') && value.includes('>')) return value;
   return `"${String(name || 'Global Healthcare Conclave').replace(/"/g, '')}" <${value}>`;
+};
+
+const getBrevoTransporter = () => {
+  if (!brevoTransporter) {
+    brevoTransporter = nodemailer.createTransport({
+      host: process.env.BREVO_SMTP_HOST || 'smtp-relay.brevo.com',
+      port: Number(process.env.BREVO_SMTP_PORT || 587),
+      auth: { user: process.env.BREVO_SMTP_LOGIN, pass: process.env.BREVO_SMTP_KEY },
+      connectionTimeout: 15000,
+      greetingTimeout: 15000,
+      socketTimeout: 30000,
+    });
+  }
+  return brevoTransporter;
+};
+
+const providerForTemplate = (templateKey) => {
+  if (RESEND_ONLY_TEMPLATE_KEYS.has(templateKey)) return 'resend';
+  if (BREVO_TEMPLATE_KEYS.has(templateKey) && process.env.BREVO_SMTP_LOGIN && process.env.BREVO_SMTP_KEY) return 'brevo';
+  return undefined;
 };
 
 /**
@@ -136,15 +159,17 @@ const formatAttachments = (attachments = []) => {
 const sendMail = async ({ to, subject, html, text, attachments = [], provider: providerOverride = '' }) => {
   const provider = String(providerOverride || process.env.EMAIL_PROVIDER || '').trim().toLowerCase();
   const hasResend = Boolean(process.env.RESEND_API_KEY);
-  const useSmtp = provider === 'smtp' || (!provider && !hasResend && getSmtpConfig());
+  const useBrevo = provider === 'brevo';
+  const useSmtp = useBrevo || provider === 'smtp' || (!provider && !hasResend && getSmtpConfig());
 
   if (useSmtp) {
-    const transporter = getSmtpTransporter();
+    const transporter = useBrevo ? getBrevoTransporter() : getSmtpTransporter();
     if (!transporter) {
       throw new Error('SMTP is not configured in environment variables.');
     }
 
-    const { from } = getSmtpSenderConfig();
+    // Brevo only accepts a sender verified in the Brevo account, and its login address is not one.
+    const { from } = useBrevo ? { from: formatAddress(process.env.EMAIL_FROM_NAME || 'Global Healthcare Conclave', process.env.BREVO_FROM_EMAIL || getSenderConfig().from) } : getSmtpSenderConfig();
     const recipients = Array.isArray(to) ? to : [to];
     const payload = {
       from,
@@ -157,18 +182,18 @@ const sendMail = async ({ to, subject, html, text, attachments = [], provider: p
 
     try {
       const info = await transporter.sendMail(payload);
-      console.log('[EMAIL] Provider: SMTP');
+      console.log(`[EMAIL] Provider: ${useBrevo ? 'Brevo' : 'SMTP'}`);
       console.log('[EMAIL] Sent successfully');
       console.log(`[EMAIL] ID: ${info.messageId || 'unknown'}`);
       return {
         messageId: info.messageId || 'unknown',
         id: info.messageId || 'unknown',
-        provider: 'smtp',
+        provider: useBrevo ? 'brevo' : 'smtp',
         data: info,
       };
     } catch (error) {
       const sanitizedError = error.message || String(error);
-      console.error('[EMAIL] Provider: SMTP');
+      console.error(`[EMAIL] Provider: ${useBrevo ? 'Brevo' : 'SMTP'}`);
       console.error('[EMAIL] Send failed');
       console.error(`[EMAIL] Error: ${sanitizedError}`);
       throw new Error(sanitizedError);
@@ -227,6 +252,18 @@ const sendMail = async ({ to, subject, html, text, attachments = [], provider: p
   }
 };
 
+// A login code must still arrive if Brevo is down or rejects the sender, so it retries on the normal provider.
+const sendForTemplate = async (templateKey, mail, send = sendMail) => {
+  const provider = providerForTemplate(templateKey);
+  try {
+    return await send({ ...mail, provider });
+  } catch (error) {
+    if (provider !== 'brevo') throw error;
+    console.warn(`[EMAIL] Brevo failed for ${templateKey}, retrying on the normal provider: ${error.message}`);
+    return send(mail);
+  }
+};
+
 const htmlToText = (html = '') =>
   String(html)
     .replace(/<style[\s\S]*?<\/style>/gi, '')
@@ -250,7 +287,6 @@ const sendTemplateEmail = async (templateKey, to, variables = {}, { attachments 
   let logId = null;
   let subject = 'No Subject';
   const recipient = Array.isArray(to) ? to.join(', ') : to;
-  const forceResend = RESEND_ONLY_TEMPLATE_KEYS.has(templateKey);
 
   try {
     const [templates] = await pool.query('SELECT * FROM email_templates WHERE template_key = ? LIMIT 1', [templateKey]);
@@ -281,13 +317,12 @@ const sendTemplateEmail = async (templateKey, to, variables = {}, { attachments 
     );
     logId = logResult.insertId;
 
-    const result = await sendMail({
+    const result = await sendForTemplate(templateKey, {
       to,
       subject,
       text: textBody,
       html: htmlBody,
       attachments,
-      provider: forceResend ? 'resend' : undefined,
     });
 
     await pool.query(
@@ -378,6 +413,8 @@ const verifyConnection = async () => {
 };
 
 module.exports = {
+  providerForTemplate,
+  sendForTemplate,
   sendMail,
   sendEmail: sendMail,
   sendTemplateEmail,
