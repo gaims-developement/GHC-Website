@@ -194,10 +194,13 @@ const submissionGuidelinesData = [
     points: [
       "Main poster content font size: more than 30 pt.",
       "Introduction or major section headings font size: more than 50 pt.",
-      "Presenting author's email address and LinkedIn ID must be included.",
+      "Presenting author's email address and LinkedIn ID are optional.",
       "Relevant graphs, figures, photographs, tables, charts, and visual material should be incorporated.",
       "Posters must remain readable, visually clear, and scientifically structured."
-    ]
+    ],
+    linkIntro: "Please check the poster specifications here:",
+    linkLabel: "View Poster Specifications",
+    linkUrl: "https://drive.google.com/drive/folders/1oPmwLwkH20kfx469gz2f6nF7HdwzNiEw?usp=drive_link"
   },
   {
     num: "12",
@@ -873,6 +876,19 @@ export default function AbstractRegister() {
                               <li key={idx}>{pt}</li>
                             ))}
                           </ul>
+                          {item.linkUrl && (
+                            <div className="pt-1 space-y-1.5">
+                              <p className="text-gray-600 text-[11px]">{item.linkIntro}</p>
+                              <a
+                                href={item.linkUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-[#6C4AB6] px-3 py-2 text-[11px] font-bold text-white transition hover:bg-[#5a3d9c]"
+                              >
+                                {item.linkLabel} <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

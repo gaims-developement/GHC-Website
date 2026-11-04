@@ -1977,10 +1977,19 @@ function ResearchHub() {
                       <ul className="list-disc list-inside text-white/75 text-sm space-y-1 pl-1">
                         <li>Main poster content font size: <strong>more than 30 pt</strong>.</li>
                         <li>Introduction or major section headings: <strong>more than 50 pt</strong>.</li>
-                        <li>The presenting author&apos;s <strong>email address and LinkedIn ID</strong> must be included.</li>
+                        <li>The presenting author&apos;s <strong>email address and LinkedIn ID</strong> are optional.</li>
                         <li>Relevant graphs, figures, photographs, tables, charts, and supporting visual material should be incorporated.</li>
                         <li>Posters must remain readable, visually clear, and scientifically structured.</li>
                       </ul>
+                      <p className="text-white/80 text-sm pt-1">Please check the poster specifications here:</p>
+                      <a
+                        href="https://drive.google.com/drive/folders/1oPmwLwkH20kfx469gz2f6nF7HdwzNiEw?usp=drive_link"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center rounded-xl bg-[#349e81] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#2c8a70]"
+                      >
+                        View Poster Specifications
+                      </a>
                     </div>
 
                     {/* Section 12 */}
