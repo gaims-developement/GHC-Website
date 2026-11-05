@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { ArrowLeft, ArrowRight, Award, CalendarDays, Gift, Loader2, MapPin, QrCode, ShieldCheck } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { apiUrl } from "../config/api";
 import { GHC_FAVICON_PATH } from "../config/branding";
 
@@ -52,7 +52,9 @@ function OtpBoxes({ value, onChange }) {
 
 export default function DelegateLogin() {
   const navigate = useNavigate();
-  const [delegateId, setDelegateId] = useState("");
+  // The login button in the delegate email carries the ID, so nobody has to copy it across.
+  const [searchParams] = useSearchParams();
+  const [delegateId, setDelegateId] = useState(searchParams.get("id") || "");
   const [otp, setOtp] = useState("");
   const [sent, setSent] = useState(false);
   const [notice, setNotice] = useState("");

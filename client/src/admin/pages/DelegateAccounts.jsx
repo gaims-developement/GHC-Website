@@ -10,7 +10,7 @@ const mailStatus = (d) => {
   const lastFailed = d.dashboardInviteLastError && (!d.dashboardInviteSentAt || new Date(d.dashboardInviteLastAttemptAt) > new Date(d.dashboardInviteSentAt));
   if (lastFailed) return { label: "Failed", color: "#b91c1c", background: "#fee2e2", detail: `Last attempt ${formatDateTime(d.dashboardInviteLastAttemptAt)} failed: ${d.dashboardInviteLastError}` };
   if (d.dashboardInviteSentAt) return { label: "Sent", color: "#047857", background: "#d1fae5", detail: `Sent on ${formatDateTime(d.dashboardInviteSentAt)}${d.dashboardInviteSendCount > 1 ? ` · sent ${d.dashboardInviteSendCount} times` : ""}` };
-  return { label: "Not sent", color: "#b45309", background: "#fef3c7", detail: "The dashboard email has not been sent yet." };
+  return { label: "Not sent", color: "#b45309", background: "#fef3c7", detail: "The Workshops Live email has not been sent yet." };
 };
 
 // Tells delegates the dashboard is open, that they can log in, and that workshops are chosen from there.
@@ -48,7 +48,7 @@ function DelegateAccounts({ api }) {
   // One email at a time with a short pause, to respect the mail provider's rate limit and allow stopping.
   const sendAll = async () => {
     if (!sendable.length) return;
-    if (!window.confirm(`Send the Delegate Dashboard email to ${sendable.length} delegate(s) who haven't received it yet?`)) return;
+    if (!window.confirm(`Send the Workshops Live email to ${sendable.length} delegate(s) who haven't received it yet?`)) return;
 
     stopBulkRef.current = false;
     setError("");
@@ -107,11 +107,11 @@ function DelegateAccounts({ api }) {
         <p className="admin-eyebrow">Delegates</p>
         <h1>Delegate Accounts</h1>
         <p className="admin-muted">
-          Email delegates that the Delegate Dashboard is open, that they can log in with their Delegate ID, and that workshops are chosen from there.
+          Email delegates that workshops are live and Delegate Login is ready, with their Delegate ID and the steps to log in and claim a workshop. Delegates who already have it are skipped.
         </p>
         <div style={{ display: "flex", gap: "0.6rem", flexWrap: "wrap", marginTop: "1rem" }}>
           <button className="admin-primary-button" type="button" onClick={sendAll} disabled={!sendable.length || bulk?.running || sendingId !== null}>
-            <Send size={18} /> Send Dashboard Email ({sendable.length})
+            <Send size={18} /> Send Workshops Live Email ({sendable.length})
           </button>
         </div>
         <div style={{ display: "flex", gap: "1.25rem", fontSize: "0.9rem", marginTop: "0.75rem", flexWrap: "wrap" }}>
@@ -150,7 +150,7 @@ function DelegateAccounts({ api }) {
           </div>
           {!bulk.running && bulk.failures.length > 0 && (
             <details style={{ marginTop: "0.5rem", fontSize: "0.85rem" }}>
-              <summary>Show failures. Press Send Dashboard Email again to retry them.</summary>
+              <summary>Show failures. Press Send Workshops Live Email again to retry them.</summary>
               <ul style={{ margin: "0.4rem 0 0 1rem" }}>{bulk.failures.map((f) => <li key={f}>{f}</li>)}</ul>
             </details>
           )}
@@ -174,7 +174,7 @@ function DelegateAccounts({ api }) {
         ) : (
           <div className="speaker-table-wrap">
             <table className="speaker-table">
-              <thead><tr><th>Name</th><th>Delegate ID</th><th>Email</th><th>Dashboard Email</th><th>Workshop</th><th>Action</th></tr></thead>
+              <thead><tr><th>Name</th><th>Delegate ID</th><th>Email</th><th>Workshops Live Email</th><th>Workshop</th><th>Action</th></tr></thead>
               <tbody>
                 {visible.map((d) => {
                   const status = mailStatus(d);

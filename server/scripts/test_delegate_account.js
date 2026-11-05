@@ -9,7 +9,17 @@ const db = require('../config/db');
 const sent = [];
 const mailPath = require.resolve('../services/mailService');
 require(mailPath);
-require.cache[mailPath].exports.sendTemplateEmail = async (key, to, vars) => { sent.push({ key, to, vars }); };
+let mailDown = false;
+require.cache[mailPath].exports.sendTemplateEmail = async (key, to, vars) => {
+  sent.push({ key, to, vars });
+  if (mailDown) throw new Error('mail down');
+};
+const claimMails = () => sent.filter((mail) => mail.key === 'workshop_claim_confirmation');
+// The claim does not wait for its email, so give it a moment to go out.
+const waitForClaimMails = async (count) => {
+  for (let i = 0; i < 100 && claimMails().length < count; i += 1) await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.strictEqual(claimMails().length, count, 'one email per successful claim');
+};
 
 const call = (handler, { body = {}, params = {}, delegate, headers = {} } = {}) => new Promise((resolve, reject) => {
   const res = {
@@ -51,12 +61,12 @@ const call = (handler, { body = {}, params = {}, delegate, headers = {} } = {}) 
       (1, 'GHC26-DEL-00001', 'Test One', 'test one', 'one@example.test', '9000000001', 'GHCDEL-ONE'),
       (2, 'GHC26-DEL-00002', 'Test Two', 'test two', 'two@example.test', '9000000002', 'GHCDEL-TWO'),
       (3, 'GHC26-DEL-00003', 'No Email', 'no email', NULL, NULL, 'GHCDEL-THREE')`);
-    await connection.query(`INSERT INTO workshops (id, title, capacity, registered_count, status, is_enabled, is_registration_open, is_open_to_all) VALUES
-      (10, 'Basic Life Support', 1, 0, 'published', 1, 1, 0),
-      (11, 'Suturing', 5, 0, 'published', 1, 1, 0),
-      (12, 'Hidden Draft', 5, 0, 'draft', 1, 1, 0),
-      (13, 'Coming Soon', 5, 0, 'published', 0, 1, 0),
-      (14, 'Toolkit', 0, 0, 'published', 1, 1, 1)`);
+    await connection.query(`INSERT INTO workshops (id, title, date, venue, faculty, capacity, registered_count, status, is_enabled, is_registration_open, is_open_to_all) VALUES
+      (10, 'Basic <Life> Support', '2026-11-28 19:00:00', 'Hall A', NULL, 1, 0, 'published', 1, 1, 0),
+      (11, 'Suturing', NULL, NULL, NULL, 5, 0, 'published', 1, 1, 0),
+      (12, 'Hidden Draft', NULL, NULL, NULL, 5, 0, 'draft', 1, 1, 0),
+      (13, 'Coming Soon', NULL, NULL, NULL, 5, 0, 'published', 0, 1, 0),
+      (14, 'Toolkit', NULL, NULL, NULL, 0, 0, 'published', 1, 1, 1)`);
 
     // Requesting a code: same answer for every ID, one email per cooldown.
     const known = await call(account.requestOtp, { body: { delegateId: ' ghc26-del-00001 ' } });
@@ -125,12 +135,26 @@ const call = (handler, { body = {}, params = {}, delegate, headers = {} } = {}) 
     assert.strictEqual(application.application_status, 'CONFIRMED', 'the workshop team sees it as a confirmed attendee');
     assert.strictEqual(application.ghc_registration_id, 'GHC26-DEL-00001');
 
+    await waitForClaimMails(1);
+    const claimMail = claimMails()[0];
+    assert.strictEqual(claimMail.to, 'one@example.test', 'the email goes to the delegate who claimed');
+    assert.strictEqual(claimMail.vars.workshopTitle, 'Basic &lt;Life&gt; Support', 'CMS text is escaped');
+    assert.match(claimMail.vars.workshopWhen, /28 November 2026.*7:00 pm/, 'the date and time are what the CMS stored');
+    assert.strictEqual(claimMail.vars.workshopFaculty, 'To be announced', 'a blank CMS field still reads properly');
+    assert.strictEqual(claimMail.vars.workshopRegistrationId, application.workshop_registration_id, 'the email has the ID the workshop team sees');
+    assert.match(claimMail.vars.openToAllNote, /Toolkit workshop is open for all/);
+
     assert.strictEqual((await claim(1, 11)).status, 409, 'a second claim is refused');
     assert.strictEqual(await seats(11), 0, 'a refused claim takes no seat');
     assert.strictEqual((await claim(2, 10)).status, 409, 'someone else cannot take a full workshop');
     assert.strictEqual(await seats(10), 1, 'a full workshop never goes over capacity');
     assert.strictEqual((await load(2)).claimed_workshop_id, null, 'a failed claim leaves the delegate free to choose again');
-    assert.strictEqual((await claim(2, 11)).status, 201, 'they can then choose another');
+    assert.strictEqual(claimMails().length, 1, 'a refused claim sends no email');
+    mailDown = true;
+    assert.strictEqual((await claim(2, 11)).status, 201, 'they can then choose another, and a mail failure does not undo the claim');
+    await waitForClaimMails(2);
+    mailDown = false;
+    assert.strictEqual((await load(2)).claimed_workshop_id, 11);
 
     const [[{ n }]] = await connection.query('SELECT COUNT(*) AS n FROM workshop_applications');
     assert.strictEqual(n, 2, 'one application per successful claim');

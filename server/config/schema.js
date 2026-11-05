@@ -3741,7 +3741,8 @@ const createInviteTables = async () => {
   await seedTemplate('delegate_id_request', 'delegate-id-request.html', 'Action Required: Submit Your College ID for GHC 2026');
   await seedTemplate('delegate_college_id_update', 'delegate-college-id-update.html', 'Important Update Regarding ID Submission for GHC');
   await seedTemplate('delegate_login_otp', 'delegate-login-otp.html', 'Your GHC 2026 Delegate Login Code');
-  await seedTemplate('delegate_dashboard_open', 'delegate-dashboard-open.html', 'Your GHC 2026 Delegate Dashboard Is Now Open');
+  await seedTemplate('workshop_claim_confirmation', 'workshop-claim-confirmation.html', 'Your GHC 2026 Workshop Seat Is Confirmed');
+  await seedTemplate('delegate_dashboard_open', 'delegate-dashboard-open.html', 'GHC 2026 Workshops Are Live: Log In and Claim Your Seat');
 };
 
 const createDelegateTables = async () => {

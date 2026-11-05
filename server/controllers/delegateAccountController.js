@@ -7,7 +7,8 @@ const { sendTemplateEmail } = require('../services/mailService');
 const Workshop = require('../models/workshopModel');
 const { getWorkshopCode } = require('../models/workshopApplicationModel');
 const { certificatePdf } = require('./certificateController');
-const { escapeHtml, newCheckinToken } = require('./delegateController');
+const { escapeHtml, newCheckinToken, openToAllNote } = require('./delegateController');
+const { getDelegateLoginUrl } = require('../config/links');
 
 const OTP_MINUTES = 10;
 const OTP_MAX_ATTEMPTS = 5;
@@ -86,6 +87,31 @@ const listWorkshops = asyncHandler(async (req, res) => {
   });
 });
 
+// No timeZone on purpose: the driver reads a DATETIME as server-local time, so this prints exactly what the CMS stored.
+const formatWorkshopWhen = (date) => (date
+  ? new Date(date).toLocaleString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
+  : 'To be announced');
+
+// Never throws: the seat is already taken, so a mail failure must not look like a failed claim.
+const sendClaimEmail = async (delegate, workshop, workshopRegistrationId) => {
+  try {
+    await sendTemplateEmail('workshop_claim_confirmation', delegate.email, {
+      name: escapeHtml(delegate.full_name),
+      delegateId: escapeHtml(delegate.registration_id),
+      workshopRegistrationId: escapeHtml(workshopRegistrationId),
+      workshopTitle: escapeHtml(workshop.title),
+      workshopWhen: escapeHtml(formatWorkshopWhen(workshop.date)),
+      workshopDuration: escapeHtml(workshop.duration || 'To be announced'),
+      workshopVenue: escapeHtml(workshop.venue),
+      workshopFaculty: escapeHtml(workshop.faculty || 'To be announced'),
+      loginLink: escapeHtml(getDelegateLoginUrl()),
+      openToAllNote: await openToAllNote(),
+    });
+  } catch (error) {
+    console.warn(`Workshop claim email failed for delegate ${delegate.id}: ${error.message}`);
+  }
+};
+
 const claimWorkshop = asyncHandler(async (req, res) => {
   const workshopId = Number(req.params.id);
   if (!Number.isInteger(workshopId) || workshopId <= 0) return res.status(404).json({ message: 'Workshop not found.' });
@@ -114,6 +140,7 @@ const claimWorkshop = asyncHandler(async (req, res) => {
 
     const [[workshop]] = await connection.query('SELECT title FROM workshops WHERE id = ?', [workshopId]);
     const suffix = `D${String(delegate.id).padStart(5, '0')}`;
+    const workshopRegistrationId = `GHC-WS-${getWorkshopCode(workshop.title)}-${suffix}`;
     // Recorded as a confirmed application so the workshop team sees it with their other attendees, attendance and certificates.
     await connection.query(
       `INSERT INTO workshop_applications (
@@ -130,14 +157,17 @@ const claimWorkshop = asyncHandler(async (req, res) => {
         delegate.city || '-',
         delegate.institution || '-',
         delegate.registration_id,
-        `GHC-WS-${getWorkshopCode(workshop.title)}-${suffix}`,
+        workshopRegistrationId,
       ]
     );
     await connection.query("INSERT INTO workshop_registrations (workshop_id, status) VALUES (?, 'confirmed')", [workshopId]);
     await connection.query('UPDATE delegates SET claimed_workshop_id = ?, workshop_claimed_at = NOW() WHERE id = ?', [workshopId, delegate.id]);
 
     await connection.commit();
-    return res.status(201).json({ claimedWorkshop: await Workshop.findById(workshopId) });
+    const claimedWorkshop = await Workshop.findById(workshopId);
+    // Not awaited, so a slow mail provider cannot hold up the claim on the delegate's screen.
+    sendClaimEmail(delegate, claimedWorkshop, workshopRegistrationId);
+    return res.status(201).json({ claimedWorkshop });
   } catch (error) {
     await connection.rollback().catch(() => {});
     // The unique (workshop, email, mobile) key: someone with these details already applied through the public form.
