@@ -10,8 +10,8 @@ const sent = [];
 const mailPath = require.resolve('../services/mailService');
 require(mailPath);
 let mailDown = false;
-require.cache[mailPath].exports.sendTemplateEmail = async (key, to, vars) => {
-  sent.push({ key, to, vars });
+require.cache[mailPath].exports.sendTemplateEmail = async (key, to, vars, options) => {
+  sent.push({ key, to, vars, options });
   if (mailDown) throw new Error('mail down');
 };
 const claimMails = () => sent.filter((mail) => mail.key === 'workshop_claim_confirmation');
@@ -43,6 +43,7 @@ const call = (handler, { body = {}, params = {}, delegate, headers = {} } = {}) 
     for (const [column, type] of Object.entries({
       login_otp_hash: 'VARCHAR(64) NULL', login_otp_expires_at: 'DATETIME NULL', login_otp_attempts: 'INT NOT NULL DEFAULT 0', login_otp_sent_at: 'DATETIME NULL',
       claimed_workshop_id: 'INT NULL', workshop_claimed_at: 'DATETIME NULL',
+      workshop_notice_sent_at: 'DATETIME NULL', workshop_notice_send_count: 'INT NOT NULL DEFAULT 0', workshop_notice_last_attempt_at: 'DATETIME NULL', workshop_notice_last_error: 'TEXT NULL',
     })) {
       const [[found]] = await connection.query("SELECT COUNT(*) AS n FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'delegates' AND column_name = ?", [column]);
       if (!found.n) await connection.query(`ALTER TABLE delegates ADD COLUMN ${column} ${type}`);
@@ -170,6 +171,17 @@ const call = (handler, { body = {}, params = {}, delegate, headers = {} } = {}) 
     assert.strictEqual(await openToAllNote(), 'The Renamed &lt;Kit&gt; workshop at Hall B is open for all delegates, so you do not need to apply for it.');
     await connection.query("UPDATE workshops SET status = 'draft' WHERE id = 14");
     assert.strictEqual(await openToAllNote(), '', 'an unpublished workshop is not mentioned');
+
+    // Workshop notification: one email with the banner, then the bulk send skips them.
+    const { sendWorkshopNotice } = require('../controllers/delegateController');
+    const notice = await call(sendWorkshopNotice, { params: { id: 1 } });
+    assert.strictEqual(notice.status, 200);
+    assert.ok(notice.data.delegate.workshopNoticeSentAt, 'the delegate is marked as sent');
+    const noticeMail = sent.find((mail) => mail.key === 'workshop_notice');
+    assert.strictEqual(noticeMail.to, 'one@example.test');
+    assert.ok(noticeMail.options.attachments[0].content.length > 10000, 'the banner image goes with it');
+    assert.strictEqual((await call(sendWorkshopNotice, { params: { id: 1 }, body: { onlyIfNotSent: true } })).status, 409, 'the bulk send skips someone already sent');
+    assert.strictEqual((await call(sendWorkshopNotice, { params: { id: 3 } })).status, 400, 'no email address, nothing sent');
 
     // Login codes use Brevo only once it is fully set up; nothing else moves to it.
     const { providerForTemplate, sendForTemplate } = require('../services/mailService');

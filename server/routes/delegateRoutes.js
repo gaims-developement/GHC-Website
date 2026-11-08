@@ -1,7 +1,7 @@
 const router = require('express').Router();
 const multer = require('multer');
 const rateLimit = require('express-rate-limit');
-const { checkIn, importDelegates, listDelegates, sendConfirmation, sendDashboardInvite, sendWhatsappInvite, setAttendance, sponsorScan } = require('../controllers/delegateController');
+const { checkIn, importDelegates, listDelegates, sendConfirmation, sendDashboardInvite, sendWhatsappInvite, sendWorkshopNotice, setAttendance, sponsorScan } = require('../controllers/delegateController');
 const { exportVenueList, getIdDocument, getIdForm, getOwnIdDocument, listDelegateIds, previewCheckIn, reviewId, sendIdRequest, submitIdForm } = require('../controllers/delegateIdController');
 const { requireAuth, requirePermission, requireRole } = require('../middleware/authMiddleware');
 
@@ -29,6 +29,7 @@ router.patch('/:id/attendance', ...adminOnly, setAttendance);
 router.post('/:id/send-confirmation', ...adminOnly, sendConfirmation);
 router.post('/:id/send-whatsapp-invite', ...adminOnly, sendWhatsappInvite);
 router.post('/:id/send-dashboard-invite', ...adminOnly, sendDashboardInvite);
+router.post('/:id/send-workshop-notice', ...adminOnly, sendWorkshopNotice);
 router.post('/check-in/preview', ...canCheckId, previewCheckIn);
 router.post('/check-in', ...canCheckId, checkIn);
 

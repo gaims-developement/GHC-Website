@@ -166,6 +166,7 @@ const pages = {
   "invitation-poster": InvitationPosterGenerator,
   "delegate-whatsapp": DelegateWhatsapp,
   "delegate-accounts": DelegateAccounts,
+  "workshop-notification": (props) => <DelegateAccounts {...props} mail="workshopNotice" />,
   tickets: AdminTickets,
   payments: Payments,
   badges: Badges,

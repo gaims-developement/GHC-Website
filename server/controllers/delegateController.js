@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const crypto = require('crypto');
 const { pool } = require('../config/db');
 const asyncHandler = require('../utils/asyncHandler');
@@ -41,6 +43,10 @@ const toDelegate = (row) => ({
   dashboardInviteSendCount: Number(row.dashboard_invite_send_count || 0),
   dashboardInviteLastAttemptAt: row.dashboard_invite_last_attempt_at || null,
   dashboardInviteLastError: row.dashboard_invite_last_error || null,
+  workshopNoticeSentAt: row.workshop_notice_sent_at || null,
+  workshopNoticeSendCount: Number(row.workshop_notice_send_count || 0),
+  workshopNoticeLastAttemptAt: row.workshop_notice_last_attempt_at || null,
+  workshopNoticeLastError: row.workshop_notice_last_error || null,
   claimedWorkshop: row.claimed_workshop_title || null,
   createdAt: row.created_at,
 });
@@ -276,6 +282,50 @@ const sendDashboardInvite = asyncHandler(async (req, res) => {
   res.json({ delegate: toDelegate(updated), recipient: row.email });
 });
 
+// The banner is the same for everyone, so it is read once.
+let workshopNoticeImage = null;
+const getWorkshopNoticeImage = () => {
+  workshopNoticeImage ||= fs.promises.readFile(path.join(__dirname, '..', 'assets', 'email', 'workshop-notice.jpg')).catch((error) => {
+    workshopNoticeImage = null;
+    throw error;
+  });
+  return workshopNoticeImage;
+};
+
+// Workshop announcement mail, sent from the "Workshop Notification" tab.
+const sendWorkshopNotice = asyncHandler(async (req, res) => {
+  const [[row]] = await pool.query('SELECT * FROM delegates WHERE id = ?', [req.params.id]);
+  if (!row) return res.status(404).json({ message: 'Delegate not found' });
+  // Bulk send passes onlyIfNotSent so a delegate emailed meanwhile (e.g. by another admin) is skipped.
+  if (req.body?.onlyIfNotSent && row.workshop_notice_sent_at) {
+    return res.status(409).json({ skipped: true, message: `${row.full_name} has already been sent the workshop notification.`, delegate: toDelegate(row) });
+  }
+  if (!row.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
+    return res.status(400).json({ message: `${row.full_name} does not have a valid email address.` });
+  }
+
+  const now = new Date();
+  try {
+    await sendTemplateEmail('workshop_notice', row.email, { name: escapeHtml(row.full_name) }, {
+      attachments: [{ filename: 'ghc-workshop-update.jpg', content: await getWorkshopNoticeImage(), contentType: 'image/jpeg', cid: 'workshop-notice' }],
+    });
+  } catch (error) {
+    await pool.query(
+      'UPDATE delegates SET workshop_notice_last_attempt_at = ?, workshop_notice_last_error = ? WHERE id = ?',
+      [now, String(error.message || error).slice(0, 1000), row.id]
+    );
+    const [[failed]] = await pool.query('SELECT * FROM delegates WHERE id = ?', [row.id]);
+    return res.status(502).json({ message: `Email to ${row.email} could not be sent: ${error.message}`, delegate: toDelegate(failed) });
+  }
+
+  await pool.query(
+    'UPDATE delegates SET workshop_notice_sent_at = ?, workshop_notice_last_attempt_at = ?, workshop_notice_last_error = NULL, workshop_notice_send_count = workshop_notice_send_count + 1 WHERE id = ?',
+    [now, now, row.id]
+  );
+  const [[updated]] = await pool.query('SELECT * FROM delegates WHERE id = ?', [row.id]);
+  res.json({ delegate: toDelegate(updated), recipient: row.email });
+});
+
 // Sponsor booth scan: each sponsor account can scan a given delegate once (used for booth coupons).
 const sponsorScan = asyncHandler(async (req, res) => {
   const code = String(req.body?.code || '').trim();
@@ -298,4 +348,4 @@ const sponsorScan = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { checkIn, escapeHtml, importDelegates, listDelegates, newCheckinToken, openToAllNote, sendConfirmation, sendDashboardInvite, sendWhatsappInvite, setAttendance, sponsorScan };
+module.exports = { checkIn, escapeHtml, importDelegates, listDelegates, newCheckinToken, openToAllNote, sendConfirmation, sendDashboardInvite, sendWhatsappInvite, sendWorkshopNotice, setAttendance, sponsorScan };

@@ -3742,6 +3742,7 @@ const createInviteTables = async () => {
   await seedTemplate('delegate_college_id_update', 'delegate-college-id-update.html', 'Important Update Regarding ID Submission for GHC');
   await seedTemplate('delegate_login_otp', 'delegate-login-otp.html', 'Your GHC 2026 Delegate Login Code');
   await seedTemplate('workshop_claim_confirmation', 'workshop-claim-confirmation.html', 'Your GHC 2026 Workshop Seat Is Confirmed');
+  await seedTemplate('workshop_notice', 'workshop-notice.html', 'GHC 2026 Workshops: Registrations Open on 9 November');
   await seedTemplate('delegate_dashboard_open', 'delegate-dashboard-open.html', 'GHC 2026 Workshops Are Live: Log In and Claim Your Seat');
 };
 
@@ -3799,6 +3800,10 @@ const createDelegateTables = async () => {
   await addColumnIfMissing('delegates', 'dashboard_invite_send_count', 'INT NOT NULL DEFAULT 0');
   await addColumnIfMissing('delegates', 'dashboard_invite_last_attempt_at', 'DATETIME NULL');
   await addColumnIfMissing('delegates', 'dashboard_invite_last_error', 'TEXT NULL');
+  await addColumnIfMissing('delegates', 'workshop_notice_sent_at', 'DATETIME NULL');
+  await addColumnIfMissing('delegates', 'workshop_notice_send_count', 'INT NOT NULL DEFAULT 0');
+  await addColumnIfMissing('delegates', 'workshop_notice_last_attempt_at', 'DATETIME NULL');
+  await addColumnIfMissing('delegates', 'workshop_notice_last_error', 'TEXT NULL');
   await addColumnIfMissing('delegates', 'claimed_workshop_id', 'INT NULL');
   await addColumnIfMissing('delegates', 'workshop_claimed_at', 'DATETIME NULL');
   // id_number_enc is AES-256-GCM (utils/idEncryption.js); image_public_id is a private Cloudinary asset.
