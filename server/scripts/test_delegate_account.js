@@ -243,6 +243,46 @@ const call = (handler, { body = {}, params = {}, delegate, headers = {} } = {}) 
     assert.strictEqual(posted, null, 'an email with embedded images is not sent half-broken');
     delete process.env.BREVO_API_KEY;
 
+    // Mailjet: embedded images go as inline parts, files as attachments, and its errors come back readable.
+    const { sendViaMailjet } = require('../services/mailService');
+    process.env.MAILJET_API_KEY = 'mj-key';
+    process.env.MAILJET_SECRET_KEY = 'mj-secret';
+    const mailjetOk = async (url, options) => {
+      posted = { url, options, body: JSON.parse(options.body) };
+      return { ok: true, json: async () => ({ Messages: [{ Status: 'success', To: [{ MessageID: 123 }] }] }) };
+    };
+    const mjResult = await sendViaMailjet({
+      from: '"Global Healthcare Conclave" <no-reply@ghc.gaims.org>', to: 'one@example.test', subject: 'Hi', html: '<img src="cid:hero">',
+      attachments: [{ filename: 'hero.jpg', content: Buffer.from('img'), contentType: 'image/jpeg', cid: 'hero' }, { filename: 'a.pdf', content: Buffer.from('pdf'), contentType: 'application/pdf' }],
+    }, mailjetOk);
+    assert.deepStrictEqual(mjResult.id, '123');
+    assert.strictEqual(posted.url, 'https://api.mailjet.com/v3.1/send');
+    assert.strictEqual(posted.options.headers.authorization, `Basic ${Buffer.from('mj-key:mj-secret').toString('base64')}`);
+    const mjMessage = posted.body.Messages[0];
+    assert.deepStrictEqual(mjMessage.From, { Email: 'no-reply@ghc.gaims.org', Name: 'Global Healthcare Conclave' });
+    assert.deepStrictEqual(mjMessage.InlinedAttachments, [{ ContentType: 'image/jpeg', Filename: 'hero.jpg', Base64Content: Buffer.from('img').toString('base64'), ContentID: 'hero' }], 'embedded images stay embedded');
+    assert.deepStrictEqual(mjMessage.Attachments.map((a) => a.Filename), ['a.pdf']);
+    const mailjetRefuses = async () => ({ ok: false, status: 400, json: async () => ({ Messages: [{ Status: 'error', Errors: [{ ErrorMessage: 'Sender not validated' }] }] }) });
+    await assert.rejects(sendViaMailjet({ from: 'x@y.z', to: 'a@b.c', subject: 'Hi', html: '' }, mailjetRefuses), /Sender not validated/);
+
+    // The full chain: Resend full and Brevo refusing still delivers through Mailjet.
+    tried.length = 0;
+    const onlyMailjet = async ({ provider }) => {
+      tried.push(provider);
+      if (provider !== 'mailjet') throw new Error(`${provider || 'resend'} down`);
+      return { provider: 'mailjet' };
+    };
+    assert.deepStrictEqual(await sendForTemplate('workshop_notice', {}, onlyMailjet), { provider: 'mailjet' });
+    assert.deepStrictEqual(tried, [undefined, 'brevo', 'mailjet'], 'Resend, then Brevo, then Mailjet');
+    tried.length = 0;
+    assert.deepStrictEqual(await sendForTemplate('delegate_login_otp', {}, onlyMailjet), { provider: 'mailjet' });
+    assert.deepStrictEqual(tried, ['brevo', undefined, 'mailjet'], 'login codes: Brevo, then Resend, then Mailjet');
+    tried.length = 0;
+    await assert.rejects(sendForTemplate('abstract_accepted', {}, async ({ provider }) => { tried.push(provider); throw new Error('down'); }), /Resend: down \| Brevo: down \| Mailjet: down/);
+    assert.deepStrictEqual(tried, ['resend', 'brevo', 'mailjet'], 'Resend is not tried twice');
+    delete process.env.MAILJET_API_KEY;
+    delete process.env.MAILJET_SECRET_KEY;
+
     if (saved.login === undefined) delete process.env.BREVO_SMTP_LOGIN; else process.env.BREVO_SMTP_LOGIN = saved.login;
     if (saved.key === undefined) delete process.env.BREVO_SMTP_KEY; else process.env.BREVO_SMTP_KEY = saved.key;
 

@@ -15,6 +15,7 @@ const RESEND_ONLY_TEMPLATE_KEYS = new Set([
 // Sent through Brevo first once its key is set. Every other email uses Brevo only as the backup.
 const BREVO_TEMPLATE_KEYS = new Set(['delegate_login_otp']);
 const brevoReady = () => Boolean(process.env.BREVO_API_KEY || (process.env.BREVO_SMTP_LOGIN && process.env.BREVO_SMTP_KEY));
+const mailjetReady = () => Boolean(process.env.MAILJET_API_KEY && process.env.MAILJET_SECRET_KEY);
 const getResendClient = () => {
   const key = process.env.RESEND_API_KEY;
   if (!key) return null;
@@ -108,6 +109,45 @@ const sendViaBrevoApi = async ({ from, to, subject, html, text, attachments = []
   return { messageId: data.messageId || 'unknown', id: data.messageId || 'unknown', provider: 'brevo', data };
 };
 
+// Third service, also over HTTPS. Unlike Brevo's web API it can embed (cid:) images, so every email can fall back to it.
+const sendViaMailjet = async ({ from, to, subject, html, text, attachments = [] }, request = fetch) => {
+  const sender = String(from).match(/^"?([^"<]*?)"?\s*<([^>]+)>$/);
+  const isInline = (att) => Boolean(att.cid || att.content_id);
+  const toFile = (att) => ({
+    ContentType: att.contentType || att.content_type || 'application/octet-stream',
+    Filename: att.filename || 'attachment',
+    Base64Content: Buffer.from(att.content).toString('base64'),
+  });
+  const files = attachments.filter((att) => !isInline(att)).map(toFile);
+  const inline = attachments.filter(isInline).map((att) => ({ ...toFile(att), ContentID: att.cid || att.content_id }));
+  const response = await request('https://api.mailjet.com/v3.1/send', {
+    method: 'POST',
+    headers: {
+      authorization: `Basic ${Buffer.from(`${process.env.MAILJET_API_KEY}:${process.env.MAILJET_SECRET_KEY}`).toString('base64')}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify({
+      Messages: [{
+        From: sender ? { Email: sender[2].trim(), Name: sender[1].trim() } : { Email: String(from).trim() },
+        To: (Array.isArray(to) ? to : [to]).map((email) => ({ Email: email })),
+        Subject: subject,
+        HTMLPart: html,
+        TextPart: text || undefined,
+        Attachments: files.length ? files : undefined,
+        InlinedAttachments: inline.length ? inline : undefined,
+      }],
+    }),
+    signal: AbortSignal.timeout(20000),
+  });
+  const data = await response.json().catch(() => ({}));
+  const message = data.Messages?.[0];
+  if (!response.ok || message?.Status !== 'success') {
+    throw new Error(message?.Errors?.map((e) => e.ErrorMessage).join('; ') || data.ErrorMessage || `Mailjet returned ${response.status}`);
+  }
+  const id = String(message.To?.[0]?.MessageID || 'unknown');
+  return { messageId: id, id, provider: 'mailjet', data };
+};
+
 const providerForTemplate = (templateKey) => {
   if (RESEND_ONLY_TEMPLATE_KEYS.has(templateKey)) return 'resend';
   if (BREVO_TEMPLATE_KEYS.has(templateKey) && brevoReady()) return 'brevo';
@@ -187,6 +227,18 @@ const sendMail = async ({ to, subject, html, text, attachments = [], provider: p
   const hasResend = Boolean(process.env.RESEND_API_KEY);
   const useBrevo = provider === 'brevo';
   const useSmtp = useBrevo || provider === 'smtp' || (!provider && !hasResend && getSmtpConfig());
+
+  if (provider === 'mailjet') {
+    const from = formatAddress(process.env.EMAIL_FROM_NAME || 'Global Healthcare Conclave', process.env.MAILJET_FROM_EMAIL || process.env.BREVO_FROM_EMAIL || getSenderConfig().from);
+    try {
+      const result = await sendViaMailjet({ from, to, subject, html: html || `<p style="white-space: pre-wrap;">${text || ''}</p>`, text, attachments });
+      console.log(`[EMAIL] Provider: Mailjet · Sent · ID: ${result.messageId}`);
+      return result;
+    } catch (error) {
+      console.error(`[EMAIL] Provider: Mailjet · Send failed · ${error.message}`);
+      throw new Error(error.name === 'TimeoutError' ? 'Mailjet timed out' : error.message);
+    }
+  }
 
   if (useBrevo && process.env.BREVO_API_KEY) {
     const from = formatAddress(process.env.EMAIL_FROM_NAME || 'Global Healthcare Conclave', process.env.BREVO_FROM_EMAIL || getSenderConfig().from);
@@ -290,25 +342,26 @@ const sendMail = async ({ to, subject, html, text, attachments = [], provider: p
   }
 };
 
-const providerName = (provider) => ({ brevo: 'Brevo', smtp: 'SMTP' }[provider || process.env.EMAIL_PROVIDER] || 'Resend');
+const providerName = (provider) => ({ brevo: 'Brevo', mailjet: 'Mailjet', smtp: 'SMTP' }[provider || process.env.EMAIL_PROVIDER] || 'Resend');
 
-// Tries the email's own provider, then the other one, so a daily quota or an outage on one does not lose the email.
-// shortcut: retries on any error, so a Resend timeout that did deliver could arrive twice; acceptable for these emails.
+// Tries the email's own provider, then each other one that is set up, so a daily quota or an outage on one does not lose the email.
+// shortcut: retries on any error, so a timeout that did deliver could arrive twice; acceptable for these emails.
 const sendForTemplate = async (templateKey, mail, send = sendMail) => {
-  const provider = providerForTemplate(templateKey);
-  try {
-    return await send({ ...mail, provider });
-  } catch (error) {
-    if (provider !== 'brevo' && !brevoReady()) throw error;
-    const backup = provider === 'brevo' ? undefined : 'brevo';
-    console.warn(`[EMAIL] ${providerName(provider)} failed for ${templateKey}, retrying on ${providerName(backup)}: ${error.message}`);
+  const primary = providerForTemplate(templateKey);
+  const same = (a, b) => (a === 'resend' ? undefined : a) === (b === 'resend' ? undefined : b);
+  const chain = [primary, ...[undefined, brevoReady() && 'brevo', mailjetReady() && 'mailjet'].filter((p) => p !== false && !same(p, primary))];
+  const errors = [];
+  for (let i = 0; i < chain.length; i += 1) {
     try {
-      return await send({ ...mail, provider: backup });
-    } catch (backupError) {
-      // Both reasons are kept, so the email log shows why each provider refused.
-      throw new Error(`${providerName(provider)}: ${error.message} | ${providerName(backup)}: ${backupError.message}`);
+      return await send({ ...mail, provider: chain[i] });
+    } catch (error) {
+      errors.push(`${providerName(chain[i])}: ${error.message}`);
+      if (i < chain.length - 1) console.warn(`[EMAIL] ${providerName(chain[i])} failed for ${templateKey}, trying ${providerName(chain[i + 1])}: ${error.message}`);
+      else if (errors.length === 1) throw error;
     }
   }
+  // Every reason is kept, so the email log shows why each provider refused.
+  throw new Error(errors.join(' | '));
 };
 
 const htmlToText = (html = '') =>
@@ -464,6 +517,7 @@ module.exports = {
   sendForTemplate,
   sendMail,
   sendViaBrevoApi,
+  sendViaMailjet,
   sendEmail: sendMail,
   sendTemplateEmail,
   verifyConnection,
