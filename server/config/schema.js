@@ -2505,6 +2505,7 @@ const createOperationsTables = async () => {
     )
   `);
   await addColumnIfMissing('email_logs', 'error_message', 'TEXT NULL');
+  await addColumnIfMissing('email_logs', 'provider', 'VARCHAR(20) NULL');
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS backup_records (

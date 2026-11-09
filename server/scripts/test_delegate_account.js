@@ -203,8 +203,23 @@ const call = (handler, { body = {}, params = {}, delegate, headers = {} } = {}) 
     assert.strictEqual(await sendForTemplate('delegate_login_otp', {}, brevoDown), 'sent', 'a Brevo failure still delivers the code');
     assert.deepStrictEqual(tried, ['brevo', undefined], 'Brevo first, then the normal provider');
     tried.length = 0;
-    await assert.rejects(sendForTemplate('abstract_accepted', {}, brevoDown), /down/, 'emails locked to Resend do not retry elsewhere');
-    assert.deepStrictEqual(tried, ['resend']);
+    await assert.rejects(sendForTemplate('abstract_accepted', {}, brevoDown), /Resend: down \| Brevo: down/, 'both reasons are kept');
+    assert.deepStrictEqual(tried, ['resend', 'brevo'], 'abstract emails also fall back to Brevo');
+    tried.length = 0;
+
+    // Resend's daily quota: every other email goes out through Brevo instead.
+    const resendFull = async ({ provider }) => {
+      tried.push(provider);
+      if (provider !== 'brevo') throw new Error('You have reached your daily email sending quota.');
+      return { provider: 'brevo' };
+    };
+    assert.deepStrictEqual(await sendForTemplate('workshop_notice', {}, resendFull), { provider: 'brevo' }, 'a full Resend quota no longer loses the email');
+    assert.deepStrictEqual(tried, [undefined, 'brevo']);
+    tried.length = 0;
+    delete process.env.BREVO_SMTP_KEY;
+    await assert.rejects(sendForTemplate('workshop_notice', {}, resendFull), /quota/, 'without Brevo set up there is nothing to fall back to');
+    assert.deepStrictEqual(tried, [undefined]);
+    process.env.BREVO_SMTP_KEY = 'test-key';
     tried.length = 0;
     const bothDown = async ({ provider }) => { tried.push(provider); throw new Error('all down'); };
     await assert.rejects(sendForTemplate('delegate_login_otp', {}, bothDown), /all down/, 'if both fail, the login page gets the error');

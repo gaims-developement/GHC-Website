@@ -12,8 +12,9 @@ const RESEND_ONLY_TEMPLATE_KEYS = new Set([
   'abstract_accepted',
   'abstract_rejected',
 ]);
-// Sent through Brevo once its key is set; otherwise they use the normal provider, so login never depends on it.
+// Sent through Brevo first once its key is set. Every other email uses Brevo only as the backup.
 const BREVO_TEMPLATE_KEYS = new Set(['delegate_login_otp']);
+const brevoReady = () => Boolean(process.env.BREVO_SMTP_LOGIN && process.env.BREVO_SMTP_KEY);
 const getResendClient = () => {
   const key = process.env.RESEND_API_KEY;
   if (!key) return null;
@@ -84,7 +85,7 @@ const getBrevoTransporter = () => {
 
 const providerForTemplate = (templateKey) => {
   if (RESEND_ONLY_TEMPLATE_KEYS.has(templateKey)) return 'resend';
-  if (BREVO_TEMPLATE_KEYS.has(templateKey) && process.env.BREVO_SMTP_LOGIN && process.env.BREVO_SMTP_KEY) return 'brevo';
+  if (BREVO_TEMPLATE_KEYS.has(templateKey) && brevoReady()) return 'brevo';
   return undefined;
 };
 
@@ -252,15 +253,24 @@ const sendMail = async ({ to, subject, html, text, attachments = [], provider: p
   }
 };
 
-// A login code must still arrive if Brevo is down or rejects the sender, so it retries on the normal provider.
+const providerName = (provider) => ({ brevo: 'Brevo', smtp: 'SMTP' }[provider || process.env.EMAIL_PROVIDER] || 'Resend');
+
+// Tries the email's own provider, then the other one, so a daily quota or an outage on one does not lose the email.
+// shortcut: retries on any error, so a Resend timeout that did deliver could arrive twice; acceptable for these emails.
 const sendForTemplate = async (templateKey, mail, send = sendMail) => {
   const provider = providerForTemplate(templateKey);
   try {
     return await send({ ...mail, provider });
   } catch (error) {
-    if (provider !== 'brevo') throw error;
-    console.warn(`[EMAIL] Brevo failed for ${templateKey}, retrying on the normal provider: ${error.message}`);
-    return send(mail);
+    if (provider !== 'brevo' && !brevoReady()) throw error;
+    const backup = provider === 'brevo' ? undefined : 'brevo';
+    console.warn(`[EMAIL] ${providerName(provider)} failed for ${templateKey}, retrying on ${providerName(backup)}: ${error.message}`);
+    try {
+      return await send({ ...mail, provider: backup });
+    } catch (backupError) {
+      // Both reasons are kept, so the email log shows why each provider refused.
+      throw new Error(`${providerName(provider)}: ${error.message} | ${providerName(backup)}: ${backupError.message}`);
+    }
   }
 };
 
@@ -326,8 +336,8 @@ const sendTemplateEmail = async (templateKey, to, variables = {}, { attachments 
     });
 
     await pool.query(
-      "UPDATE email_logs SET status = 'sent', sent_at = NOW(), error_message = NULL WHERE id = ?",
-      [logId]
+      "UPDATE email_logs SET status = 'sent', sent_at = NOW(), error_message = NULL, provider = ? WHERE id = ?",
+      [result?.provider || null, logId]
     );
 
     return result;
