@@ -14,7 +14,7 @@ const RESEND_ONLY_TEMPLATE_KEYS = new Set([
 ]);
 // Sent through Brevo first once its key is set. Every other email uses Brevo only as the backup.
 const BREVO_TEMPLATE_KEYS = new Set(['delegate_login_otp']);
-const brevoReady = () => Boolean(process.env.BREVO_SMTP_LOGIN && process.env.BREVO_SMTP_KEY);
+const brevoReady = () => Boolean(process.env.BREVO_API_KEY || (process.env.BREVO_SMTP_LOGIN && process.env.BREVO_SMTP_KEY));
 const getResendClient = () => {
   const key = process.env.RESEND_API_KEY;
   if (!key) return null;
@@ -81,6 +81,31 @@ const getBrevoTransporter = () => {
     });
   }
   return brevoTransporter;
+};
+
+// Railway blocks outgoing SMTP on its lower plans, so with BREVO_API_KEY set Brevo is reached over HTTPS instead.
+const sendViaBrevoApi = async ({ from, to, subject, html, text, attachments = [] }, request = fetch) => {
+  // shortcut: Brevo's web API has no inline (cid:) images, so those emails fail here instead of arriving with broken images; host the images to lift this.
+  if (attachments.some((att) => att.cid || att.content_id)) throw new Error('the Brevo web API cannot send emails with embedded images');
+  const sender = String(from).match(/^"?([^"<]*?)"?\s*<([^>]+)>$/);
+  const response = await request('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: { 'api-key': process.env.BREVO_API_KEY, 'content-type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify({
+      sender: sender ? { name: sender[1].trim(), email: sender[2].trim() } : { email: String(from).trim() },
+      to: (Array.isArray(to) ? to : [to]).map((email) => ({ email })),
+      subject,
+      htmlContent: html,
+      textContent: text || undefined,
+      attachment: attachments.length
+        ? attachments.map((att) => ({ name: att.filename || 'attachment', content: Buffer.from(att.content).toString('base64') }))
+        : undefined,
+    }),
+    signal: AbortSignal.timeout(20000),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.message || `Brevo API returned ${response.status}`);
+  return { messageId: data.messageId || 'unknown', id: data.messageId || 'unknown', provider: 'brevo', data };
 };
 
 const providerForTemplate = (templateKey) => {
@@ -162,6 +187,18 @@ const sendMail = async ({ to, subject, html, text, attachments = [], provider: p
   const hasResend = Boolean(process.env.RESEND_API_KEY);
   const useBrevo = provider === 'brevo';
   const useSmtp = useBrevo || provider === 'smtp' || (!provider && !hasResend && getSmtpConfig());
+
+  if (useBrevo && process.env.BREVO_API_KEY) {
+    const from = formatAddress(process.env.EMAIL_FROM_NAME || 'Global Healthcare Conclave', process.env.BREVO_FROM_EMAIL || getSenderConfig().from);
+    try {
+      const result = await sendViaBrevoApi({ from, to, subject, html: html || `<p style="white-space: pre-wrap;">${text || ''}</p>`, text, attachments });
+      console.log(`[EMAIL] Provider: Brevo API · Sent · ID: ${result.messageId}`);
+      return result;
+    } catch (error) {
+      console.error(`[EMAIL] Provider: Brevo API · Send failed · ${error.message}`);
+      throw new Error(error.name === 'TimeoutError' ? 'Brevo API timed out' : error.message);
+    }
+  }
 
   if (useSmtp) {
     const transporter = useBrevo ? getBrevoTransporter() : getSmtpTransporter();
@@ -426,6 +463,7 @@ module.exports = {
   providerForTemplate,
   sendForTemplate,
   sendMail,
+  sendViaBrevoApi,
   sendEmail: sendMail,
   sendTemplateEmail,
   verifyConnection,

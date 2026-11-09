@@ -224,6 +224,25 @@ const call = (handler, { body = {}, params = {}, delegate, headers = {} } = {}) 
     const bothDown = async ({ provider }) => { tried.push(provider); throw new Error('all down'); };
     await assert.rejects(sendForTemplate('delegate_login_otp', {}, bothDown), /all down/, 'if both fail, the login page gets the error');
     assert.strictEqual(tried.length, 2);
+    // Brevo over HTTPS: the request Brevo expects, and its errors come back readable.
+    const { sendViaBrevoApi } = require('../services/mailService');
+    let posted = null;
+    const brevoOk = async (url, options) => { posted = { url, options, body: JSON.parse(options.body) }; return { ok: true, json: async () => ({ messageId: '<m1>' }) }; };
+    process.env.BREVO_API_KEY = 'api-test-key';
+    const apiResult = await sendViaBrevoApi({ from: '"Global Healthcare Conclave" <no-reply@ghc.gaims.org>', to: 'one@example.test', subject: 'Hi', html: '<p>Hi</p>', attachments: [{ filename: 'a.pdf', content: Buffer.from('pdf') }] }, brevoOk);
+    assert.strictEqual(apiResult.provider, 'brevo');
+    assert.strictEqual(posted.url, 'https://api.brevo.com/v3/smtp/email');
+    assert.strictEqual(posted.options.headers['api-key'], 'api-test-key');
+    assert.deepStrictEqual(posted.body.sender, { name: 'Global Healthcare Conclave', email: 'no-reply@ghc.gaims.org' });
+    assert.deepStrictEqual(posted.body.to, [{ email: 'one@example.test' }]);
+    assert.deepStrictEqual(posted.body.attachment, [{ name: 'a.pdf', content: Buffer.from('pdf').toString('base64') }]);
+    const brevoRefuses = async () => ({ ok: false, status: 401, json: async () => ({ message: 'Key not found' }) });
+    await assert.rejects(sendViaBrevoApi({ from: 'x@y.z', to: 'one@example.test', subject: 'Hi', html: '' }, brevoRefuses), /Key not found/);
+    posted = null;
+    await assert.rejects(sendViaBrevoApi({ from: 'x@y.z', to: 'a@b.c', subject: 'Hi', html: '', attachments: [{ filename: 'i.jpg', content: Buffer.from('x'), cid: 'hero' }] }, brevoOk), /embedded images/);
+    assert.strictEqual(posted, null, 'an email with embedded images is not sent half-broken');
+    delete process.env.BREVO_API_KEY;
+
     if (saved.login === undefined) delete process.env.BREVO_SMTP_LOGIN; else process.env.BREVO_SMTP_LOGIN = saved.login;
     if (saved.key === undefined) delete process.env.BREVO_SMTP_KEY; else process.env.BREVO_SMTP_KEY = saved.key;
 
