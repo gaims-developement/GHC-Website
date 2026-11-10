@@ -151,10 +151,12 @@ const call = (handler, { body = {}, params = {}, delegate, headers = {} } = {}) 
     assert.strictEqual(await seats(10), 1, 'a full workshop never goes over capacity');
     assert.strictEqual((await load(2)).claimed_workshop_id, null, 'a failed claim leaves the delegate free to choose again');
     assert.strictEqual(claimMails().length, 1, 'a refused claim sends no email');
+    await connection.query("UPDATE workshops SET date = '2026-11-29 10:00:00', start_time = '10:00', end_time = '14:00' WHERE id = 11");
     mailDown = true;
     assert.strictEqual((await claim(2, 11)).status, 201, 'they can then choose another, and a mail failure does not undo the claim');
     await waitForClaimMails(2);
     mailDown = false;
+    assert.match(claimMails()[1].vars.workshopWhen, /29 November 2026, 10:00 am – 2:00 pm$/, 'the CMS start and end times are shown');
     assert.strictEqual((await load(2)).claimed_workshop_id, 11);
 
     const [[{ n }]] = await connection.query('SELECT COUNT(*) AS n FROM workshop_applications');

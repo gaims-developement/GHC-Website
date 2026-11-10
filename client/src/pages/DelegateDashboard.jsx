@@ -6,7 +6,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useNavigate } from "react-router-dom";
 import { apiUrl, getImageUrl } from "../config/api";
 import { GHC_FAVICON_PATH } from "../config/branding";
-import { formatWorkshopDate } from "../data/workshops";
+import { formatWorkshopDate, getWorkshopTimeRange } from "../data/workshops";
 import { DELEGATE_TOKEN_KEY } from "./DelegateLogin";
 
 const CONFETTI_COLORS = ["#EC4899", "#8B5CF6", "#FAC775", "#5DCAA5", "#85B7EB"];
@@ -109,8 +109,11 @@ function CongratulationsPopup({ onClose }) {
 function WorkshopFacts({ workshop }) {
   return (
     <ul className="mt-3 space-y-1.5 text-sm text-[#475467]">
-      <li className="flex items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0 text-[#173B8F]" />{formatWorkshopDate(workshop.date)}</li>
-      {workshop.duration && <li className="flex items-center gap-2"><Clock3 className="h-4 w-4 shrink-0 text-[#173B8F]" />{workshop.duration}</li>}
+      {/* The date's day part only: the time inside it depends on the server's time zone, the CMS start and end times do not. */}
+      <li className="flex items-center gap-2"><CalendarDays className="h-4 w-4 shrink-0 text-[#173B8F]" />{workshop.date ? new Date(`${String(workshop.date).slice(0, 10)}T00:00:00`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : formatWorkshopDate(workshop.date)}</li>
+      {(workshop.startTime || workshop.duration) && (
+        <li className="flex items-center gap-2"><Clock3 className="h-4 w-4 shrink-0 text-[#173B8F]" />{[workshop.startTime && getWorkshopTimeRange(workshop), workshop.duration].filter(Boolean).join(" · ")}</li>
+      )}
       {workshop.venue && <li className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-[#173B8F]" />{workshop.venue}</li>}
     </ul>
   );

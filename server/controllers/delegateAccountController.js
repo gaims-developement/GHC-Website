@@ -87,10 +87,21 @@ const listWorkshops = asyncHandler(async (req, res) => {
   });
 });
 
+const formatClock = (time) => {
+  const [hours, minutes] = String(time).split(':').map(Number);
+  return `${hours % 12 || 12}:${String(minutes || 0).padStart(2, '0')} ${hours < 12 ? 'am' : 'pm'}`;
+};
+
 // No timeZone on purpose: the driver reads a DATETIME as server-local time, so this prints exactly what the CMS stored.
-const formatWorkshopWhen = (date) => (date
-  ? new Date(date).toLocaleString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
-  : 'To be announced');
+// The CMS start and end times win over the time inside the date, e.g. "Saturday, 28 November 2026, 1:00 pm – 5:00 pm".
+const formatWorkshopWhen = ({ date, startTime, endTime }) => {
+  if (!date) return 'To be announced';
+  const day = new Date(date).toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const time = startTime
+    ? `${formatClock(startTime)}${endTime ? ` – ${formatClock(endTime)}` : ''}`
+    : new Date(date).toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
+  return `${day}, ${time}`;
+};
 
 // Never throws: the seat is already taken, so a mail failure must not look like a failed claim.
 const sendClaimEmail = async (delegate, workshop, workshopRegistrationId) => {
@@ -100,7 +111,7 @@ const sendClaimEmail = async (delegate, workshop, workshopRegistrationId) => {
       delegateId: escapeHtml(delegate.registration_id),
       workshopRegistrationId: escapeHtml(workshopRegistrationId),
       workshopTitle: escapeHtml(workshop.title),
-      workshopWhen: escapeHtml(formatWorkshopWhen(workshop.date)),
+      workshopWhen: escapeHtml(formatWorkshopWhen(workshop)),
       workshopDuration: escapeHtml(workshop.duration || 'To be announced'),
       workshopVenue: escapeHtml(workshop.venue),
       workshopFaculty: escapeHtml(workshop.faculty || 'To be announced'),

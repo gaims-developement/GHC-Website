@@ -25,7 +25,6 @@ import {
   ChevronRight,
   ClipboardCheck,
   Clock3,
-  CreditCard,
   Dna,
   Download,
   FileText,
@@ -41,7 +40,6 @@ import {
   Plane,
   Play,
   Share2,
-  ShieldCheck,
   Sparkles,
   Stethoscope,
   Book,
@@ -1455,8 +1453,8 @@ function GHCTimeline() {
       key: "workshop-registration",
       title: "Workshop Registration",
       subtitle: "How to register",
-      status: "Announcing Soon",
-      statusType: "soon",
+      status: "Started 9 November",
+      statusType: "confirmed",
       icon: Wrench,
       content: <WorkshopRegistrationContent />,
     },
@@ -1613,16 +1611,15 @@ function AbstractSubmissionContent() {
 
 function WorkshopRegistrationContent() {
   const steps = [
-    ["Workshop schedule announced", "Available workshops, seats and faculty details will be published once dates are finalized."],
-    ["Choose your preferred workshop", "Review the topic, facilitator, duration, requirements and seat availability."],
-    ["Register or sign in", "Use your delegate profile so the workshop can be linked to your GHC pass."],
-    ["Select session and confirm seat", "Pick the available AM or PM session and review any workshop-specific prerequisites."],
-    ["Complete payment and receive confirmation", "Pay securely and receive your workshop confirmation email with access details."],
+    ["Log in to your delegate dashboard", "Enter your Delegate ID (e.g. GHC26-DEL-00001) and the login code sent to your registered email."],
+    ["Day 1 workshop is open for all", "First Aid in Common Emergencies (28 November) is included for every registered delegate."],
+    ["Choose one Day 2 workshop", "Pick Disaster Management, Suturing or Airway Management (29 November), subject to seat availability."],
+    ["Receive your confirmation", "Your seat is confirmed by email. Both workshops are free, with no extra fees."],
   ];
 
   return (
     <div className="workshop-registration-flowchart">
-      <p className="workshop-flow-intro">Workshop registration will open after the programme is announced. The flow below shows how delegates will reserve seats.</p>
+      <p className="workshop-flow-intro">Workshop registration started on 9 November 2026. Every registered delegate gets 2 free workshops.</p>
       <div className="schedule-flow">
         {steps.map(([title, description], index) => (
           <div className="schedule-flow-row" key={title}>
@@ -1633,8 +1630,6 @@ function WorkshopRegistrationContent() {
             <div>
               <h4>{title}</h4>
               <p>{description}</p>
-              {index === 3 && <span className="session-tabs"><b>AM</b><b>PM</b></span>}
-              {index === 4 && <span className="payment-icons"><CreditCard /><BadgeCheck /><ShieldCheck /></span>}
             </div>
           </div>
         ))}
