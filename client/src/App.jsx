@@ -84,6 +84,7 @@ const QRAttendance = lazy(() => import("./pages/QRAttendance"));
 const Schedule = lazy(() => import("./pages/Schedule"));
 
 import { navLinks } from "./config/nav";
+import { ABSTRACT_DEADLINE } from "./config/abstract";
 import { getVideoEmbedInfo } from "./utils/videoEmbed";
 
 const impactCards = [
@@ -634,18 +635,7 @@ function Hero({ banner }) {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: finalDelay + 0.8, duration: 0.62 }}
           >
-            <div className="flex items-center gap-2 text-sm font-bold font-['DM_Sans']">
-              <span className="relative flex h-3 w-3">
-                {abstractOpen && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-emerald-400"></span>}
-                <span className={`relative inline-flex rounded-full h-3 w-3 ${abstractOpen ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
-              </span>
-              <span className={abstractOpen ? 'text-emerald-700 font-bold' : 'text-red-600 font-bold'}>
-                {abstractOpen ? 'Calls are currently open' : 'Calls are currently closed'}
-              </span>
-            </div>
-            <a href="/abstract-registration" className="hero-button-secondary border flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition bg-white hover:bg-gray-100 border-gray-300 shadow-sm" style={{ color: "#000000" }}>
-              <span style={{ color: "#000000" }} className="text-black font-bold">Submit Abstract</span> <FileText className="h-4 w-4 text-black" />
-            </a>
+            <AbstractCallsStatus open={abstractOpen} />
           </motion.div>
         </div>
 
@@ -654,6 +644,45 @@ function Hero({ banner }) {
 
       {/* Squiggle divider removed */}
     </section>
+  );
+}
+
+// Ticks on its own so the hero does not re-render every second; flips to closed exactly at the deadline.
+function AbstractCallsStatus({ open }) {
+  const [timeLeft, setTimeLeft] = useState(() => getTimeLeft(ABSTRACT_DEADLINE));
+  useEffect(() => {
+    if (timeLeft.isExpired) return undefined;
+    const timer = setInterval(() => setTimeLeft(getTimeLeft(ABSTRACT_DEADLINE)), 1000);
+    return () => clearInterval(timer);
+  }, [timeLeft.isExpired]);
+  const isOpen = open && !timeLeft.isExpired;
+  const pad = (n) => String(n).padStart(2, "0");
+
+  return (
+    <>
+      <div className="flex items-center gap-2 text-sm font-bold font-['DM_Sans']">
+        <span className="relative flex h-3 w-3">
+          {isOpen && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-emerald-400"></span>}
+          <span className={`relative inline-flex rounded-full h-3 w-3 ${isOpen ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+        </span>
+        <span className={isOpen ? 'text-emerald-700 font-bold' : 'text-red-600 font-bold'}>
+          {isOpen ? 'Calls are currently open' : 'Calls are currently closed'}
+        </span>
+      </div>
+      <a href="/abstract-registration" className="hero-button-secondary border flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition bg-white hover:bg-gray-100 border-gray-300 shadow-sm" style={{ color: "#000000" }}>
+        <span style={{ color: "#000000" }} className="text-black font-bold">Submit Abstract</span> <FileText className="h-4 w-4 text-black" />
+      </a>
+      {isOpen && (
+        <div className="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 font-['DM_Sans']" role="timer" aria-live="off">
+          <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-red-700">
+            <Clock3 className="h-3.5 w-3.5" /> Abstract submission ends at 11:59 pm on 10 November
+          </div>
+          <div className="mt-1 font-['Outfit'] text-xl font-extrabold tabular-nums text-[#101828]">
+            {timeLeft.days > 0 && `${timeLeft.days}d `}{pad(timeLeft.hours)}h {pad(timeLeft.minutes)}m {pad(timeLeft.seconds)}s <span className="text-xs font-semibold text-gray-500">left</span>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -1443,9 +1472,9 @@ function GHCTimeline() {
     {
       key: "abstract",
       title: "Abstract Submission",
-      subtitle: "How to submit",
-      status: "Calls open",
-      statusType: "confirmed",
+      subtitle: "Submissions closed",
+      status: "Closed 10 November",
+      statusType: "closed",
       icon: FileText,
       content: <AbstractSubmissionContent />,
     },
@@ -1580,10 +1609,9 @@ function RegistrationOpenContent() {
 
 function AbstractSubmissionContent() {
   const steps = [
-    ["Click on Submit Abstract", "Start the submission process from the abstract submission section."],
-    ["Fill details in the form", "Enter all the required information about you and your research."],
-    ["Upload abstract", "Attach your abstract in DOCX format."],
-    ["Submit abstract", "Submit your form and await the review."],
+    ["Abstract submissions are closed", "The call for abstracts for GHC 2026 closed at 11:59 pm IST on 10 November 2026. New submissions are no longer accepted."],
+    ["Revisions still open", "Authors asked to revise their abstract can submit the revision until 14 November 2026 using the link in their email."],
+    ["Await the decision", "The Scientific Committee will email every author with the final decision."],
   ];
 
   return (
@@ -1600,11 +1628,6 @@ function AbstractSubmissionContent() {
           </div>
         </div>
       ))}
-      <div className="pt-2 pl-9">
-        <Link to="/abstract-registration" className="inline-flex items-center gap-2 bg-[#173B8F] text-white px-5 py-2.5 rounded-full font-bold text-xs hover:bg-[#0D47A1] transition-all shadow-sm">
-          Submit Abstract Now <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
     </div>
   );
 }
@@ -1723,7 +1746,7 @@ function ResearchHub() {
         <div className="mb-14 flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <SectionHeading eyebrow="Call for Abstract" title="Submit your research and present it to a global audience at GHC" />
           <div className="flex flex-wrap gap-3">
-            <a href="/abstract-registration" className="inline-flex items-center gap-2 bg-[#173B8F] text-white px-6 py-3 rounded-full font-bold text-sm hover:-translate-y-1 transition-transform shadow-md">Submit Abstract <ArrowRight className="h-4 w-4" /></a>
+            <span className="inline-flex items-center gap-2 bg-red-50 text-red-700 border border-red-200 px-6 py-3 rounded-full font-bold text-sm">Abstract submissions are closed</span>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -1745,9 +1768,9 @@ function ResearchHub() {
             <div className="absolute top-0 right-0 w-64 h-64 bg-[#173B8F] rounded-full blur-[80px] opacity-20 -mr-20 -mt-20"></div>
             <div className="relative z-10 w-16 h-16 rounded-2xl bg-[#173B8F]/20 border border-[#173B8F]/30 text-white flex items-center justify-center mb-6"><Microscope className="h-8 w-8" /></div>
             <h3 className="relative z-10 font-['Outfit'] text-2xl font-extrabold text-white mb-4">Submit Research</h3>
-            <p className="relative z-10 text-gray-300 font-medium leading-relaxed mb-8 flex-1">Open the structured submission flow for personal details, institution, category, title, authors, abstract and Word document upload (PDF not accepted).</p>
+            <p className="relative z-10 text-gray-300 font-medium leading-relaxed mb-8 flex-1">Abstract submissions for GHC 2026 closed at 11:59 pm IST on 10 November 2026. Authors asked to revise can still submit their revision until 14 November 2026.</p>
             <div className="relative z-10 mt-auto pt-6 border-t border-gray-800">
-              <a href="/abstract-registration" className="inline-flex items-center gap-2 bg-white text-[#101828] px-8 py-3.5 rounded-full font-bold text-sm hover:bg-gray-100 transition-colors shadow-sm">Submit Abstract <ArrowRight className="h-4 w-4" /></a>
+              <span className="inline-flex items-center gap-2 bg-white/10 text-white px-8 py-3.5 rounded-full font-bold text-sm">Submissions closed</span>
             </div>
           </motion.article>
         </div>

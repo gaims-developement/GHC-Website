@@ -666,7 +666,8 @@ const setTeam = async (id, teamId) => {
 };
 
 const setWorkflowStage = async (id, stage, extra = {}) => {
-  const updates = ['workflow_stage = ?'];
+  // A sent verdict is final: a late review or lead endorsement must not move the abstract back to "Awaiting Verdict".
+  const updates = ["workflow_stage = IF(status IN ('accepted', 'rejected'), status, ?)"];
   const params = [stage];
   if (extra.leadReviewerId !== undefined) {
     updates.push('lead_reviewer_id = ?');

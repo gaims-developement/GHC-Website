@@ -1529,6 +1529,12 @@ button {
   color: #b45309;
 }
 
+.schedule-status.closed {
+  border: 1px solid rgba(220, 38, 38, 0.28);
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}
+
 .schedule-status.confirmed {
   border: 1px solid rgba(5, 150, 105, 0.28);
   background: rgba(16, 185, 129, 0.12);

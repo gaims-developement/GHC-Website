@@ -486,7 +486,14 @@ const createResearch = asyncHandler(async (req, res) => {
   return res.status(201).json({ submission });
 });
 
+// New submissions only; revisions keep their own deadline (REVISION_DEADLINE).
+const ABSTRACT_SUBMISSION_DEADLINE = new Date('2026-11-10T23:59:59+05:30').getTime();
+
 const submitResearch = asyncHandler(async (req, res) => {
+  if (Date.now() > ABSTRACT_SUBMISSION_DEADLINE) {
+    await cleanupUploadedFiles(req.files);
+    return res.status(403).json({ message: 'Abstract submissions for GHC 2026 closed at 11:59 pm IST on 10 November 2026.' });
+  }
   const payload = {
     ...sanitizePayload(req.body),
     status: 'submitted',

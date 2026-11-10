@@ -27,6 +27,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { apiUrl } from "../config/api";
+import { ABSTRACT_DEADLINE } from "../config/abstract";
 import { Link } from "react-router-dom";
 
 const specialties = [
@@ -267,7 +268,7 @@ export default function AbstractRegister() {
   const [step, setStep] = useState(0);
   const [submissionState, setSubmissionState] = useState({ status: "idle", message: "", data: null });
   const [errors, setErrors] = useState({});
-  const [isCallsOpen, setIsCallsOpen] = useState(true);
+  const [isCallsOpen, setIsCallsOpen] = useState(() => Date.now() < ABSTRACT_DEADLINE);
   const [abstractWhatsapp, setAbstractWhatsapp] = useState({ url: "", text: "" });
   const [expandedGuidelines, setExpandedGuidelines] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
@@ -295,9 +296,9 @@ export default function AbstractRegister() {
     axios.get(apiUrl("/api/settings/public"))
       .then(res => {
         if (res.data?.registration?.abstractSubmissionOpen !== undefined) {
-          setIsCallsOpen(res.data.registration.abstractSubmissionOpen);
+          setIsCallsOpen(res.data.registration.abstractSubmissionOpen && Date.now() < ABSTRACT_DEADLINE);
         } else {
-          setIsCallsOpen(true);
+          setIsCallsOpen(Date.now() < ABSTRACT_DEADLINE);
         }
         setAbstractWhatsapp({
           url: res.data?.registration?.abstractWhatsappGroupUrl || "",
@@ -457,7 +458,8 @@ export default function AbstractRegister() {
     } catch (error) {
       setSubmissionState({
         status: "error",
-        message: error.response?.data?.message || "Unable to submit abstract. Please verify all details and try again.",
+        // The server's error handler (e.g. a file over 10 MB) answers with `error`, not `message`.
+        message: error.response?.data?.message || error.response?.data?.error || (!error.response && "Could not reach the server. Please check your internet connection and try again.") || "Unable to submit abstract. Please verify all details and try again.",
         data: null
       });
     }
