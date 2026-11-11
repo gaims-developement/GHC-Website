@@ -1036,6 +1036,40 @@ const defaultPastSpeakers = [
   }
 ];
 
+function ChiefGuest() {
+  return (
+    <section id="chief-guest" className="section-shell reveal-section bg-[#F8F9FC] py-24 border-y border-gray-100">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6">
+        <SectionHeading eyebrow="Chief Guest" title="We are honoured to announce our Chief Guest." />
+        <article className="grid overflow-hidden rounded-[2rem] border border-gray-100 bg-white shadow-[0_12px_40px_rgba(16,24,40,0.08)] md:grid-cols-[minmax(0,360px)_1fr]">
+          <div className="bg-gradient-to-b from-[#FFF4D6] to-white">
+            <img
+              src="/assets/Speakers/chief-guest-jitendra-singh.png"
+              alt="Hon'ble Dr. Jitendra Singh"
+              className="h-full max-h-[480px] w-full object-cover object-top"
+              loading="lazy"
+            />
+          </div>
+          <div className="flex flex-col justify-center gap-5 p-8 sm:p-12">
+            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[#173B8F]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[#173B8F]">
+              <Sparkles className="h-3.5 w-3.5" /> Chief Guest
+            </span>
+            <h3 className="font-['Outfit'] text-3xl sm:text-4xl lg:text-5xl font-extrabold uppercase leading-tight text-[#101828]">
+              Hon&apos;ble Dr. Jitendra Singh
+            </h3>
+            <p className="text-lg font-semibold leading-relaxed text-[#475467]">
+              Minister of State, PMO (Prime Minister&apos;s Office), Union Minister of State (Independent Charge) for Science &amp; Technology and Earth Sciences, Government of India.
+            </p>
+            <p className="border-l-4 border-[#00A6A6] pl-4 text-lg font-medium leading-relaxed text-[#173B8F]">
+              We are honoured to welcome him to the <span className="font-bold">Global Healthcare Conclave 2026</span>.
+            </p>
+          </div>
+        </article>
+      </div>
+    </section>
+  );
+}
+
 function WorldClassSpeakers() {
   const { endpoint } = useMockResource(apiEndpoints.speakers, mockSpeakers);
   const [speakerData, setSpeakerData] = useState(mockSpeakers);
@@ -3709,6 +3743,7 @@ function App() {
         <Hero banner={activeHeroBanner} />
         <ParticipatingCountries />
         <WatchVision />
+        <ChiefGuest />
         <WorldClassSpeakers />
         <WorkshopsExperience />
         <ResearchHub />
