@@ -50,7 +50,7 @@ function Dashboard({ user, api, onNavigate }) {
       api.get("/api/workshops"),
       api.get("/api/visa-applications"),
       api.get("/api/certificates/dashboard"),
-      api.get("/api/sponsorship/dashboard"),
+      api.get("/api/partners"),
       api.get("/api/speakers/sessions"),
       api.get("/api/system-admin/dashboard"),
     ]);
@@ -94,7 +94,7 @@ function Dashboard({ user, api, onNavigate }) {
       setCertificates(resCerts.value.data.metrics || { totalGenerated: 0, pendingCertificates: 0, issuedToday: 0 });
     }
     if (resSponsors.status === "fulfilled") {
-      const sp = resSponsors.value.data.sponsors;
+      const sp = resSponsors.value.data.partners;
       setActiveSponsors(Array.isArray(sp) ? sp.length : 0);
     }
     if (resSessions.status === "fulfilled") {

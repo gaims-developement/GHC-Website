@@ -41,6 +41,7 @@ import {
   Play,
   Share2,
   Sparkles,
+  Megaphone,
   Stethoscope,
   Book,
   BookOpen,
@@ -1169,6 +1170,47 @@ function ComingSoonText() {
   );
 }
 
+function WorkshopsFullNotice() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-12">
+      <article className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#101828] via-[#14254f] to-[#173B8F] text-white shadow-[0_20px_50px_rgba(23,59,143,0.25)]">
+        <div className="absolute -top-24 -right-20 h-72 w-72 rounded-full bg-[#00A6A6] opacity-20 blur-[90px]" aria-hidden="true" />
+        <div className="absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-white opacity-10 blur-[90px]" aria-hidden="true" />
+        <div className="relative grid gap-8 p-8 sm:p-10 md:grid-cols-[1.4fr_1fr] md:items-center">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em]">
+              <Megaphone className="h-3.5 w-3.5" /> Important Announcement | GHC 2026
+            </span>
+            <h3 className="mt-5 font-['Outfit'] text-2xl sm:text-3xl font-extrabold leading-tight">All workshop slots are now fully booked</h3>
+            <p className="mt-4 text-white/80 font-medium leading-relaxed">
+              We sincerely thank all delegates for the overwhelming response to the Global Healthcare Conclave 2026. We regret that no additional delegates can be accommodated in the workshops.
+            </p>
+            <p className="mt-3 text-white/80 font-medium leading-relaxed">We appreciate your understanding and look forward to welcoming you!</p>
+            <p className="mt-6 text-sm text-white/70 leading-relaxed">
+              Warm regards,<br />
+              <span className="font-bold text-white">Organizing Committee</span><br />
+              GAIMS Global Healthcare Conclave 2026
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/15 bg-white/10 p-6 backdrop-blur-sm">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#7FE3E3]">Conclave registrations remain open</p>
+            <div className="mt-4 space-y-3 text-sm font-semibold">
+              <p className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-[#7FE3E3]" /> 28 November 2026</p>
+              <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-[#7FE3E3]" /> Bharat Mandapam, New Delhi</p>
+            </div>
+            <ul className="mt-5 space-y-2 text-sm text-white/80">
+              <li className="flex gap-2"><span className="mt-0.5 h-4 w-4 shrink-0 text-center leading-4 text-red-300 font-bold" aria-hidden="true">×</span> New registrations will not include workshop participation</li>
+            </ul>
+            <a href={registrationUrl} className="mt-6 inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-[#101828] shadow-sm transition hover:bg-gray-100">
+              Register for the Conclave <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+        </div>
+      </article>
+    </div>
+  );
+}
+
 function WorkshopsExperience() {
   const { endpoint } = useMockResource(apiEndpoints.workshops, mockWorkshops);
   const [workshopData, setWorkshopData] = useState(mockWorkshops);
@@ -1212,6 +1254,8 @@ function WorkshopsExperience() {
           text="Each workshop is structured around capacity, faculty depth and delegate readiness in New Delhi."
         />
       </div>
+
+      <WorkshopsFullNotice />
 
       {/* No workshops published in the CMS yet: plain text, no card or slider */}
       {workshopsLoaded && workshopData.length === 0 && <ComingSoonText />}
